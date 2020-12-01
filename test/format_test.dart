@@ -52,18 +52,42 @@ void main() {
               e is ArgumentError &&
               e.message == '{a} Key [a] is missing in named args.')));
     });
-  });
-
-  group('Width and align:', () {
-    test('simple', () {
+    test('width, align and fill', () {
       const s = 'hello';
 
       expect('{:1}'.format([s]), 'hello');
+
       expect('{:9}'.format([s]), 'hello    ');
       expect('{:<9}'.format([s]), 'hello    ');
       expect('{:>9}'.format([s]), '    hello');
       expect('{:^9}'.format([s]), '  hello  ');
-      expect('{:^6}'.format([s]), 'hello ');
+      expect('{:^10}'.format([s]), '  hello   ');
+
+      expect('{:*9}'.format([s]), '{:*9}'); // align is missing
+      expect('{:*<9}'.format([s]), 'hello****');
+      expect('{:*>9}'.format([s]), '****hello');
+      expect('{:*^9}'.format([s]), '**hello**');
+      expect('{:*^10}'.format([s]), '**hello***');
+    });
+
+    test('width and precision', () {
+      expect(
+          () => '{:.2}'.format([0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:.2} Precision not allowed for int.')));
+
+      expect(
+          () => '{:{}}'.format([0.0, -1]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:{}} Width must be >= 0. Passed -1.')));
+
+      expect(
+          () => '{:.{}}'.format([0.0, -1]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:.{}} Precision must be >= 0. Passed -1.')));
     });
   });
 
@@ -75,7 +99,8 @@ void main() {
             () => '{:c}'.format(['a']),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
-                e.message == '{:c} Expected int or List<int>. Passed String.')));
+                e.message ==
+                    '{:c} Expected int or List<int>. Passed String.')));
       });
 
       test('surrogate pairs', () {
@@ -121,8 +146,7 @@ void main() {
             () => '{:b}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
-                e.message ==
-                    '{:b} Expected int. Passed double.')));
+                e.message == '{:b} Expected int. Passed double.')));
       });
 
       test('sign', () {
@@ -136,10 +160,6 @@ void main() {
 
       test('align', () {
         expect('{:12b}'.format([n]), '    10101010');
-      });
-
-      test('fill', () {
-        expect('{:-^12b}'.format([n]), '--10101010--');
       });
 
       test('zero', () {
@@ -168,29 +188,18 @@ void main() {
                 e.message ==
                     "{:#b} Alternate form (#) not allowed with format specifier 'b'.")));
       });
-
-      test('precision', () {
-        expect(
-            () => '{:.2b}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    '{:.2b} Precision not allowed for int.')));
-      });
     });
 
     group('o:', () {
       const n = 2739128;
 
       test('basic use', () {
-
         expect('{:o}'.format([n]), '12345670');
         expect(
             () => '{:o}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
-                e.message ==
-                    '{:o} Expected int. Passed double.')));
+                e.message == '{:o} Expected int. Passed double.')));
       });
 
       test('sign', () {
@@ -204,10 +213,6 @@ void main() {
 
       test('align', () {
         expect('{:12o}'.format([n]), '    12345670');
-      });
-
-      test('fill', () {
-        expect('{:-^12o}'.format([n]), '--12345670--');
       });
 
       test('zero', () {
@@ -236,15 +241,6 @@ void main() {
                 e.message ==
                     "{:#o} Alternate form (#) not allowed with format specifier 'o'.")));
       });
-
-      test('precision', () {
-        expect(
-            () => '{:.2o}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    '{:.2o} Precision not allowed for int.')));
-      });
     });
 
     group('x:', () {
@@ -256,8 +252,7 @@ void main() {
             () => '{:x}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
-                e.message ==
-                    '{:x} Expected int. Passed double.')));
+                e.message == '{:x} Expected int. Passed double.')));
       });
 
       test('sign', () {
@@ -271,10 +266,6 @@ void main() {
 
       test('align', () {
         expect('{:12x}'.format([n]), '    12abcdef');
-      });
-
-      test('fill', () {
-        expect('{:-^12x}'.format([n]), '--12abcdef--');
       });
 
       test('zero', () {
@@ -301,15 +292,6 @@ void main() {
         expect('{:#_x}'.format([n]), '0x12ab_cdef');
         expect('{:#_x}'.format([-n]), '-0x12ab_cdef');
       });
-
-      test('precision', () {
-        expect(
-            () => '{:.2x}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    '{:.2x} Precision not allowed for int.')));
-      });
     });
 
     group('x:', () {
@@ -321,8 +303,7 @@ void main() {
             () => '{:X}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
-                e.message ==
-                    '{:X} Expected int. Passed double.')));
+                e.message == '{:X} Expected int. Passed double.')));
       });
 
       test('sign', () {
@@ -336,10 +317,6 @@ void main() {
 
       test('align', () {
         expect('{:12X}'.format([n]), '    12ABCDEF');
-      });
-
-      test('fill', () {
-        expect('{:-^12X}'.format([n]), '--12ABCDEF--');
       });
 
       test('zero', () {
@@ -364,167 +341,359 @@ void main() {
         expect('{:#X}'.format([n]), '0x12ABCDEF');
         expect('{:#_X}'.format([n]), '0x12AB_CDEF');
       });
+    });
 
-      test('precision', () {
+    group('d:', () {
+      const n = 123456789;
+
+      test('basic use', () {
+        expect('{}'.format([n]), '123456789');
+        expect('{:d}'.format([n]), '123456789');
         expect(
-            () => '{:.2X}'.format([n]),
+            () => '{:d}'.format([123.0]),
+            throwsA(predicate((e) =>
+                e is ArgumentError &&
+                e.message == '{:d} Expected int. Passed double.')));
+      });
+
+      test('sign', () {
+        expect('{:+d}'.format([n]), '+123456789');
+        expect('{:-d}'.format([n]), '123456789');
+        expect('{: d}'.format([n]), ' 123456789');
+        expect('{:+d}'.format([-n]), '-123456789');
+        expect('{:-d}'.format([-n]), '-123456789');
+        expect('{: d}'.format([-n]), '-123456789');
+      });
+
+      test('align', () {
+        expect('{:13d}'.format([n]), '    123456789');
+      });
+
+      test('zero', () {
+        expect('{:013d}'.format([n]), '0000123456789');
+      });
+
+      test('group', () {
+        expect('{:,d}'.format([n]), '123,456,789');
+        expect('{:_d}'.format([n]), '123_456_789');
+        expect('{:15,d}'.format([n]), '    123,456,789');
+        expect('{:15_d}'.format([n]), '    123_456_789');
+        expect('{:015,d}'.format([n]), '000,123,456,789');
+        expect('{:015_d}'.format([n]), '000_123_456_789');
+        expect('{:016,d}'.format([n]), '0,000,123,456,789');
+        expect('{:017,d}'.format([n]), '0,000,123,456,789');
+      });
+
+      test('alt', () {
+        expect(
+            () => '{:#d}'.format([n]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
-                    '{:.2X} Precision not allowed for int.')));
+                    "{:#d} Alternate form (#) not allowed with format specifier 'd'.")));
       });
     });
 
-    test('d', () {
-      const n = 123456789;
-
-      expect('{}'.format([n]), '123456789');
-      expect('{:d}'.format([n]), '123456789');
-      expect(
-          () => '{:d}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  '{:d} Expected int. Passed double.')));
-
-      // sign
-      expect('{:+d}'.format([n]), '+123456789');
-      expect('{:-d}'.format([n]), '123456789');
-      expect('{: d}'.format([n]), ' 123456789');
-      expect('{:+d}'.format([-n]), '-123456789');
-      expect('{:-d}'.format([-n]), '-123456789');
-      expect('{: d}'.format([-n]), '-123456789');
-
-      // align
-      expect('{:13d}'.format([n]), '    123456789');
-
-      // fill
-      expect('{:-^13d}'.format([n]), '--123456789--');
-
-      // zero
-      expect('{:013d}'.format([n]), '0000123456789');
-
-      // group
-      expect('{:,d}'.format([n]), '123,456,789');
-      expect('{:_d}'.format([n]), '123_456_789');
-      expect('{:15,d}'.format([n]), '    123,456,789');
-      expect('{:15_d}'.format([n]), '    123_456_789');
-      expect('{:015,d}'.format([n]), '000,123,456,789');
-      expect('{:015_d}'.format([n]), '000_123_456_789');
-      expect('{:016,d}'.format([n]), '0,000,123,456,789');
-      expect('{:017,d}'.format([n]), '0,000,123,456,789');
-
-      // alt
-      expect(
-          () => '{:#d}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:#d} Alternate form (#) not allowed with format specifier 'd'.")));
-
-      // precision
-      expect(
-          () => '{:.2d}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  '{:.2d} Precision not allowed for int.')));
-    });
-
-    test('f', () {
+    group('f:', () {
       const n = 12345.6789;
 
-      expect('{:f}'.format([n]), '12345.678900');
-      expect(
-          () => '{:f}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  '{:f} Expected double. Passed int.')));
+      test('basic use', () {
+        expect('{:f}'.format([0.0]), '0.000000');
+        expect('{:f}'.format([-0.0]), '-0.000000');
+        expect('{:f}'.format([n]), '12345.678900');
+        expect(
+            () => '{:f}'.format([123]),
+            throwsA(predicate((e) =>
+                e is ArgumentError &&
+                e.message == '{:f} Expected double. Passed int.')));
+      });
 
-      // sign
-      expect('{:+f}'.format([n]), '+12345.678900');
-      expect('{:-f}'.format([n]), '12345.678900');
-      expect('{: f}'.format([n]), ' 12345.678900');
-      expect('{:+f}'.format([-n]), '-12345.678900');
-      expect('{:-f}'.format([-n]), '-12345.678900');
-      expect('{: f}'.format([-n]), '-12345.678900');
+      test('sign', () {
+        expect('{:+f}'.format([n]), '+12345.678900');
+        expect('{:-f}'.format([n]), '12345.678900');
+        expect('{: f}'.format([n]), ' 12345.678900');
+        expect('{:+f}'.format([-n]), '-12345.678900');
+        expect('{:-f}'.format([-n]), '-12345.678900');
+        expect('{: f}'.format([-n]), '-12345.678900');
+      });
 
-      // align
-      expect('{:16f}'.format([n]), '    12345.678900');
+      test('align', () {
+        expect('{:16f}'.format([n]), '    12345.678900');
+      });
 
-      // fill
-      expect('{:-^16f}'.format([n]), '--12345.678900--');
+      test('zero', () {
+        expect('{:016f}'.format([n]), '000012345.678900');
+      });
 
-      // zero
-      expect('{:016f}'.format([n]), '000012345.678900');
+      test('group', () {
+        expect('{:,f}'.format([n]), '12,345.678900');
+        expect('{:_f}'.format([n]), '12_345.678900');
+        expect('{:18,f}'.format([n]), '     12,345.678900');
+        expect('{:18_f}'.format([n]), '     12_345.678900');
+        expect('{:018,f}'.format([n]), '000,012,345.678900');
+        expect('{:018_f}'.format([n]), '000_012_345.678900');
+        expect('{:019,f}'.format([n]), '0,000,012,345.678900');
+        expect('{:020,f}'.format([n]), '0,000,012,345.678900');
+      });
 
-      // group
-      expect('{:,f}'.format([n]), '12,345.678900');
-      expect('{:_f}'.format([n]), '12_345.678900');
-      expect('{:18,f}'.format([n]), '     12,345.678900');
-      expect('{:18_f}'.format([n]), '     12_345.678900');
-      expect('{:018,f}'.format([n]), '000,012,345.678900');
-      expect('{:018_f}'.format([n]), '000_012_345.678900');
-      expect('{:019,f}'.format([n]), '0,000,012,345.678900');
-      expect('{:020,f}'.format([n]), '0,000,012,345.678900');
+      test('alt', () {
+        expect('{:#f}'.format([n]), '12345.678900');
+        expect('{:#.0f}'.format([n]), '12346.');
+      });
 
-      // alt (всегда содержит десятичную точку)
-      expect(
-          () => '{:#f}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:#f} Alternate form (#) not allowed with format specifier 'f'.")));
+      test('precision', () {
+        expect('{:.0f}'.format([n]), '12346');
+        expect('{:.1f}'.format([n]), '12345.7');
+        expect('{:.2f}'.format([n]), '12345.68');
+        expect('{:.3f}'.format([n]), '12345.679');
+        expect('{:.4f}'.format([n]), '12345.6789');
+        expect('{:.5f}'.format([n]), '12345.67890');
+      });
 
-      // precision
-      expect('{:.0f}'.format([n]), '12346');
-      expect('{:.1f}'.format([n]), '12345.7');
-      expect('{:.2f}'.format([n]), '12345.68');
-      expect('{:.3f}'.format([n]), '12345.679');
-      expect('{:.4f}'.format([n]), '12345.6789');
-      expect('{:.5f}'.format([n]), '12345.67890');
+      test('nan and inf', () {
+        // Zero flag is ignored.
+        final nan = double.nan;
+        final inf = double.infinity;
+        assert(-inf == double.negativeInfinity);
 
-      // NaN and Infinity
-      // Zero flag is ignored.
-      final nan = double.nan;
-      final inf = double.infinity;
-      final ninf = double.negativeInfinity;
-      expect('{:f}'.format([nan]), 'nan');
-      expect('{:-f}'.format([nan]), 'nan');
-      expect('{:+f}'.format([nan]), '+nan');
-      expect('{: f}'.format([nan]), ' nan');
-      expect('{:f}'.format([-nan]), 'nan');
-      expect('{:-f}'.format([-nan]), 'nan');
-      expect('{:+f}'.format([-nan]), '+nan');
-      expect('{: f}'.format([-nan]), ' nan');
+        expect('{:f}'.format([nan]), 'nan');
+        expect('{:-f}'.format([nan]), 'nan');
+        expect('{:+f}'.format([nan]), '+nan');
+        expect('{: f}'.format([nan]), ' nan');
+        expect('{:f}'.format([-nan]), 'nan');
+        expect('{:-f}'.format([-nan]), 'nan');
+        expect('{:+f}'.format([-nan]), '+nan');
+        expect('{: f}'.format([-nan]), ' nan');
 
-      expect('{:06f}'.format([nan]), '   nan');
-      expect('{:-06f}'.format([nan]), '   nan');
-      expect('{:+06f}'.format([nan]), '  +nan');
-      expect('{: 06f}'.format([nan]), '   nan');
-      expect('{:06f}'.format([-nan]), '   nan');
-      expect('{:-06f}'.format([-nan]), '   nan');
-      expect('{:+06f}'.format([-nan]), '  +nan');
-      expect('{: 06f}'.format([-nan]), '   nan');
+        expect('{:06f}'.format([nan]), '   nan');
+        expect('{:-06f}'.format([nan]), '   nan');
+        expect('{:+06f}'.format([nan]), '  +nan');
+        expect('{: 06f}'.format([nan]), '   nan');
+        expect('{:06f}'.format([-nan]), '   nan');
+        expect('{:-06f}'.format([-nan]), '   nan');
+        expect('{:+06f}'.format([-nan]), '  +nan');
+        expect('{: 06f}'.format([-nan]), '   nan');
 
-      expect('{:f}'.format([inf]), 'inf');
-      expect('{:-f}'.format([inf]), 'inf');
-      expect('{:+f}'.format([inf]), '+inf');
-      expect('{: f}'.format([inf]), ' inf');
-      expect('{:f}'.format([-inf]), '-inf');
-      expect('{:-f}'.format([-inf]), '-inf');
-      expect('{:+f}'.format([-inf]), '-inf');
-      expect('{: f}'.format([-inf]), '-inf');
+        expect('{:f}'.format([inf]), 'inf');
+        expect('{:-f}'.format([inf]), 'inf');
+        expect('{:+f}'.format([inf]), '+inf');
+        expect('{: f}'.format([inf]), ' inf');
+        expect('{:f}'.format([-inf]), '-inf');
+        expect('{:-f}'.format([-inf]), '-inf');
+        expect('{:+f}'.format([-inf]), '-inf');
+        expect('{: f}'.format([-inf]), '-inf');
 
-      expect('{:06f}'.format([inf]), '   inf');
-      expect('{:-06f}'.format([inf]), '   inf');
-      expect('{:+06f}'.format([inf]), '  +inf');
-      expect('{: 06f}'.format([inf]), '   inf');
-      expect('{:06f}'.format([-inf]), '  -inf');
-      expect('{:-06f}'.format([-inf]), '  -inf');
-      expect('{:+06f}'.format([-inf]), '  -inf');
-      expect('{: 06f}'.format([-inf]), '  -inf');
+        expect('{:06f}'.format([inf]), '   inf');
+        expect('{:-06f}'.format([inf]), '   inf');
+        expect('{:+06f}'.format([inf]), '  +inf');
+        expect('{: 06f}'.format([inf]), '   inf');
+        expect('{:06f}'.format([-inf]), '  -inf');
+        expect('{:-06f}'.format([-inf]), '  -inf');
+        expect('{:+06f}'.format([-inf]), '  -inf');
+        expect('{: 06f}'.format([-inf]), '  -inf');
+
+        expect('{:F}'.format([nan]), 'NAN');
+        expect('{:+F}'.format([nan]), '+NAN');
+        expect('{:F}'.format([inf]), 'INF');
+        expect('{:F}'.format([-inf]), '-INF');
+      });
+    });
+
+    group('e:', () {
+      const n = 12345.6789;
+
+      test('basic use', () {
+        expect('{:e}'.format([0.0]), '0.000000e+0');
+        expect('{:e}'.format([-0.0]), '-0.000000e+0');
+        expect('{:e}'.format([n]), '1.234568e+4');
+        expect('{:E}'.format([n]), '1.234568E+4');
+        expect(
+            () => '{:e}'.format([123]),
+            throwsA(predicate((e) =>
+                e is ArgumentError &&
+                e.message == '{:e} Expected double. Passed int.')));
+      });
+
+      test('sign', () {
+        expect('{:+e}'.format([n]), '+1.234568e+4');
+        expect('{:-e}'.format([n]), '1.234568e+4');
+        expect('{: e}'.format([n]), ' 1.234568e+4');
+        expect('{:+e}'.format([-n]), '-1.234568e+4');
+        expect('{:-e}'.format([-n]), '-1.234568e+4');
+        expect('{: e}'.format([-n]), '-1.234568e+4');
+      });
+
+      test('align', () {
+        expect('{:15e}'.format([n]), '    1.234568e+4');
+      });
+
+      test('zero', () {
+        expect('{:015e}'.format([n]), '00001.234568e+4');
+      });
+
+      test('group', () {
+        expect('{:,e}'.format([n]), '1.234568e+4');
+        expect('{:_e}'.format([n]), '1.234568e+4');
+        expect('{:17,e}'.format([n]), '      1.234568e+4');
+        expect('{:17_e}'.format([n]), '      1.234568e+4');
+        expect('{:017,e}'.format([n]), '000,001.234568e+4');
+        expect('{:017_e}'.format([n]), '000_001.234568e+4');
+        expect('{:018,e}'.format([n]), '0,000,001.234568e+4');
+        expect('{:019,e}'.format([n]), '0,000,001.234568e+4');
+        expect('{:012,.0e}'.format([n]), '0,000,001e+4');
+      });
+
+      test('alt', () {
+        expect('{:#e}'.format([n]), '1.234568e+4');
+        expect('{:#.0e}'.format([n]), '1.e+4');
+      });
+
+      test('precision', () {
+        expect('{:.0e}'.format([n]), '1e+4');
+        expect('{:.1e}'.format([n]), '1.2e+4');
+        expect('{:.2e}'.format([n]), '1.23e+4');
+        expect('{:.3e}'.format([n]), '1.235e+4');
+        expect('{:.4e}'.format([n]), '1.2346e+4');
+        expect('{:.5e}'.format([n]), '1.23457e+4');
+        expect('{:.6e}'.format([n]), '1.234568e+4');
+        expect('{:.7e}'.format([n]), '1.2345679e+4');
+        expect('{:.8e}'.format([n]), '1.23456789e+4');
+        expect('{:.9e}'.format([n]), '1.234567890e+4');
+      });
+
+      test('nan and inf', () {
+        // В отличие от Python и C++ флаг zero для NaN и Infinity игнорирую.
+        final nan = double.nan;
+        final inf = double.infinity;
+        assert(-inf == double.negativeInfinity);
+
+        expect('{:e}'.format([nan]), 'nan');
+        expect('{:-e}'.format([nan]), 'nan');
+        expect('{:+e}'.format([nan]), '+nan');
+        expect('{: e}'.format([nan]), ' nan');
+        expect('{:e}'.format([-nan]), 'nan');
+        expect('{:-e}'.format([-nan]), 'nan');
+        expect('{:+e}'.format([-nan]), '+nan');
+        expect('{: e}'.format([-nan]), ' nan');
+
+        expect('{:06e}'.format([nan]), '   nan');
+        expect('{:-06e}'.format([nan]), '   nan');
+        expect('{:+06e}'.format([nan]), '  +nan');
+        expect('{: 06e}'.format([nan]), '   nan');
+        expect('{:06e}'.format([-nan]), '   nan');
+        expect('{:-06e}'.format([-nan]), '   nan');
+        expect('{:+06e}'.format([-nan]), '  +nan');
+        expect('{: 06e}'.format([-nan]), '   nan');
+
+        expect('{:e}'.format([inf]), 'inf');
+        expect('{:-e}'.format([inf]), 'inf');
+        expect('{:+e}'.format([inf]), '+inf');
+        expect('{: e}'.format([inf]), ' inf');
+        expect('{:e}'.format([-inf]), '-inf');
+        expect('{:-e}'.format([-inf]), '-inf');
+        expect('{:+e}'.format([-inf]), '-inf');
+        expect('{: e}'.format([-inf]), '-inf');
+
+        expect('{:06e}'.format([inf]), '   inf');
+        expect('{:-06e}'.format([inf]), '   inf');
+        expect('{:+06e}'.format([inf]), '  +inf');
+        expect('{: 06e}'.format([inf]), '   inf');
+        expect('{:06e}'.format([-inf]), '  -inf');
+        expect('{:-06e}'.format([-inf]), '  -inf');
+        expect('{:+06e}'.format([-inf]), '  -inf');
+        expect('{: 06e}'.format([-inf]), '  -inf');
+
+        expect('{:E}'.format([nan]), 'NAN');
+        expect('{:+E}'.format([nan]), '+NAN');
+        expect('{:E}'.format([inf]), 'INF');
+        expect('{:E}'.format([-inf]), '-INF');
+      });
+    });
+
+    group('n:', () {
+      const d = 123456789;
+      const f = 1234567.89;
+      const nan = double.nan;
+      const inf = double.infinity;
+
+      void localeTest(String locale, List<String> results) {
+        test(locale, () {
+          Intl.defaultLocale = locale;
+          var i = 0;
+          expect('{:n}'.format([d]), results[i++]);
+          expect('{:n}'.format([f]), results[i++]);
+          expect('{:.1n}'.format([f]), results[i++]);
+          // expect('{:14.1n}'.format([f]), results[i++]);
+
+          expect('{:,n}'.format([d]), results[i++]);
+          expect('{:,n}'.format([f]), results[i++]);
+          expect('{:,.1n}'.format([f]), results[i++]);
+          expect('{:n}'.format([nan]), results[i++]);
+          expect('{:n}'.format([inf]), results[i++]);
+          expect('{:n}'.format([-inf]), results[i++]);
+        });
+      }
+
+      localeTest('en_US', [
+        '123456789',
+        '1234567.890000',
+        '1234567.9',
+        // '000001234567.9',
+        '123,456,789',
+        '1,234,567.890000',
+        '1,234,567.9',
+        'NaN',
+        '∞',
+        '-∞',
+      ]);
+
+      localeTest('ru_RU', [
+        '123456789',
+        '1234567,890000',
+        '1234567,9',
+        '123\u00a0456\u00a0789',
+        '1\u00a0234\u00a0567,890000',
+        '1\u00a0234\u00a0567,9',
+        'не\u00a0число',
+        '∞',
+        '-∞',
+      ]);
+
+      localeTest('bn', [
+        '১২৩৪৫৬৭৮৯',
+        '১২৩৪৫৬৭.৮৯০০০০',
+        '১২৩৪৫৬৭.৯',
+        '১২,৩৪,৫৬,৭৮৯',
+        '১২,৩৪,৫৬৭.৮৯০০০০',
+        '১২,৩৪,৫৬৭.৯',
+        'NaN',
+        '∞',
+        '-∞',
+      ]);
+
+      localeTest('en_IN', [
+        '123456789',
+        '1234567.890000',
+        '1234567.9',
+        '12,34,56,789',
+        '12,34,567.890000',
+        '12,34,567.9',
+        'NaN',
+        '∞',
+        '-∞',
+      ]);
+
+      localeTest('ar', [
+        '123456789',
+        '1234567.890000',
+        '1234567.9',
+        '123,456,789',
+        '1,234,567.890000',
+        '1,234,567.9',
+        'ليس\u00a0رقمًا',
+        '∞',
+        '\u200e-∞',
+      ]);
     });
   });
 

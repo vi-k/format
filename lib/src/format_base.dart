@@ -19,14 +19,15 @@ import 'string_ext.dart';
 ///
 
 final RegExp _formatSpecRe = RegExp(
-    // {   [argId                             ]   :[  [fill ] align   ] [sign ] [#] [0] [width                                   ] [grpo] [   .precision                                 ] [specifier  ] [template        ]     }
-    r'\{\s*(\d*|[_\p{L}][_\p{L}\d]*|\[[^\]]*\])(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?([_,])?(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?([sbcdoxXnf])?(\[(?:[^\]])*\])?)?\s*\}',
+    // {   [argId                             ]   :[  [fill ] align   ] [sign ] [#] [0] [width                                   ] [grpo] [   .precision                                 ] [specifier       ] [template        ]     }
+    r'\{\s*(\d*|[_\p{L}][_\p{L}\d]*|\[[^\]]*\])(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?([_,])?(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?([sbcdoxXnfFeEgG])?(\[(?:[^\]])*\])?)?\s*\}',
     unicode: true);
 // '\\{\\s*(\\d*|[_\\w][_\\w\\d]*|\'(?:\'\'|[^\'])*\'|"(?:""|[^"])*")(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?(\\d+|\\{(\\d*|[_\\w][_\\w\\d]*)\\})?(?:\\.(\\d+|\\{(\\d*|[_\\w][_\\w\\d]*)\\})?)?([sSnmfaxXcdtDTqp])?(\'(?:\'\'|[^\'])*\'|"(?:""|[^"])*")?)?\\s*\\}');
-final RegExp _firstGroup3Re = RegExp(r'(\d)((?:\d{3})+)(\.|$)');
-final RegExp _firstGroup4Re = RegExp(r'([^.])((?:[^.]{4})+)(\.|$)');
-final RegExp _secondGroup3Re = RegExp(r'(\d{3})');
-final RegExp _secondGroup4Re = RegExp('([^.]{4})');
+final RegExp _searchForTriples = RegExp(r'(\d)((?:\d{3})+)$');
+final RegExp _searchForQuadruples =
+    RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
+final RegExp _changeOfTriples = RegExp(r'(\d{3})');
+final RegExp _changeOfQuadruples = RegExp('([0-9a-fA-F]{4})');
 
 /// Берёт значение в строке [str] внутри кавычек [left] и [right].
 ///
@@ -183,6 +184,10 @@ int? _getWidth(_Options options, String? str, String name) {
             '${options.all} $name must be int, passed ${v.runtimeType}.');
       }
 
+      if (v < 0) {
+        throw ArgumentError('${options.all} $name must be >= 0. Passed $v.');
+      }
+
       value = v;
     }
   }
@@ -190,12 +195,12 @@ int? _getWidth(_Options options, String? str, String name) {
   return value;
 }
 
-String _numFormat<T extends num>(
+String _numberFormat<T extends num>(
   _Options options,
   dynamic dyn, {
   required String Function(T value, int? precision) toStr,
   int groupLength = 3,
-  String? prefix,
+  String Function(String result)? doAlt,
 }) {
   String result;
 
@@ -207,9 +212,6 @@ String _numFormat<T extends num>(
   num value = dyn;
 
   final precision = options.precision;
-  if (value is int && precision != null) {
-    throw ArgumentError('${options.all} Precision not allowed for int.');
-  }
 
   // Знак сохраняем отдельно, работаем с положительным числом
   var sign = options.sign;
@@ -248,15 +250,19 @@ String _numFormat<T extends num>(
           "${options.all} Option ',' not allowed with format specifier '${options.specifier}'.");
     }
 
-    final firstRe = groupLength == 3 ? _firstGroup3Re : _firstGroup4Re;
-    final secondRe = groupLength == 3 ? _secondGroup3Re : _secondGroup4Re;
+    final searchRe =
+        groupLength == 3 ? _searchForTriples : _searchForQuadruples;
+    final changeRe = groupLength == 3 ? _changeOfTriples : _changeOfQuadruples;
+    var pointIndex = result.indexOf('.');
+    if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
+    if (pointIndex == -1) pointIndex = result.length;
 
-    result = result.replaceFirstMapped(
-        firstRe,
-        (m) =>
-            m[1]! +
-            m[2]!.replaceAllMapped(secondRe, (m) => '$grpo${m[1]}') +
-            m[3]!);
+    result = result.substring(0, pointIndex).replaceFirstMapped(
+            searchRe,
+            (m) =>
+                m[1]! +
+                m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[1]}')) +
+        result.substring(pointIndex);
 
     // Если добавляли нули, надо обрезать лишние
     if (options.zero && width != null) {
@@ -268,11 +274,12 @@ String _numFormat<T extends num>(
   }
 
   if (options.alt) {
-    if (prefix == null) {
+    if (doAlt == null) {
       throw ArgumentError(
           "${options.all} Alternate form (#) not allowed with format specifier '${options.specifier}'.");
     }
-    result = '$prefix$result';
+
+    result = doAlt(result);
   }
 
   // Восстанавливаем знак
@@ -306,15 +313,13 @@ String _format(String template, List<dynamic> positionalArgs,
       ..specifier = match.group(10)
       ..template = match.group(11);
 
-    // var value = getValue(match.group(argIdGroup));
-    // var align = match.group(alignGroup);
-
-    // final width = getWidth(match.group(widthGroup), 'Width');
-    // final precision = getWidth(match.group(precisionGroup), 'Precision');
-
     String? result;
 
-    var value = options.value;
+    final value = options.value;
+
+    if (value is int && options.precision != null) {
+      throw ArgumentError('${options.all} Precision not allowed for int.');
+    }
 
     // Типы форматирования по умолчанию.
     if (options.specifier == null) {
@@ -327,42 +332,49 @@ String _format(String template, List<dynamic> positionalArgs,
       }
     }
 
-    String Function(String result)? post;
+    // String Function(String result)? post;
+    // if (options.specifier == 'n') {
+    //   if (value is int) {
+    //     options.specifier = 'd';
+    //   } else if (value is double) {
+    //     options.specifier = 'g';
+    //   } else {
+    //     throw ArgumentError(
+    //         '${options.all} Expected int or double. Passed ${value.runtimeType}.');
+    //   }
 
-    if (options.specifier == 'n') {
-      if (value is int) {
-        options.specifier = 'd';
-      } else if (value is double) {
-        options.specifier = 'g';
-      } else {
-        throw ArgumentError(
-            '${options.all} Expected int or double. Passed ${value.runtimeType}.');
-      }
+    //   post = (result) =>
+    //       result.replaceAllMapped(RegExp('nan|inf|[-+.,e%]'), (match) {
+    //         switch (match.group(0)) {
+    //           case '.':
+    //             return options.intlNumberFormat.symbols.DECIMAL_SEP;
+    //           case ',':
+    //             return options.intlNumberFormat.symbols.GROUP_SEP;
+    //           case 'e':
+    //             return options.intlNumberFormat.symbols.EXP_SYMBOL;
+    //           case '+':
+    //             return options.intlNumberFormat.symbols.PLUS_SIGN;
+    //           case '-':
+    //             return options.intlNumberFormat.symbols.MINUS_SIGN;
+    //           case 'nan':
+    //             return options.intlNumberFormat.symbols.NAN;
+    //           case 'inf':
+    //             return options.intlNumberFormat.symbols.INFINITY;
+    //           case '%':
+    //             return options.intlNumberFormat.symbols.PERCENT;
+    //           default:
+    //             return '';
+    //         }
+    //       });
 
-      post = (result) => result.replaceAllMapped(RegExp('[.,e+-]'), (match) {
-            switch (match.group(0)) {
-              case '.':
-                return options.intlNumberFormat.symbols.DECIMAL_SEP;
-              case ',':
-                return options.intlNumberFormat.symbols.GROUP_SEP;
-              case 'e':
-                return options.intlNumberFormat.symbols.EXP_SYMBOL;
-              case '+':
-                return options.intlNumberFormat.symbols.PLUS_SIGN;
-              case '-':
-                return options.intlNumberFormat.symbols.MINUS_SIGN;
-            }
-            return '';
-          });
-
-      // if (options.groupOption == ',') {
-      //   options.groupOption = options.intlNumberFormat.symbols.GROUP_SEP;
-      // }
-    }
+    //   // if (options.groupOption == ',') {
+    //   //   options.groupOption = options.intlNumberFormat.symbols.GROUP_SEP;
+    //   // }
+    // }
 
     final spec = options.specifier;
     if (spec == null) {
-      result = options.value.toString();
+      result = value.toString();
     } else {
       switch (spec) {
         // Символ
@@ -391,148 +403,77 @@ String _format(String template, List<dynamic> positionalArgs,
                   : value.substring(0, options.precision!);
           break;
 
-        // ? число
-        // case 'b':
-        // case 'o':
-        // case 'x':
-        // case 'X':
-        //   if (value is! int) {
-        //     throw ArgumentError(
-        //         '${options.spec} Expected int. Passed ${value.runtimeType}.');
-        //   }
-
-        //   if (options.precision != null) {
-        //     throw ArgumentError(
-        //         '${options.spec} Precision not allowed for int.');
-        //   }
-
-        //   // Знак сохраняем отдельно, работаем с положительным числом
-        //   if (value < 0) {
-        //     value = -value;
-        //     options.sign = '-';
-        //   } else if (options.sign == null || options.sign == '-') {
-        //     options.sign = '';
-        //   }
-
-        //   // Преобразуем в строку
-        //   switch (type) {
-        //     case 'b':
-        //       result = value.toRadixString(2);
-        //       break;
-
-        //     case 'o':
-        //       result = value.toRadixString(8);
-        //       break;
-
-        //     case 'x':
-        //       result = value.toRadixString(16);
-        //       break;
-
-        //     case 'X':
-        //       result = value.toRadixString(16).toUpperCase();
-        //       break;
-
-        //     default:
-        //       result = value.toString();
-        //       break;
-        //   }
-
-        //   // Дополняем нулями (align и fill в этом случае игнорируются)
-        //   if (options.zero && options.width != null) {
-        //     final w = result.length + options.sign!.length;
-        //     if (w < options.width!)
-        //       result = '0' * (options.width! - w) + result;
-        //   }
-
-        //   // Разделяем на группы:
-        //   // 0001234 -> 0,001,234
-        //   // 0x123ABCDEF -> 0x1_23AB_CDEF
-        //   final grpo = options.groupOption;
-        //   if (grpo != null) {
-        //     // if (type == 'n' && options.groupOption == ',') {
-        //     //   options.groupOption = intlNumberFormat.symbols.GROUP_SEP;
-        //     // }
-
-        //     var re1 = _firstGroup3Re;
-        //     var re2 = _secondGroup3Re;
-        //     if (type != 'd' && type != 'n') {
-        //       if (grpo == ',') {
-        //         throw ArgumentError(
-        //             "${options.spec} Option ',' not allowed here.");
-        //       }
-        //       re1 = _firstGroup4Re;
-        //       re2 = _secondGroup4Re;
-        //     }
-
-        //     result = result.replaceFirstMapped(
-        //         re1,
-        //         (m) =>
-        //             m[1]! + m[2]!.replaceAllMapped(re2, (m) => '$grpo${m[1]}'));
-
-        //     // Если добавляли нули, надо обрезать лишние
-        //     if (options.zero && options.width != null) {
-        //       final extra = result.substring(
-        //           0, result.length + options.sign!.length - options.width!);
-        //       result = extra.replaceAll(RegExp('^[0$grpo]*'), '') +
-        //           result.substring(
-        //               result.length + options.sign!.length - options.width!);
-        //       if (result[0] == grpo) result = '0$result';
-        //     }
-        //   }
-
-        //   if (options.alt) {
-        //     if (type == 'x' || type == 'X') result = '0x$result';
-        //   }
-
-        //   // Восстанавливаем знак
-        //   result = options.sign! + result;
-
-        //   options.align ??= '>'; // Числа по умолчанию прижимаются вправо
-        //   break;
-
         // Число
         case 'b':
-          result = _numFormat<int>(options, value,
+          result = _numberFormat<int>(options, value,
               toStr: (value, precision) => value.toRadixString(2),
               groupLength: 4);
           break;
 
         case 'o':
-          result = _numFormat<int>(options, value,
+          result = _numberFormat<int>(options, value,
               toStr: (value, precision) => value.toRadixString(8),
               groupLength: 4);
           break;
 
         case 'x':
-          result = _numFormat<int>(options, value,
+          result = _numberFormat<int>(options, value,
               toStr: (value, precision) => value.toRadixString(16),
               groupLength: 4,
-              prefix: '0x');
+              doAlt: (result) => '0x$result');
           break;
 
         case 'X':
-          result = _numFormat<int>(options, value,
+          result = _numberFormat<int>(options, value,
               toStr: (value, precision) =>
                   value.toRadixString(16).toUpperCase(),
               groupLength: 4,
-              prefix: '0x');
+              doAlt: (result) => '0x$result');
           break;
 
         case 'd':
-          result = _numFormat<int>(options, value,
+          result = _numberFormat<int>(options, value,
               toStr: (value, _) => value.toString());
-          if (post != null) {
-            result = post(result);
-          }
+          // if (post != null) {
+          //   result = post(result);
+          // }
           break;
 
         case 'f':
+        case 'F':
         case 'g':
-          result = _numFormat<double>(options, value,
+          result = _numberFormat<double>(options, value,
               toStr: (value, precision) =>
-                  value.toStringAsFixed(precision ?? 6));
-          if (post != null) {
-            result = post(result);
+                  value.toStringAsFixed(precision ?? 6),
+              doAlt: (result) => result.contains('.') ? result : '$result.');
+          // if (post != null) result = post(result);
+          if (spec == 'F') result = result.toUpperCase();
+          break;
+
+        case 'e':
+        case 'E':
+          result = _numberFormat<double>(options, value,
+              toStr: (value, precision) =>
+                  value.toStringAsExponential(precision ?? 6),
+              doAlt: (result) => result.contains('.')
+                  ? result
+                  : result.replaceFirst('e', '.e'));
+          // if (post != null) result = post(result);
+          if (spec == 'E') result = result.toUpperCase();
+          break;
+
+        case 'n':
+          if (value is num) {
+            final precision = options.precision ?? (value is int ? 0 : 6);
+            final fmt = NumberFormat.decimalPattern();
+            fmt.minimumFractionDigits = fmt.maximumFractionDigits = precision;
+
+            if (options.groupOption != ',') fmt.turnOffGrouping();
+
+            result = fmt.format(value);
+          } else {
+            throw ArgumentError(
+                '${options.all} Expected int or double. Passed ${value.runtimeType}.');
           }
           break;
 
