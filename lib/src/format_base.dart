@@ -28,7 +28,7 @@ final RegExp _quadruplesRe = RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
 final RegExp _tripleRe = RegExp(r'\d{3}');
 final RegExp _quadrupleRe = RegExp('[0-9a-fA-F]{4}');
 final RegExp _trailingZerosRe = RegExp(r'\.?0+(?=(e[-+]\d+)?$)');
-final RegExp _trailingZerosAltRe = RegExp(r'0+(?=(e[-+]\d+)?$)');
+final RegExp _placeForPointRe = RegExp(r'(?=(e[-+]\d+)?$)');
 
 /// Берёт значение в строке [str] внутри кавычек [left] и [right].
 ///
@@ -201,6 +201,7 @@ String _numberFormat<T extends num>(
   _Options options,
   dynamic dyn, {
   required String Function(T value, int? precision) toStr,
+  bool removeTrailingZeros = false,
   int groupLength = 3,
   String Function(String result)? doAlt,
 }) {
@@ -233,6 +234,10 @@ String _numberFormat<T extends num>(
     options.zero = false;
   } else {
     result = toStr(value as T, precision);
+  }
+
+  if (removeTrailingZeros && result.contains('.')) {
+    result = result.replaceFirst(_trailingZerosRe, '');
   }
 
   // Дополняем нулями (align и fill в этом случае игнорируются)
@@ -415,7 +420,7 @@ String _format(String template, List<dynamic> positionalArgs,
                   value.toStringAsExponential(precision ?? 6),
               doAlt: (result) => result.contains('.')
                   ? result
-                  : result.replaceFirst('e', '.e'));
+                  : result.replaceFirst(_placeForPointRe, '.'));
           if (spec == 'E') result = result.toUpperCase();
           break;
 
@@ -424,13 +429,10 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<double>(options, value,
               toStr: (value, precision) =>
                   value.toStringAsPrecision(precision ?? 6),
+              removeTrailingZeros: true,
               doAlt: (result) => result.contains('.')
                   ? result
-                  : result.contains('e')
-                      ? result.replaceFirst('e', '.e')
-                      : '$result.');
-          result = result.replaceFirst(
-              options.alt ? _trailingZerosAltRe : _trailingZerosRe, '');
+                  : result.replaceFirst(_placeForPointRe, '.'));
           if (spec == 'G') result = result.toUpperCase();
           break;
 
