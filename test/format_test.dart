@@ -3,12 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:test/test.dart';
 
 void main() {
-  // final alpha = RegExp(r'\p{Letter}', unicode: true);
-  // print(alpha.hasMatch("f")); // true
-  // print(alpha.hasMatch("ת")); // true
-  // print(alpha.hasMatch("®")); // false
-
-  group('Arguments:', () {
+  group('Common use:', () {
     //setUp(() );
     test('positional arguments', () {
       const positionalArgs = [1, 2, 3];
@@ -53,9 +48,11 @@ void main() {
               e.message == '{a} Key [a] is missing in named args.')));
     });
     test('width, align and fill', () {
+      expect('{:00}'.format([123]), '123'); // Flag zero and zero width
+
       const s = 'hello';
 
-      expect('{:1}'.format([s]), 'hello');
+      expect('{:0}'.format([s]), 'hello');
 
       expect('{:9}'.format([s]), 'hello    ');
       expect('{:<9}'.format([s]), 'hello    ');
@@ -84,23 +81,35 @@ void main() {
               e.message == '{:{}} Width must be >= 0. Passed -1.')));
 
       expect(
-          () => '{:.{}}'.format([0.0, -1]),
+          () => '{:.{}f}'.format([0.0, -1]),
           throwsA(predicate((e) =>
               e is ArgumentError &&
-              e.message == '{:.{}} Precision must be >= 0. Passed -1.')));
+              e.message == '{:.{}f} Precision must be >= 0. Passed -1.')));
+
+      expect(
+          () => '{:.0g}'.format([0.0, 0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:.0g} Precision must be >= 1. Passed 0.')));
+
+      expect(
+          () => '{:.0}'.format([0.0, 0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:.0} Precision must be >= 1. Passed 0.')));
     });
   });
 
   group('Format specifier', () {
     group('c:', () {
       test('basic use', () {
-        expect('{:c}'.format([65]), 'A');
         expect(
             () => '{:c}'.format(['a']),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
                     '{:c} Expected int or List<int>. Passed String.')));
+        expect('{:c}'.format([65]), 'A');
       });
 
       test('surrogate pairs', () {
@@ -141,12 +150,12 @@ void main() {
       const n = 0xAA;
 
       test('basic use', () {
-        expect('{:b}'.format([n]), '10101010');
         expect(
             () => '{:b}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:b} Expected int. Passed double.')));
+        expect('{:b}'.format([n]), '10101010');
       });
 
       test('sign', () {
@@ -194,12 +203,12 @@ void main() {
       const n = 2739128;
 
       test('basic use', () {
-        expect('{:o}'.format([n]), '12345670');
         expect(
             () => '{:o}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:o} Expected int. Passed double.')));
+        expect('{:o}'.format([n]), '12345670');
       });
 
       test('sign', () {
@@ -247,12 +256,12 @@ void main() {
       const n = 0x12ABCDEF;
 
       test('basic use', () {
-        expect('{:x}'.format([n]), '12abcdef');
         expect(
             () => '{:x}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:x} Expected int. Passed double.')));
+        expect('{:x}'.format([n]), '12abcdef');
       });
 
       test('sign', () {
@@ -298,12 +307,12 @@ void main() {
       const n = 0x12ABCDEF;
 
       test('basic use', () {
-        expect('{:X}'.format([n]), '12ABCDEF');
         expect(
             () => '{:X}'.format([123.0]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:X} Expected int. Passed double.')));
+        expect('{:X}'.format([n]), '12ABCDEF');
       });
 
       test('sign', () {
@@ -398,14 +407,14 @@ void main() {
       const n = 12345.6789;
 
       test('basic use', () {
-        expect('{:f}'.format([0.0]), '0.000000');
-        expect('{:f}'.format([-0.0]), '-0.000000');
-        expect('{:f}'.format([n]), '12345.678900');
         expect(
             () => '{:f}'.format([123]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:f} Expected double. Passed int.')));
+        expect('{:f}'.format([0.0]), '0.000000');
+        expect('{:f}'.format([-0.0]), '-0.000000');
+        expect('{:f}'.format([n]), '12345.678900');
       });
 
       test('sign', () {
@@ -452,8 +461,8 @@ void main() {
 
       test('nan and inf', () {
         // Zero flag is ignored.
-        final nan = double.nan;
-        final inf = double.infinity;
+        const nan = double.nan;
+        const inf = double.infinity;
         assert(-inf == double.negativeInfinity);
 
         expect('{:f}'.format([nan]), 'nan');
@@ -503,15 +512,15 @@ void main() {
       const n = 12345.6789;
 
       test('basic use', () {
-        expect('{:e}'.format([0.0]), '0.000000e+0');
-        expect('{:e}'.format([-0.0]), '-0.000000e+0');
-        expect('{:e}'.format([n]), '1.234568e+4');
-        expect('{:E}'.format([n]), '1.234568E+4');
         expect(
             () => '{:e}'.format([123]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:e} Expected double. Passed int.')));
+        expect('{:e}'.format([0.0]), '0.000000e+0');
+        expect('{:e}'.format([-0.0]), '-0.000000e+0');
+        expect('{:e}'.format([n]), '1.234568e+4');
+        expect('{:E}'.format([n]), '1.234568E+4');
       });
 
       test('sign', () {
@@ -563,8 +572,8 @@ void main() {
 
       test('nan and inf', () {
         // В отличие от Python и C++ флаг zero для NaN и Infinity игнорирую.
-        final nan = double.nan;
-        final inf = double.infinity;
+        const nan = double.nan;
+        const inf = double.infinity;
         assert(-inf == double.negativeInfinity);
 
         expect('{:e}'.format([nan]), 'nan');
@@ -608,6 +617,63 @@ void main() {
         expect('{:E}'.format([inf]), 'INF');
         expect('{:E}'.format([-inf]), '-INF');
       });
+    });
+
+    group('g:', () {
+      test('basic use', () {
+        expect(
+            () => '{:g}'.format([123]),
+            throwsA(predicate((e) =>
+                e is ArgumentError &&
+                e.message == '{:g} Expected double. Passed int.')));
+
+        expect('{:g}'.format([0.000001]), '0.000001');
+        expect('{:g}'.format([0.0000001]), '1e-7');
+        expect('{:G}'.format([0.0000001]), '1E-7');
+        expect('{:#g}'.format([0.0000001]), '1.e-7');
+        expect('{:#G}'.format([0.0000001]), '1.E-7');
+        expect('{:g}'.format([123456.0]), '123456');
+        expect('{:#g}'.format([123456.0]), '123456.');
+        expect('{:g}'.format([1234567.0]), '1.23457e+6');
+        expect('{:G}'.format([1234567.0]), '1.23457E+6');
+
+        expect('{:.15g}'.format([0.000001]), '0.000001');
+        expect('{:.15g}'.format([0.0000001]), '1e-7');
+        expect('{:#.15g}'.format([0.0000001]), '1.e-7');
+        expect('{:.15g}'.format([123456.0]), '123456');
+        expect('{:.15g}'.format([1234567.0]), '1234567');
+        expect('{:.15g}'.format([123456789012345.0]), '123456789012345');
+        expect('{:#.15g}'.format([123456789012345.0]), '123456789012345.');
+        expect('{:.15g}'.format([1234567890123456.0]), '1.23456789012346e+15');
+
+        expect('{:.1g}'.format([0.000001]), '0.000001');
+        expect('{:.1g}'.format([0.0000001]), '1e-7');
+        expect('{:#.1g}'.format([0.0000001]), '1.e-7');
+        expect('{:.1g}'.format([123456.0]), '1e+5');
+        expect('{:#.1g}'.format([123456.0]), '1.e+5');
+        expect('{:.1g}'.format([1234567.0]), '1e+6');
+        expect('{:#.1g}'.format([1234567.0]), '1.e+6');
+        expect('{:.1g}'.format([1.0]), '1');
+        expect('{:#.1g}'.format([1.0]), '1.');
+        expect('{:.1g}'.format([12.0]), '1e+1');
+        expect('{:#.1g}'.format([12.0]), '1.e+1');
+      });
+
+      // test('zero', () {
+      //   expect('{:015e}'.format([n]), '00001.234568e+4');
+      // });
+
+      // test('group', () {
+      //   expect('{:,e}'.format([n]), '1.234568e+4');
+      //   expect('{:_e}'.format([n]), '1.234568e+4');
+      //   expect('{:17,e}'.format([n]), '      1.234568e+4');
+      //   expect('{:17_e}'.format([n]), '      1.234568e+4');
+      //   expect('{:017,e}'.format([n]), '000,001.234568e+4');
+      //   expect('{:017_e}'.format([n]), '000_001.234568e+4');
+      //   expect('{:018,e}'.format([n]), '0,000,001.234568e+4');
+      //   expect('{:019,e}'.format([n]), '0,000,001.234568e+4');
+      //   expect('{:012,.0e}'.format([n]), '0,000,001e+4');
+      // });
     });
 
     group('n:', () {
@@ -714,6 +780,7 @@ void main() {
       expect('{:,f}'.format([1234567.89012]), '1,234,567.890120');
       expect('{:,f}'.format([123456.789012]), '123,456.789012');
     });
+
 
     //   It("ширина - положительные значения", function () {
     //     var n = 12345.6789;
