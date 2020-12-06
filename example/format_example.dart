@@ -1,7 +1,7 @@
 import 'package:format/format.dart';
 import 'package:intl/intl.dart';
 // ignore: import_of_legacy_library_into_null_safe
-import 'package:sprintf/sprintf.dart';
+// import 'package:sprintf/sprintf.dart';
 
 void main() {
   // print(format('{} {} {} {0} {} {}', [1, 2, 3]));

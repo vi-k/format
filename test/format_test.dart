@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:format/format.dart';
 import 'package:intl/intl.dart';
 import 'package:test/test.dart';
@@ -48,7 +49,8 @@ void main() {
               e.message == '{a} Key [a] is missing in named args.')));
     });
     test('width, align and fill', () {
-      expect('{:00}'.format([123]), '123'); // Flag zero and zero width
+      expect('{:0}'.format([123]), '123'); // Flag zero and zero width
+      expect('{:00}'.format([123]), '123');
 
       const s = 'hello';
 
@@ -146,6 +148,24 @@ void main() {
       });
     });
 
+    group('s:', () {
+      const s = 'abcdef';
+
+      test('basic use', () {
+        expect(
+            () => '{:s}'.format([123]),
+            throwsA(predicate((e) =>
+                e is ArgumentError &&
+                e.message == '{:s} Expected String. Passed int.')));
+        expect('{}'.format([s]), 'abcdef');
+        expect('{:s}'.format([s]), 'abcdef');
+      });
+
+      test('align', () {
+        expect('{:10s}'.format([s]), 'abcdef    ');
+      });
+    });
+
     group('b:', () {
       const n = 0xAA;
 
@@ -156,6 +176,7 @@ void main() {
                 e is ArgumentError &&
                 e.message == '{:b} Expected int. Passed double.')));
         expect('{:b}'.format([n]), '10101010');
+        expect('{:b}'.format([-n]), '-10101010');
       });
 
       test('sign', () {
@@ -169,10 +190,13 @@ void main() {
 
       test('align', () {
         expect('{:12b}'.format([n]), '    10101010');
+        expect('{:12b}'.format([-n]), '   -10101010');
       });
 
       test('zero', () {
+        expect('{:0b}'.format([n]), '10101010');
         expect('{:012b}'.format([n]), '000010101010');
+        expect('{:012b}'.format([-n]), '-00010101010');
       });
 
       test('group', () {
@@ -181,12 +205,19 @@ void main() {
         expect('{:014_b}'.format([n]), '0000_1010_1010');
         expect('{:015_b}'.format([n]), '0_0000_1010_1010');
         expect('{:016_b}'.format([n]), '0_0000_1010_1010');
+
+        expect('{:_b}'.format([-n]), '-1010_1010');
+        expect('{:14_b}'.format([-n]), '    -1010_1010');
+        expect('{:014_b}'.format([-n]), '-000_1010_1010');
+        expect('{:015_b}'.format([-n]), '-0000_1010_1010');
+        expect('{:016_b}'.format([-n]), '-0_0000_1010_1010');
+
         expect(
             () => '{:,b}'.format([n]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
-                    "{:,b} Option ',' not allowed with format specifier 'b'.")));
+                    "{:,b} Group option ',' not allowed with format specifier 'b'.")));
       });
 
       test('alt', () {
@@ -209,6 +240,7 @@ void main() {
                 e is ArgumentError &&
                 e.message == '{:o} Expected int. Passed double.')));
         expect('{:o}'.format([n]), '12345670');
+        expect('{:o}'.format([-n]), '-12345670');
       });
 
       test('sign', () {
@@ -222,10 +254,13 @@ void main() {
 
       test('align', () {
         expect('{:12o}'.format([n]), '    12345670');
+        expect('{:12o}'.format([-n]), '   -12345670');
       });
 
       test('zero', () {
+        expect('{:0o}'.format([n]), '12345670');
         expect('{:012o}'.format([n]), '000012345670');
+        expect('{:012o}'.format([-n]), '-00012345670');
       });
 
       test('group', () {
@@ -234,12 +269,19 @@ void main() {
         expect('{:014_o}'.format([n]), '0000_1234_5670');
         expect('{:015_o}'.format([n]), '0_0000_1234_5670');
         expect('{:016_o}'.format([n]), '0_0000_1234_5670');
+
+        expect('{:_o}'.format([-n]), '-1234_5670');
+        expect('{:14_o}'.format([-n]), '    -1234_5670');
+        expect('{:014_o}'.format([-n]), '-000_1234_5670');
+        expect('{:015_o}'.format([-n]), '-0000_1234_5670');
+        expect('{:016_o}'.format([-n]), '-0_0000_1234_5670');
+
         expect(
             () => '{:,o}'.format([n]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
-                    "{:,o} Option ',' not allowed with format specifier 'o'.")));
+                    "{:,o} Group option ',' not allowed with format specifier 'o'.")));
       });
 
       test('alt', () {
@@ -262,6 +304,7 @@ void main() {
                 e is ArgumentError &&
                 e.message == '{:x} Expected int. Passed double.')));
         expect('{:x}'.format([n]), '12abcdef');
+        expect('{:x}'.format([-n]), '-12abcdef');
       });
 
       test('sign', () {
@@ -275,10 +318,13 @@ void main() {
 
       test('align', () {
         expect('{:12x}'.format([n]), '    12abcdef');
+        expect('{:12x}'.format([-n]), '   -12abcdef');
       });
 
       test('zero', () {
+        expect('{:0x}'.format([n]), '12abcdef');
         expect('{:012x}'.format([n]), '000012abcdef');
+        expect('{:012x}'.format([-n]), '-00012abcdef');
       });
 
       test('group', () {
@@ -287,19 +333,37 @@ void main() {
         expect('{:014_x}'.format([n]), '0000_12ab_cdef');
         expect('{:015_x}'.format([n]), '0_0000_12ab_cdef');
         expect('{:016_x}'.format([n]), '0_0000_12ab_cdef');
+
+        expect('{:_x}'.format([-n]), '-12ab_cdef');
+        expect('{:14_x}'.format([-n]), '    -12ab_cdef');
+        expect('{:014_x}'.format([-n]), '-000_12ab_cdef');
+        expect('{:015_x}'.format([-n]), '-0000_12ab_cdef');
+        expect('{:016_x}'.format([-n]), '-0_0000_12ab_cdef');
+
         expect(
             () => '{:,x}'.format([n]),
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
-                    "{:,x} Option ',' not allowed with format specifier 'x'.")));
+                    "{:,x} Group option ',' not allowed with format specifier 'x'.")));
       });
 
       test('alt', () {
         expect('{:#x}'.format([n]), '0x12abcdef');
-        expect('{:#x}'.format([-n]), '-0x12abcdef');
+        expect('{:#14x}'.format([n]), '    0x12abcdef');
+        expect('{:#014x}'.format([n]), '0x000012abcdef');
         expect('{:#_x}'.format([n]), '0x12ab_cdef');
+        expect('{:#12_x}'.format([n]), ' 0x12ab_cdef');
+        expect('{:#012_x}'.format([n]), '0x0_12ab_cdef');
+        expect('{:#013_x}'.format([n]), '0x0_12ab_cdef');
+
+        expect('{:#x}'.format([-n]), '-0x12abcdef');
+        expect('{:#14x}'.format([-n]), '   -0x12abcdef');
+        expect('{:#014x}'.format([-n]), '-0x00012abcdef');
         expect('{:#_x}'.format([-n]), '-0x12ab_cdef');
+        expect('{:#13_x}'.format([-n]), ' -0x12ab_cdef');
+        expect('{:#013_x}'.format([-n]), '-0x0_12ab_cdef');
+        expect('{:#014_x}'.format([-n]), '-0x0_12ab_cdef');
       });
     });
 
@@ -312,6 +376,7 @@ void main() {
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:X} Expected int. Passed double.')));
+        expect('{:X}'.format([n]), '12ABCDEF');
         expect('{:X}'.format([n]), '12ABCDEF');
       });
 
@@ -329,6 +394,7 @@ void main() {
       });
 
       test('zero', () {
+        expect('{:0X}'.format([n]), '12ABCDEF');
         expect('{:012X}'.format([n]), '000012ABCDEF');
       });
 
@@ -343,7 +409,7 @@ void main() {
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message ==
-                    "{:,X} Option ',' not allowed with format specifier 'X'.")));
+                    "{:,X} Group option ',' not allowed with format specifier 'X'.")));
       });
 
       test('alt', () {
@@ -379,6 +445,7 @@ void main() {
       });
 
       test('zero', () {
+        expect('{:0d}'.format([n]), '123456789');
         expect('{:013d}'.format([n]), '0000123456789');
       });
 
@@ -431,6 +498,7 @@ void main() {
       });
 
       test('zero', () {
+        expect('{:0f}'.format([n]), '12345.678900');
         expect('{:016f}'.format([n]), '000012345.678900');
       });
 
@@ -537,6 +605,7 @@ void main() {
       });
 
       test('zero', () {
+        expect('{:0e}'.format([n]), '1.234568e+4');
         expect('{:015e}'.format([n]), '00001.234568e+4');
       });
 
@@ -663,7 +732,9 @@ void main() {
       });
 
       test('zero', () {
+        expect('{:0g}'.format([0.000001]), '0.000001');
         expect('{:014g}'.format([0.000001]), '0000000.000001');
+        expect('{:0g}'.format([0.0000001]), '1e-7');
         expect('{:014g}'.format([0.0000001]), '00000000001e-7');
       });
 
@@ -682,14 +753,6 @@ void main() {
         expect('{:019,.9g}'.format([1234567890.0]), '000,001.23456789e+9');
         expect('{:020,.9g}'.format([1234567890.0]), '0,000,001.23456789e+9');
         expect('{:021,.9g}'.format([1234567890.0]), '0,000,001.23456789e+9');
-
-        // expect('{:17,g}'.format([n]), '      1.234568e+4');
-        // expect('{:17_g}'.format([n]), '      1.234568e+4');
-        // expect('{:017,g}'.format([n]), '000,001.234568e+4');
-        // expect('{:017_g}'.format([n]), '000_001.234568e+4');
-        // expect('{:018,g}'.format([n]), '0,000,001.234568e+4');
-        // expect('{:019,g}'.format([n]), '0,000,001.234568e+4');
-        // expect('{:012,.0g}'.format([n]), '0,000,001e+4');
       });
     });
 
@@ -699,14 +762,53 @@ void main() {
       const nan = double.nan;
       const inf = double.infinity;
 
-      void localeTest(String locale, List<String> results) {
+      // void printA(String str) => print('$str ${str.length} ${str.characters.length}');
+      void printA(String str) => print('(${str.length}/${str.characters.length}) $str ');
+
+      {
+        const f = -123456789.89;
+        Intl.defaultLocale = 'ar_EG';
+        print(NumberFormat().symbols.DECIMAL_PATTERN);
+
+        print('14');
+        printA('{:14n}'.format([f]));
+        printA('{:14,n}'.format([f]));
+        printA('{:014n}'.format([f]));
+        printA('{:014,n}'.format([f]));
+
+        print('15');
+        printA('{:15n}'.format([f]));
+        printA('{:15,n}'.format([f]));
+        printA('{:015n}'.format([f]));
+        printA('{:015,n}'.format([f]));
+
+        print('16');
+        printA('{:16n}'.format([f]));
+        printA('{:16,n}'.format([f]));
+        printA('{:016n}'.format([f]));
+        printA('{:016,n}'.format([f]));
+
+        print('17');
+        printA('{:17n}'.format([f]));
+        printA('{:17,n}'.format([f]));
+        printA('{:017n}'.format([f]));
+        printA('{:017,n}'.format([f]));
+
+        print('18');
+        printA('{:18n}'.format([f]));
+        printA('{:18,n}'.format([f]));
+        printA('{:018n}'.format([f]));
+        printA('{:018,n}'.format([f]));
+      }
+
+      void testLocale(String locale, List<String> results) {
         test(locale, () {
           Intl.defaultLocale = locale;
           var i = 0;
           expect('{:n}'.format([d]), results[i++]);
           expect('{:n}'.format([f]), results[i++]);
           expect('{:.1n}'.format([f]), results[i++]);
-          // expect('{:14.1n}'.format([f]), results[i++]);
+          expect('{:014.1n}'.format([f]), results[i++]);
 
           expect('{:,n}'.format([d]), results[i++]);
           expect('{:,n}'.format([f]), results[i++]);
@@ -717,492 +819,70 @@ void main() {
         });
       }
 
-      localeTest('en_US', [
+      testLocale('en_US', [
         '123456789',
-        '1234567.890000',
+        '1234567.89',
         '1234567.9',
-        // '000001234567.9',
+        '000001234567.9',
         '123,456,789',
-        '1,234,567.890000',
+        '1,234,567.89',
         '1,234,567.9',
         'NaN',
         '∞',
         '-∞',
       ]);
 
-      localeTest('ru_RU', [
-        '123456789',
-        '1234567,890000',
-        '1234567,9',
-        '123\u00a0456\u00a0789',
-        '1\u00a0234\u00a0567,890000',
-        '1\u00a0234\u00a0567,9',
-        'не\u00a0число',
-        '∞',
-        '-∞',
-      ]);
+      // testLocale('ru_RU', [
+      //   '123456789',
+      //   '1234567,890000',
+      //   '1234567,9',
+      //   '123\u00a0456\u00a0789',
+      //   '1\u00a0234\u00a0567,890000',
+      //   '1\u00a0234\u00a0567,9',
+      //   'не\u00a0число',
+      //   '∞',
+      //   '-∞',
+      // ]);
 
-      localeTest('bn', [
-        '১২৩৪৫৬৭৮৯',
-        '১২৩৪৫৬৭.৮৯০০০০',
-        '১২৩৪৫৬৭.৯',
-        '১২,৩৪,৫৬,৭৮৯',
-        '১২,৩৪,৫৬৭.৮৯০০০০',
-        '১২,৩৪,৫৬৭.৯',
-        'NaN',
-        '∞',
-        '-∞',
-      ]);
+      // testLocale('bn', [
+      //   '১২৩৪৫৬৭৮৯',
+      //   '১২৩৪৫৬৭.৮৯০০০০',
+      //   '১২৩৪৫৬৭.৯',
+      //   '১২,৩৪,৫৬,৭৮৯',
+      //   '১২,৩৪,৫৬৭.৮৯০০০০',
+      //   '১২,৩৪,৫৬৭.৯',
+      //   'NaN',
+      //   '∞',
+      //   '-∞',
+      // ]);
 
-      localeTest('en_IN', [
-        '123456789',
-        '1234567.890000',
-        '1234567.9',
-        '12,34,56,789',
-        '12,34,567.890000',
-        '12,34,567.9',
-        'NaN',
-        '∞',
-        '-∞',
-      ]);
+      // testLocale('en_IN', [
+      //   '123456789',
+      //   '1234567.890000',
+      //   '1234567.9',
+      //   '12,34,56,789',
+      //   '12,34,567.890000',
+      //   '12,34,567.9',
+      //   'NaN',
+      //   '∞',
+      //   '-∞',
+      // ]);
 
-      localeTest('ar', [
-        '123456789',
-        '1234567.890000',
-        '1234567.9',
-        '123,456,789',
-        '1,234,567.890000',
-        '1,234,567.9',
-        'ليس\u00a0رقمًا',
-        '∞',
-        '\u200e-∞',
-      ]);
+      // testLocale('ar', [
+      //   '123456789',
+      //   '1234567.890000',
+      //   '1234567.9',
+      //   '123,456,789',
+      //   '1,234,567.890000',
+      //   '1,234,567.9',
+      //   'ليس\u00a0رقمًا',
+      //   '∞',
+      //   '\u200e-∞',
+      // ]);
     });
   });
 
-  group('без флагов', () {
-    test('s', () {
-      expect('{}'.format(['123']), '123');
-      expect('{:s}'.format(['123']), '123');
-      expect(
-          () => '{:s}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:s} Expected String. Passed int.')));
-    });
-
-    test('разделение на группы - ,', () {
-      expect('{:,f}'.format([123456789.012]), '123,456,789.012000');
-      expect('{:,f}'.format([12345678.9012]), '12,345,678.901200');
-      expect('{:,f}'.format([1234567.89012]), '1,234,567.890120');
-      expect('{:,f}'.format([123456.789012]), '123,456.789012');
-    });
-
-
-    //   It("ширина - положительные значения", function () {
-    //     var n = 12345.6789;
-    //     Assert.StrictEqual("{:00}" .format(n), ""); // Первый нуль - для заполнения нулями слева, второй - размер результирующей строки
-    //     Assert.StrictEqual("{:00f}".format(n), "");
-    //     Assert.StrictEqual("{:00n}".format(n), "");
-    //     Assert.StrictEqual("{:00m}".format(n), "");
-
-    //     Assert.StrictEqual("{:4}" .format(n), "****");
-    //     Assert.StrictEqual("{:4f}".format(n), "****");
-    //     Assert.StrictEqual("{:4n}".format(n), "****");
-    //     Assert.StrictEqual("{:4m}".format(n), "****");
-
-    //     Assert.StrictEqual("{:5}"   .format(n), "*****"); // Дробная часть не отбрасывается, поэтому число не вмещается
-    //     Assert.StrictEqual("{:5f}"  .format(n), "*****");
-    //     Assert.StrictEqual("{:5.0f}".format(n), "12346"); // Дробная часть отброшена, число вмещается
-    //     Assert.StrictEqual("{:5n}"  .format(n), "12346");
-    //     Assert.StrictEqual("{:5m}"  .format(n), "12345");
-    //     Assert.StrictEqual("{:-5}"  .format(n), "*****");
-    //     Assert.StrictEqual("{:-5f}" .format(n), "*****");
-    //     Assert.StrictEqual("{:-5n}" .format(n), "12346");
-    //     Assert.StrictEqual("{:-5m}" .format(n), "12345");
-    //     Assert.StrictEqual("{: 5}"  .format(n), "*****");
-    //     Assert.StrictEqual("{: 5f}" .format(n), "*****");
-    //     Assert.StrictEqual("{: 5n}" .format(n), "*****");
-    //     Assert.StrictEqual("{: 5m}" .format(n), "*****");
-    //     Assert.StrictEqual("{:+5}"  .format(n), "*****");
-    //     Assert.StrictEqual("{:+5f}" .format(n), "*****");
-    //     Assert.StrictEqual("{:+5n}" .format(n), "*****");
-    //     Assert.StrictEqual("{:+5m}" .format(n), "*****");
-
-    //     Assert.StrictEqual("{:6}"    .format(n), "******");
-    //     Assert.StrictEqual("{:6f}"   .format(n), "******");
-    //     Assert.StrictEqual("{:6.0f}" .format(n), " 12346");
-    //     Assert.StrictEqual("{:6n}"   .format(n), " 12346");
-    //     Assert.StrictEqual("{:6m}"   .format(n), " 12345");
-    //     Assert.StrictEqual("{:-6}"   .format(n), "******");
-    //     Assert.StrictEqual("{:-6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{:-6.0f}".format(n), " 12346");
-    //     Assert.StrictEqual("{:-6n}"  .format(n), " 12346");
-    //     Assert.StrictEqual("{:-6m}"  .format(n), " 12345");
-    //     Assert.StrictEqual("{: 6}"   .format(n), "******");
-    //     Assert.StrictEqual("{: 6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{: 6.0f}".format(n), " 12346");
-    //     Assert.StrictEqual("{: 6n}"  .format(n), " 12346");
-    //     Assert.StrictEqual("{: 6m}"  .format(n), " 12345");
-    //     Assert.StrictEqual("{:+6}"   .format(n), "******");
-    //     Assert.StrictEqual("{:+6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{:+6.0f}".format(n), "+12346");
-    //     Assert.StrictEqual("{:+6n}"  .format(n), "+12346");
-    //     Assert.StrictEqual("{:+6m}"  .format(n), "+12345");
-    //   });
-
-    //   It("ширина - отрицательные значения", function () {
-    //     var n = -12345.6789;
-    //     Assert.StrictEqual("{:00}" .format(n), ""); // Первый нуль - для заполнения нулями слева, второй - размер результирующей строки
-    //     Assert.StrictEqual("{:00f}".format(n), "");
-    //     Assert.StrictEqual("{:00n}".format(n), "");
-    //     Assert.StrictEqual("{:00m}".format(n), "");
-
-    //     Assert.StrictEqual("{:5}" .format(n), "*****");
-    //     Assert.StrictEqual("{:5f}".format(n), "*****");
-    //     Assert.StrictEqual("{:5n}".format(n), "*****");
-    //     Assert.StrictEqual("{:5m}".format(n), "*****");
-
-    //     Assert.StrictEqual("{:6}"    .format(n), "******");
-    //     Assert.StrictEqual("{:6f}"   .format(n), "******");
-    //     Assert.StrictEqual("{:6.0f}" .format(n), "-12346");
-    //     Assert.StrictEqual("{:6n}"   .format(n), "-12346");
-    //     Assert.StrictEqual("{:6m}"   .format(n), "-12345");
-    //     Assert.StrictEqual("{:-6}"   .format(n), "******");
-    //     Assert.StrictEqual("{:-6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{:-6.0f}".format(n), "-12346");
-    //     Assert.StrictEqual("{:-6n}"  .format(n), "-12346");
-    //     Assert.StrictEqual("{:-6m}"  .format(n), "-12345");
-    //     Assert.StrictEqual("{: 6}"   .format(n), "******");
-    //     Assert.StrictEqual("{: 6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{: 6.0f}".format(n), "-12346");
-    //     Assert.StrictEqual("{: 6n}"  .format(n), "-12346");
-    //     Assert.StrictEqual("{: 6m}"  .format(n), "-12345");
-    //     Assert.StrictEqual("{:+6}"   .format(n), "******");
-    //     Assert.StrictEqual("{:+6f}"  .format(n), "******");
-    //     Assert.StrictEqual("{:+6.0f}".format(n), "-12346");
-    //     Assert.StrictEqual("{:+6n}"  .format(n), "-12346");
-    //     Assert.StrictEqual("{:+6m}"  .format(n), "-12345");
-
-    //     Assert.StrictEqual("{:7}"    .format(n), "*******");
-    //     Assert.StrictEqual("{:7f}"   .format(n), "*******");
-    //     Assert.StrictEqual("{:7.0f}" .format(n), " -12346");
-    //     Assert.StrictEqual("{:7n}"   .format(n), " -12346");
-    //     Assert.StrictEqual("{:7m}"   .format(n), " -12345");
-    //     Assert.StrictEqual("{:-7}"   .format(n), "*******");
-    //     Assert.StrictEqual("{:-7f}"  .format(n), "*******");
-    //     Assert.StrictEqual("{:-7.0f}".format(n), " -12346");
-    //     Assert.StrictEqual("{:-7n}"  .format(n), " -12346");
-    //     Assert.StrictEqual("{:-7m}"  .format(n), " -12345");
-    //     Assert.StrictEqual("{: 7}"   .format(n), "*******");
-    //     Assert.StrictEqual("{: 7f}"  .format(n), "*******");
-    //     Assert.StrictEqual("{: 7.0f}".format(n), " -12346");
-    //     Assert.StrictEqual("{: 7n}"  .format(n), " -12346");
-    //     Assert.StrictEqual("{: 7m}"  .format(n), " -12345");
-    //     Assert.StrictEqual("{:+7}"   .format(n), "*******");
-    //     Assert.StrictEqual("{:+7f}"  .format(n), "*******");
-    //     Assert.StrictEqual("{:+7.0f}".format(n), " -12346");
-    //     Assert.StrictEqual("{:+7n}"  .format(n), " -12346");
-    //     Assert.StrictEqual("{:+7m}"  .format(n), " -12345");
-    //   });
-
-    //   It("заполнение нулями - положительные значения", function () {
-    //     var n = 12345.6789;
-    //     Assert.StrictEqual("{:0}" .format(n), "12345.6789"); // Если ширина не указана, нулями заполнять нечего
-    //     Assert.StrictEqual("{:0f}".format(n), "12345.6789");
-    //     Assert.StrictEqual("{:0n}".format(n), "12346");
-    //     Assert.StrictEqual("{:0m}".format(n), "12345");
-
-    //     Assert.StrictEqual("{:010}" .format(n), "12345.6789");
-    //     Assert.StrictEqual("{:010f}".format(n), "12345.6789");
-    //     Assert.StrictEqual("{:05n}" .format(n), "12346");
-    //     Assert.StrictEqual("{:05m}" .format(n), "12345");
-
-    //     Assert.StrictEqual("{:011}" .format(n), "012345.6789");
-    //     Assert.StrictEqual("{:011f}".format(n), "012345.6789");
-    //     Assert.StrictEqual("{:06n}" .format(n), "012346");
-    //     Assert.StrictEqual("{:06m}" .format(n), "012345");
-
-    //     Assert.StrictEqual("{:014}" .format(n), "000012345.6789");
-    //     Assert.StrictEqual("{:014f}".format(n), "000012345.6789");
-    //     Assert.StrictEqual("{:09n}" .format(n), "000012346");
-    //     Assert.StrictEqual("{:09m}" .format(n), "000012345");
-    //   });
-
-    //   It("заполнение нулями - отрицательные значения", function () {
-    //     var n = -12345.6789;
-    //     Assert.StrictEqual("{:0}" .format(n), "-12345.6789"); // Если ширина не указана, нулями заполнять нечего
-    //     Assert.StrictEqual("{:0f}".format(n), "-12345.6789");
-    //     Assert.StrictEqual("{:0n}".format(n), "-12346");
-    //     Assert.StrictEqual("{:0m}".format(n), "-12345");
-
-    //     Assert.StrictEqual("{:011}" .format(n), "-12345.6789");
-    //     Assert.StrictEqual("{:011f}".format(n), "-12345.6789");
-    //     Assert.StrictEqual("{:06n}" .format(n), "-12346");
-    //     Assert.StrictEqual("{:06m}" .format(n), "-12345");
-
-    //     Assert.StrictEqual("{:012}" .format(n), "-012345.6789");
-    //     Assert.StrictEqual("{:012f}".format(n), "-012345.6789");
-    //     Assert.StrictEqual("{:07n}" .format(n), "-012346");
-    //     Assert.StrictEqual("{:07m}" .format(n), "-012345");
-
-    //     Assert.StrictEqual("{:015}" .format(n), "-000012345.6789");
-    //     Assert.StrictEqual("{:015f}".format(n), "-000012345.6789");
-    //     Assert.StrictEqual("{:010n}".format(n), "-000012346");
-    //     Assert.StrictEqual("{:010m}".format(n), "-000012345");
-    //   });
-
-    //   It("разделение на тройки - положительные значения", function () {
-    //     var n = 12345.6789;
-    //     Assert.StrictEqual("{:#}" .format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#f}".format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#n}".format(n), "12'346");
-    //     Assert.StrictEqual("{:#m}".format(n), "12'345");
-
-    //     Assert.StrictEqual("{:#10}" .format(n), "**********");
-    //     Assert.StrictEqual("{:#10f}".format(n), "**********");
-    //     Assert.StrictEqual("{:#5n}" .format(n), "*****");
-    //     Assert.StrictEqual("{:#5m}" .format(n), "*****");
-
-    //     Assert.StrictEqual("{:#11}" .format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#11f}".format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#6n}" .format(n), "12'346");
-    //     Assert.StrictEqual("{:#6m}" .format(n), "12'345");
-
-    //     Assert.StrictEqual("{:#.4}" .format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#.4n}".format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#.4m}".format(n), "12'345.6789");
-
-    //     Assert.StrictEqual("{:#11.4}" .format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#11.4f}".format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#11.4n}".format(n), "12'345.6789");
-    //     Assert.StrictEqual("{:#11.4m}".format(n), "12'345.6789");
-
-    //     Assert.StrictEqual("{:#012.4}" .format(n), "012'345.6789");
-    //     Assert.StrictEqual("{:#012.4f}".format(n), "012'345.6789");
-    //     Assert.StrictEqual("{:#012.4n}".format(n), "012'345.6789");
-    //     Assert.StrictEqual("{:#012.4m}".format(n), "012'345.6789");
-
-    //     Assert.StrictEqual("{:#013.4}" .format(n), " 012'345.6789");
-    //     Assert.StrictEqual("{:#013.4f}".format(n), " 012'345.6789");
-    //     Assert.StrictEqual("{:#013.4n}".format(n), " 012'345.6789");
-    //     Assert.StrictEqual("{:#013.4m}".format(n), " 012'345.6789");
-
-    //     Assert.StrictEqual("{:#014.4}" .format(n), "0'012'345.6789");
-    //     Assert.StrictEqual("{:#014.4f}".format(n), "0'012'345.6789");
-    //     Assert.StrictEqual("{:#014.4n}".format(n), "0'012'345.6789");
-    //     Assert.StrictEqual("{:#014.4m}".format(n), "0'012'345.6789");
-    //   });
-
-    //   It("разделение на тройки - отрицательные значения", function () {
-    //     var n = -12345.6789;
-    //     Assert.StrictEqual("{:#}" .format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#f}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#n}".format(n), "-12'346");
-    //     Assert.StrictEqual("{:#m}".format(n), "-12'345");
-
-    //     Assert.StrictEqual("{:#11}" .format(n), "***********");
-    //     Assert.StrictEqual("{:#11f}".format(n), "***********");
-    //     Assert.StrictEqual("{:#6n}" .format(n), "******");
-    //     Assert.StrictEqual("{:#6m}" .format(n), "******");
-
-    //     Assert.StrictEqual("{:#12}" .format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#12f}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#7n}" .format(n), "-12'346");
-    //     Assert.StrictEqual("{:#7m}" .format(n), "-12'345");
-
-    //     Assert.StrictEqual("{:#.4}" .format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#.4f}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#.4n}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#.4m}".format(n), "-12'345.6789");
-
-    //     Assert.StrictEqual("{:#12.4}" .format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#12.4f}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#12.4n}".format(n), "-12'345.6789");
-    //     Assert.StrictEqual("{:#12.4m}".format(n), "-12'345.6789");
-
-    //     Assert.StrictEqual("{:#013.4}" .format(n), "-012'345.6789");
-    //     Assert.StrictEqual("{:#013.4f}".format(n), "-012'345.6789");
-    //     Assert.StrictEqual("{:#013.4n}".format(n), "-012'345.6789");
-    //     Assert.StrictEqual("{:#013.4m}".format(n), "-012'345.6789");
-
-    //     Assert.StrictEqual("{:#014.4}" .format(n), " -012'345.6789");
-    //     Assert.StrictEqual("{:#014.4f}".format(n), " -012'345.6789");
-    //     Assert.StrictEqual("{:#014.4n}".format(n), " -012'345.6789");
-    //     Assert.StrictEqual("{:#014.4m}".format(n), " -012'345.6789");
-
-    //     Assert.StrictEqual("{:#015.4}" .format(n), "-0'012'345.6789");
-    //     Assert.StrictEqual("{:#015.4f}".format(n), "-0'012'345.6789");
-    //     Assert.StrictEqual("{:#015.4n}".format(n), "-0'012'345.6789");
-    //     Assert.StrictEqual("{:#015.4m}".format(n), "-0'012'345.6789");
-    //   });
-
-    //   It("выравнивание и заполнение", function () {
-    //     var n = 5;
-    //     Assert.StrictEqual("{:6}"    .format(n), "     5"); // По умолчанию числа выравниваются по правой границе
-    //     Assert.StrictEqual("{:6f}"   .format(n), "     5");
-    //     Assert.StrictEqual("{:6n}"   .format(n), "     5");
-    //     Assert.StrictEqual("{:6m}"   .format(n), "     5");
-
-    //     Assert.StrictEqual("{:>6}"   .format(n), "     5");
-    //     Assert.StrictEqual("{:>6f}"  .format(n), "     5");
-    //     Assert.StrictEqual("{:>6n}"  .format(n), "     5");
-    //     Assert.StrictEqual("{:>6m}"  .format(n), "     5");
-    //     Assert.StrictEqual("{:.>6}"  .format(n), ".....5");
-    //     Assert.StrictEqual("{:.>6f}" .format(n), ".....5");
-    //     Assert.StrictEqual("{:.>6n}" .format(n), ".....5");
-    //     Assert.StrictEqual("{:.>6m}" .format(n), ".....5");
-    //     Assert.StrictEqual("{:.> 6}" .format(n), ".... 5");
-    //     Assert.StrictEqual("{:.> 6f}".format(n), ".... 5");
-    //     Assert.StrictEqual("{:.> 6n}".format(n), ".... 5");
-    //     Assert.StrictEqual("{:.> 6m}".format(n), ".... 5");
-    //     Assert.StrictEqual("{:.>+6}" .format(n), "....+5");
-    //     Assert.StrictEqual("{:.>+6f}".format(n), "....+5");
-    //     Assert.StrictEqual("{:.>+6n}".format(n), "....+5");
-    //     Assert.StrictEqual("{:.>+6m}".format(n), "....+5");
-
-    //     Assert.StrictEqual("{:<6}"   .format(n), "5     ");
-    //     Assert.StrictEqual("{:<6f}"  .format(n), "5     ");
-    //     Assert.StrictEqual("{:<6n}"  .format(n), "5     ");
-    //     Assert.StrictEqual("{:<6m}"  .format(n), "5     ");
-    //     Assert.StrictEqual("{:.<6}"  .format(n), "5.....");
-    //     Assert.StrictEqual("{:.<6f}" .format(n), "5.....");
-    //     Assert.StrictEqual("{:.<6n}" .format(n), "5.....");
-    //     Assert.StrictEqual("{:.<6m}" .format(n), "5.....");
-    //     Assert.StrictEqual("{:.< 6}" .format(n), " 5....");
-    //     Assert.StrictEqual("{:.< 6f}".format(n), " 5....");
-    //     Assert.StrictEqual("{:.< 6n}".format(n), " 5....");
-    //     Assert.StrictEqual("{:.< 6m}".format(n), " 5....");
-    //     Assert.StrictEqual("{:.<+6}" .format(n), "+5....");
-    //     Assert.StrictEqual("{:.<+6f}".format(n), "+5....");
-    //     Assert.StrictEqual("{:.<+6n}".format(n), "+5....");
-    //     Assert.StrictEqual("{:.<+6m}".format(n), "+5....");
-
-    //     Assert.StrictEqual("{:^6}"   .format(n), "  5   ");
-    //     Assert.StrictEqual("{:^6f}"  .format(n), "  5   ");
-    //     Assert.StrictEqual("{:^6n}"  .format(n), "  5   ");
-    //     Assert.StrictEqual("{:^6m}"  .format(n), "  5   ");
-    //     Assert.StrictEqual("{:.^6}"  .format(n), "..5...");
-    //     Assert.StrictEqual("{:.^6f}" .format(n), "..5...");
-    //     Assert.StrictEqual("{:.^6n}" .format(n), "..5...");
-    //     Assert.StrictEqual("{:.^6m}" .format(n), "..5...");
-    //     Assert.StrictEqual("{:.^ 6}" .format(n), ".. 5..");
-    //     Assert.StrictEqual("{:.^ 6f}".format(n), ".. 5..");
-    //     Assert.StrictEqual("{:.^ 6n}".format(n), ".. 5..");
-    //     Assert.StrictEqual("{:.^ 6m}".format(n), ".. 5..");
-    //     Assert.StrictEqual("{:.^+6}" .format(n), "..+5..");
-    //     Assert.StrictEqual("{:.^+6f}".format(n), "..+5..");
-    //     Assert.StrictEqual("{:.^+6n}".format(n), "..+5..");
-    //     Assert.StrictEqual("{:.^+6m}".format(n), "..+5..");
-    //   });
-
-    //   It("f - отбрасывание нулей", function () {
-    //     Assert.StrictEqual("{:f}".format(12345.6789), "12345.6789");
-    //     Assert.StrictEqual("{:f}".format(12345.0009), "12345.0009");
-    //     Assert.StrictEqual("{:f}".format(12345.6780), "12345.678");
-    //     Assert.StrictEqual("{:f}".format(12345.0080), "12345.008");
-    //     Assert.StrictEqual("{:f}".format(12345.6700), "12345.67");
-    //     Assert.StrictEqual("{:f}".format(12345.0700), "12345.07");
-    //     Assert.StrictEqual("{:f}".format(12345.6000), "12345.6");
-    //     Assert.StrictEqual("{:f}".format(12345.0000), "12345");
-    //     Assert.StrictEqual("{:f}".format(12340.0000), "12340");
-    //     Assert.StrictEqual("{:f}".format(12300.0000), "12300");
-    //     Assert.StrictEqual("{:f}".format(12000.0000), "12000");
-    //     Assert.StrictEqual("{:f}".format(10000.0000), "10000");
-    //   });
-  });
-
-  // Describe("Шестнадцатиричные числа (x,X)", function () {
-  //   It("положительные значения", function () {
-  //     var n = 0xabcde;
-  //     Assert.StrictEqual("{:x}"    .format(n), "abcde");
-  //     Assert.StrictEqual("{:X}"    .format(n), "ABCDE");
-  //     Assert.StrictEqual("{:#x}"   .format(n), "0xabcde");
-  //     Assert.StrictEqual("{:#X}"   .format(n), "0xABCDE");
-
-  //     Assert.StrictEqual("{:x}"    .format(new Number(n)), "abcde");
-  //     Assert.StrictEqual("{:X}"    .format(new Number(n)), "ABCDE");
-
-  //     Assert.StrictEqual("{:-x}"   .format(n), "abcde");
-  //     Assert.StrictEqual("{:-X}"   .format(n), "ABCDE");
-  //     Assert.StrictEqual("{:-#x}"  .format(n), "0xabcde");
-  //     Assert.StrictEqual("{:-#X}"  .format(n), "0xABCDE");
-
-  //     Assert.StrictEqual("{: x}"   .format(n), " abcde");
-  //     Assert.StrictEqual("{: X}"   .format(n), " ABCDE");
-  //     Assert.StrictEqual("{: #x}"  .format(n), " 0xabcde");
-  //     Assert.StrictEqual("{: #X}"  .format(n), " 0xABCDE");
-
-  //     Assert.StrictEqual("{:+x}"   .format(n), "+abcde");
-  //     Assert.StrictEqual("{:+X}"   .format(n), "+ABCDE");
-  //     Assert.StrictEqual("{:+#x}"  .format(n), "+0xabcde");
-  //     Assert.StrictEqual("{:+#X}"  .format(n), "+0xABCDE");
-
-  //     Assert.StrictEqual("{:4x}"   .format(n), "****");
-  //     Assert.StrictEqual("{:4X}"   .format(n), "****");
-  //     Assert.StrictEqual("{:#6x}"  .format(n), "******");
-  //     Assert.StrictEqual("{:#6X}"  .format(n), "******");
-
-  //     Assert.StrictEqual("{:5x}"   .format(n), "abcde");
-  //     Assert.StrictEqual("{:5X}"   .format(n), "ABCDE");
-  //     Assert.StrictEqual("{:#7x}"  .format(n), "0xabcde");
-  //     Assert.StrictEqual("{:#7X}"  .format(n), "0xABCDE");
-
-  //     Assert.StrictEqual("{:8x}"   .format(n), "   abcde");
-  //     Assert.StrictEqual("{:8X}"   .format(n), "   ABCDE");
-  //     Assert.StrictEqual("{:#10x}" .format(n), "   0xabcde");
-  //     Assert.StrictEqual("{:#10X}" .format(n), "   0xABCDE");
-
-  //     Assert.StrictEqual("{:08x}"  .format(n), "000abcde");
-  //     Assert.StrictEqual("{:08X}"  .format(n), "000ABCDE");
-  //     Assert.StrictEqual("{:#010x}".format(n), "0x000abcde");
-  //     Assert.StrictEqual("{:#010X}".format(n), "0x000ABCDE");
-  //   });
-
-  //   It("отрицательные значения", function () {
-  //     var n = -0xabcde;
-  //     Assert.StrictEqual("{:x}"    .format(n), "-abcde");
-  //     Assert.StrictEqual("{:X}"    .format(n), "-ABCDE");
-  //     Assert.StrictEqual("{:#x}"   .format(n), "-0xabcde");
-  //     Assert.StrictEqual("{:#X}"   .format(n), "-0xABCDE");
-
-  //     Assert.StrictEqual("{:-x}"   .format(n), "-abcde");
-  //     Assert.StrictEqual("{:-X}"   .format(n), "-ABCDE");
-  //     Assert.StrictEqual("{:-#x}"  .format(n), "-0xabcde");
-  //     Assert.StrictEqual("{:-#X}"  .format(n), "-0xABCDE");
-
-  //     Assert.StrictEqual("{: x}"   .format(n), "-abcde");
-  //     Assert.StrictEqual("{: X}"   .format(n), "-ABCDE");
-  //     Assert.StrictEqual("{: #x}"  .format(n), "-0xabcde");
-  //     Assert.StrictEqual("{: #X}"  .format(n), "-0xABCDE");
-
-  //     Assert.StrictEqual("{:+x}"   .format(n), "-abcde");
-  //     Assert.StrictEqual("{:+X}"   .format(n), "-ABCDE");
-  //     Assert.StrictEqual("{:+#x}"  .format(n), "-0xabcde");
-  //     Assert.StrictEqual("{:+#X}"  .format(n), "-0xABCDE");
-
-  //     Assert.StrictEqual("{:5x}"   .format(n), "*****");
-  //     Assert.StrictEqual("{:5X}"   .format(n), "*****");
-  //     Assert.StrictEqual("{:#7x}"  .format(n), "*******");
-  //     Assert.StrictEqual("{:#7X}"  .format(n), "*******");
-
-  //     Assert.StrictEqual("{:6x}"   .format(n), "-abcde");
-  //     Assert.StrictEqual("{:6X}"   .format(n), "-ABCDE");
-  //     Assert.StrictEqual("{:#8x}"  .format(n), "-0xabcde");
-  //     Assert.StrictEqual("{:#8X}"  .format(n), "-0xABCDE");
-
-  //     Assert.StrictEqual("{:9x}"   .format(n), "   -abcde");
-  //     Assert.StrictEqual("{:9X}"   .format(n), "   -ABCDE");
-  //     Assert.StrictEqual("{:#11x}" .format(n), "   -0xabcde");
-  //     Assert.StrictEqual("{:#11X}" .format(n), "   -0xABCDE");
-
-  //     Assert.StrictEqual("{:09x}"  .format(n), "-000abcde");
-  //     Assert.StrictEqual("{:09X}"  .format(n), "-000ABCDE");
-  //     Assert.StrictEqual("{:#011x}".format(n), "-0x000abcde");
-  //     Assert.StrictEqual("{:#011X}".format(n), "-0x000ABCDE");
-  //   });
-  // });
-
+  // group('без флагов', () {
   // Describe("Символы (c)", function () {
   //   It("в виде числа", function () {
   //     Assert.StrictEqual("{:c}".format(33), "!");

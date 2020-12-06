@@ -200,23 +200,34 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
 String _numberFormat<T extends num>(
   _Options options,
   dynamic dyn, {
+  bool altAllowed = true,
+  bool standartGroupOptionAllowed = true,
   required String Function(T value, int? precision) toStr,
   bool removeTrailingZeros = false,
+  bool needPoint = false,
   int groupLength = 3,
-  String Function(String result)? doAlt,
+  String prefix = '',
 }) {
-  String result;
-
+  // Проверки.
   if (dyn is! T) {
     throw ArgumentError(
         '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
   }
+  if (options.alt && !altAllowed) {
+    throw ArgumentError(
+        "${options.all} Alternate form (#) not allowed with format specifier '${options.specifier}'.");
+  }
+  if (options.groupOption == ',' && !standartGroupOptionAllowed) {
+    throw ArgumentError(
+        "${options.all} Group option ',' not allowed with format specifier '${options.specifier}'.");
+  }
 
+  String result;
   num value = dyn;
 
   final precision = options.precision;
 
-  // Знак сохраняем отдельно, работаем с положительным числом
+  // Знак сохраняем отдельно, работаем с положительным числом.
   var sign = options.sign;
   if (value.isNegative) {
     value = -value;
@@ -225,7 +236,7 @@ String _numberFormat<T extends num>(
     sign = '';
   }
 
-  // Преобразуем в строку
+  // Преобразуем в строку.
   if (value.isNaN) {
     result = 'nan';
     options.zero = false;
@@ -236,27 +247,25 @@ String _numberFormat<T extends num>(
     result = toStr(value as T, precision);
   }
 
+  // Удаляем лишние нули.
   if (removeTrailingZeros && result.contains('.')) {
     result = result.replaceFirst(_trailingZerosRe, '');
   }
 
-  // Дополняем нулями (align и fill в этом случае игнорируются)
-  final width = options.width;
-  if (options.zero && width != null) {
-    final w = result.length + sign.length;
-    if (w < width) result = '0' * (width - w) + result;
+  // Ставим обязательную точку.
+  if (needPoint && !result.contains('.')) {
+    result = result.replaceFirst(_placeForPointRe, '.');
   }
 
-  // Разделяем на группы:
-  // 0001234 -> 0,001,234
-  // 0x123ABCDEF -> 0x1_23AB_CDEF
+  // Дополняем нулями (align и fill в этом случае игнорируются).
+  final minWidth = (options.width ?? 0) - sign.length - prefix.length;
+  if (options.zero && result.length < minWidth) {
+    result = '0' * (minWidth - result.length) + result;
+  }
+
+  // Разделяем на группы.
   final grpo = options.groupOption;
   if (grpo != null) {
-    if (grpo == ',' && groupLength == 4) {
-      throw ArgumentError(
-          "${options.all} Option ',' not allowed with format specifier '${options.specifier}'.");
-    }
-
     final searchRe = groupLength == 3 ? _triplesRe : _quadruplesRe;
     final changeRe = groupLength == 3 ? _tripleRe : _quadrupleRe;
     var pointIndex = result.indexOf('.');
@@ -270,26 +279,138 @@ String _numberFormat<T extends num>(
                 m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[0]}')) +
         result.substring(pointIndex);
 
-    // Если добавляли нули, надо обрезать лишние
-    if (options.zero && width != null) {
-      final extra = result.substring(0, result.length + sign.length - width);
-      result = extra.replaceAll(RegExp('^[0$grpo]*'), '') +
-          result.substring(result.length + sign.length - width);
+    // Если добавляли нули, надо обрезать лишние.
+    if (options.zero) {
+      final extraWidth = result.length - minWidth;
+      final extra = result.substring(0, extraWidth);
+      result = extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
+          result.substring(extraWidth);
       if (result[0] == grpo) result = '0$result';
     }
   }
 
-  if (options.alt) {
-    if (doAlt == null) {
-      throw ArgumentError(
-          "${options.all} Alternate form (#) not allowed with format specifier '${options.specifier}'.");
-    }
+  // Восстанавливаем знак, добавляем префикс.
+  result = '$sign$prefix$result';
 
-    result = doAlt(result);
+  // Числа по умолчанию прижимаются вправо
+  options.align ??= '>';
+
+  return result;
+}
+
+String _intlNumberFormat<T extends num>(
+  _Options options,
+  dynamic dyn, {
+  bool needPoint = false,
+}) {
+  // Проверки.
+  if (dyn is! T) {
+    throw ArgumentError(
+        '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
   }
 
-  // Восстанавливаем знак
-  result = sign + result;
+  String result;
+  num value = dyn;
+
+  final fmt = NumberFormat.decimalPattern();
+  final zeroDigitForRe = fmt.symbols.ZERO_DIGIT
+      .replaceFirstMapped(RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
+  final expSymbolForRe = fmt.symbols.EXP_SYMBOL
+      .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+  final decimalSepForRe = fmt.symbols.DECIMAL_SEP
+      .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+  final groupSepForRe =
+      fmt.symbols.GROUP_SEP.replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+
+  final precision = options.precision ?? (value is int ? 0 : 6);
+
+  // Знак сохраняем отдельно, работаем с положительным числом.
+  var sign = options.sign;
+  if (value.isNegative) {
+    value = -value;
+    sign = fmt.symbols.MINUS_SIGN;
+  } else if (sign == null || sign == '-') {
+    sign = '';
+  } else if (sign == '+') {
+    sign = fmt.symbols.PLUS_SIGN;
+  }
+
+  // Преобразуем в строку.
+  if (value.isNaN) {
+    result = fmt.symbols.NAN;
+    options.zero = false;
+  } else if (value.isInfinite) {
+    result = fmt.symbols.INFINITY;
+    options.zero = false;
+  } else {
+    fmt
+      ..minimumFractionDigits = fmt.maximumFractionDigits = precision
+      ..minimumIntegerDigits = options.zero ? options.width ?? 1 : 1;
+    if (options.groupOption != ',') fmt.turnOffGrouping();
+
+    result = fmt.format(value);
+  }
+
+  // Удаляем лишние нули в конце.
+  final pointIndex = result.indexOf(fmt.symbols.DECIMAL_SEP);
+  if (pointIndex != -1) {
+    result = result.replaceFirst(
+        RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
+        '',
+        pointIndex);
+  }
+
+  // Ставим обязательную точку.
+  if (needPoint && !result.contains('.')) {
+    result = result.replaceFirst(_placeForPointRe, '.');
+  }
+
+  // Удаляем лишние нули в начале.
+  if (options.zero) {
+    final extraWidth = result.length - (fmt.minimumIntegerDigits - sign.length);
+    final extra = result.substring(0, extraWidth);
+    result =
+        extra.replaceFirst(RegExp('^($zeroDigitForRe|$groupSepForRe)*'), '') +
+            result.substring(extraWidth);
+    if (result.startsWith(fmt.symbols.GROUP_SEP)) {
+      result = '${fmt.symbols.ZERO_DIGIT}$result';
+    }
+  }
+
+  // // Дополняем нулями (align и fill в этом случае игнорируются).
+  // final minWidth = (options.width ?? 0) - sign.length;
+  // if (options.zero && result.length < minWidth) {
+  //   result = zeroDigit * (minWidth - result.length) + result;
+  // }
+
+  // // Разделяем на группы.
+  // final grpo = options.groupOption;
+  // if (grpo != null) {
+  //   final searchRe = groupLength == 3 ? _triplesRe : _quadruplesRe;
+  //   final changeRe = groupLength == 3 ? _tripleRe : _quadrupleRe;
+  //   var pointIndex = result.indexOf('.');
+  //   if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
+  //   if (pointIndex == -1) pointIndex = result.length;
+
+  //   result = result.substring(0, pointIndex).replaceFirstMapped(
+  //           searchRe,
+  //           (m) =>
+  //               m[1]! +
+  //               m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[0]}')) +
+  //       result.substring(pointIndex);
+
+  //   // Если добавляли нули, надо обрезать лишние.
+  //   if (options.zero) {
+  //     final extraWidth = result.length - minWidth;
+  //     final extra = result.substring(0, extraWidth);
+  //     result = extra.replaceAll(RegExp('^[0$grpo]*'), '') +
+  //         result.substring(extraWidth);
+  //     if (result[0] == grpo) result = '0$result';
+  //   }
+  // }
+
+  // Восстанавливаем знак, добавляем префикс.
+  result = '$sign$result';
 
   // Числа по умолчанию прижимаются вправо
   options.align ??= '>';
@@ -373,82 +494,125 @@ String _format(String template, List<dynamic> positionalArgs,
 
         // Число
         case 'b':
-          result = _numberFormat<int>(options, value,
-              toStr: (value, precision) => value.toRadixString(2),
-              groupLength: 4);
+          result = _numberFormat<int>(
+            options,
+            value,
+            altAllowed: false,
+            standartGroupOptionAllowed: false,
+            toStr: (value, precision) => value.toRadixString(2),
+            groupLength: 4,
+          );
           break;
 
         case 'o':
-          result = _numberFormat<int>(options, value,
-              toStr: (value, precision) => value.toRadixString(8),
-              groupLength: 4);
+          result = _numberFormat<int>(
+            options,
+            value,
+            altAllowed: false,
+            standartGroupOptionAllowed: false,
+            toStr: (value, precision) => value.toRadixString(8),
+            groupLength: 4,
+          );
           break;
 
         case 'x':
-          result = _numberFormat<int>(options, value,
-              toStr: (value, precision) => value.toRadixString(16),
-              groupLength: 4,
-              doAlt: (result) => '0x$result');
+          result = _numberFormat<int>(
+            options,
+            value,
+            standartGroupOptionAllowed: false,
+            toStr: (value, precision) => value.toRadixString(16),
+            groupLength: 4,
+            prefix: options.alt ? '0x' : '',
+          );
           break;
 
         case 'X':
-          result = _numberFormat<int>(options, value,
-              toStr: (value, precision) =>
-                  value.toRadixString(16).toUpperCase(),
-              groupLength: 4,
-              doAlt: (result) => '0x$result');
+          result = _numberFormat<int>(
+            options,
+            value,
+            standartGroupOptionAllowed: false,
+            toStr: (value, precision) => value.toRadixString(16).toUpperCase(),
+            groupLength: 4,
+            prefix: options.alt ? '0x' : '',
+          );
           break;
 
         case 'd':
-          result = _numberFormat<int>(options, value,
-              toStr: (value, _) => value.toString());
+          result = _numberFormat<int>(
+            options,
+            value,
+            altAllowed: false,
+            toStr: (value, _) => value.toString(),
+          );
           break;
 
         case 'f':
         case 'F':
-          result = _numberFormat<double>(options, value,
-              toStr: (value, precision) =>
-                  value.toStringAsFixed(precision ?? 6),
-              doAlt: (result) => result.contains('.') ? result : '$result.');
+          result = _numberFormat<double>(
+            options,
+            value,
+            toStr: (value, precision) => value.toStringAsFixed(precision ?? 6),
+            needPoint: options.alt,
+          );
           if (spec == 'F') result = result.toUpperCase();
           break;
 
         case 'e':
         case 'E':
-          result = _numberFormat<double>(options, value,
-              toStr: (value, precision) =>
-                  value.toStringAsExponential(precision ?? 6),
-              doAlt: (result) => result.contains('.')
-                  ? result
-                  : result.replaceFirst(_placeForPointRe, '.'));
+          result = _numberFormat<double>(
+            options,
+            value,
+            toStr: (value, precision) =>
+                value.toStringAsExponential(precision ?? 6),
+            needPoint: options.alt,
+          );
           if (spec == 'E') result = result.toUpperCase();
           break;
 
         case 'g':
         case 'G':
-          result = _numberFormat<double>(options, value,
-              toStr: (value, precision) =>
-                  value.toStringAsPrecision(precision ?? 6),
-              removeTrailingZeros: true,
-              doAlt: (result) => result.contains('.')
-                  ? result
-                  : result.replaceFirst(_placeForPointRe, '.'));
+          result = _numberFormat<double>(
+            options,
+            value,
+            toStr: (value, precision) =>
+                value.toStringAsPrecision(precision ?? 6),
+            removeTrailingZeros: true,
+            needPoint: options.alt,
+          );
           if (spec == 'G') result = result.toUpperCase();
           break;
 
         case 'n':
-          if (value is num) {
-            final precision = options.precision ?? (value is int ? 0 : 6);
-            final fmt = NumberFormat.decimalPattern();
-            fmt.minimumFractionDigits = fmt.maximumFractionDigits = precision;
-
-            if (options.groupOption != ',') fmt.turnOffGrouping();
-
-            result = fmt.format(value);
-          } else {
+          if (value is! num) {
             throw ArgumentError(
                 '${options.all} Expected int or double. Passed ${value.runtimeType}.');
           }
+
+          result =
+              _intlNumberFormat<num>(options, value, needPoint: options.alt);
+
+          // final precision = options.precision ?? (value is int ? 0 : 6);
+          // final fmt = NumberFormat.decimalPattern();
+          // fmt.minimumFractionDigits = fmt.maximumFractionDigits = precision;
+          // fmt.minimumIntegerDigits = options.zero ? options.width ?? 1 : 1;
+          // if (options.groupOption != ',') fmt.turnOffGrouping();
+
+          // result = fmt.format(value);
+
+          // if (options.zero) {
+          //   final extraWidth = result.length - fmt.minimumIntegerDigits;
+          //   final extra = result.substring(0, extraWidth);
+          //   final grpo = fmt.symbols.GROUP_SEP;
+          //   result = extra.replaceAll(
+          //           RegExp(
+          //               '^(${fmt.symbols.MINUS_SIGN})?(${fmt.symbols.ZERO_DIGIT}|$grpo)*'),
+          //           '') +
+          //       result.substring(extraWidth);
+          //   if (result[0] == grpo) result = '${fmt.symbols.ZERO_DIGIT}$result';
+          // }
+
+          options.align ??= '>';
+
           break;
 
         //   //

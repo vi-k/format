@@ -9,7 +9,7 @@
             "request": "launch",
             "type": "dart",
             "program": "example/format_example.dart",
-            "vmAdditionalArgs": ["--no-sound-null-safety"],
+            /*"vmAdditionalArgs": ["--no-sound-null-safety"],*/
             "args": []
         },
         {
@@ -17,7 +17,7 @@
             "request": "launch",
             "type": "dart",
             "program": "test/format_test.dart",
-            "vmAdditionalArgs": ["--no-sound-null-safety"],
+            /*"vmAdditionalArgs": ["--no-sound-null-safety"],*/
             "args": []
         }
     ]
