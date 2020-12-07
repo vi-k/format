@@ -16,6 +16,7 @@
 
 // MANUAL EDIT TO SUPPRESS WARNINGS IN GENERATED CODE
 // ignore_for_file: unnecessary_new, prefer_single_quotes, prefer_const_constructors
+/*
 library number_symbol_data;
 
 import "number_symbols.dart";
@@ -6734,3 +6735,4 @@ final currencyFractionDigits = {
   "ZMK": 0,
   "ZWD": 0,
 };
+*/

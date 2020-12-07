@@ -4,9 +4,9 @@ import 'string_ext.dart';
 
 /// Отличия от Python:
 ///
-/// Поддеживается автоматическия и ручная нумерация одновременно - когда
+/// Поддерживается автоматическия и ручная нумерация одновременно - когда
 /// встречается ручная нумерация, индекс автоматической нумерации сбрасывается
-/// на идекс ручной нумерации.
+/// на индекс ручной нумерации.
 ///
 /// В альтернативном формате для X выводится 0x, а не 0X.
 ///
@@ -15,19 +15,45 @@ import 'string_ext.dart';
 ///
 /// Пока не поддерживается в именованных аргументах .key и [index].
 ///
-/// nan и inf не дополняются нулями при флаге zero.
+/// nan и inf не дополняются нулями при флаге zero (так делает msvc:spintf в msvc).
+/// sign не действует для nan (nan не может стать +nan) (msvc:sprintf выводит +nan)
+/// 
+/// В форматах 'e', 'f', 'g', 'n' целые числа воспринимаются как Decimal
+/// в python:
+/// - в 'e' и 'f' precision = 0;
+/// - в 'g' и 'n' precision = 21.
 ///
+/// TODO:
+/// Длина в s через characters.
 
 final RegExp _formatSpecRe = RegExp(
-    // {   [argId                             ]   :[  [fill ] align   ] [sign ] [#] [0] [width                                   ] [grpo] [   .precision                                 ] [specifier       ] [template        ]     }
-    r'\{\s*(\d*|[_\p{L}][_\p{L}\d]*|\[[^\]]*\])(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?([_,])?(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?([sbcdoxXnfFeEgG])?(\[(?:[^\]])*\])?)?\s*\}',
+    // begin
+    r'\{\s*'
+    // argId
+    r'(\d*|[_\p{L}][_\p{L}\d]*|'
+    "'(?:''|[^'])*'"
+    '|"(?:""|[^"])*")'
+    //  :[  [fill ] align   ] [sign ] [#] [0]
+    '(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?'
+    // width (number or {widthId})
+    r'(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?'
+    // group option
+    '([_,])?'
+    // .precision (number or {precissionId})
+    r'(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?'
+    // specifier
+    '([csbodxXfFeEgGn])?'
+    // additional template
+    "('(?:''|[^'])*'"
+    '|"(?:""|[^"])*")?)?'
+    // end
+    r'\s*\}',
     unicode: true);
-// '\\{\\s*(\\d*|[_\\w][_\\w\\d]*|\'(?:\'\'|[^\'])*\'|"(?:""|[^"])*")(?::(?:([^{}])?([<>^|]))?([-+ ])?(#)?(0)?(\\d+|\\{(\\d*|[_\\w][_\\w\\d]*)\\})?(?:\\.(\\d+|\\{(\\d*|[_\\w][_\\w\\d]*)\\})?)?([sSnmfaxXcdtDTqp])?(\'(?:\'\'|[^\'])*\'|"(?:""|[^"])*")?)?\\s*\\}');
 final RegExp _triplesRe = RegExp(r'(\d)((?:\d{3})+)$');
 final RegExp _quadruplesRe = RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
 final RegExp _tripleRe = RegExp(r'\d{3}');
 final RegExp _quadrupleRe = RegExp('[0-9a-fA-F]{4}');
-final RegExp _trailingZerosRe = RegExp(r'\.?0+(?=(e[-+]\d+)?$)');
+final RegExp _trailingZerosRe = RegExp(r'\.?0+(?=e|$)');
 final RegExp _placeForPointRe = RegExp(r'(?=(e[-+]\d+)?$)');
 
 /// Берёт значение в строке [str] внутри кавычек [left] и [right].
@@ -148,7 +174,7 @@ dynamic _getValue(_Options options, String? rawId) {
       value = _getValueByIndex(options, index);
     } else {
       // Именованный параметр.
-      final id = _removeQuotesIfNeed(rawId, '[', ']');
+      final id = _removeQuotesIfNeed(rawId, '\'"', '\'"');
 
       final namedArgs = options.namedArgs;
       if (namedArgs == null) {
@@ -171,7 +197,7 @@ dynamic _getValue(_Options options, String? rawId) {
 // n - значение задано напрямую;
 // {} - перебираем параметры в positionalArgs по порядку;
 // {index} - индекс параметра в positionalArgs;
-// {id} или {[id]} - название параметра в namedArgs;
+// {id} или {[id]} - название параметра в namedArgs.
 int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
   int? value;
 
@@ -200,18 +226,23 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
 String _numberFormat<T extends num>(
   _Options options,
   dynamic dyn, {
+  bool precisionAllowed = true,
   bool altAllowed = true,
   bool standartGroupOptionAllowed = true,
   required String Function(T value, int? precision) toStr,
   bool removeTrailingZeros = false,
   bool needPoint = false,
-  int groupLength = 3,
+  int groupSize = 3,
   String prefix = '',
 }) {
   // Проверки.
   if (dyn is! T) {
     throw ArgumentError(
         '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
+  }
+  if (options.precision != null && !precisionAllowed) {
+    throw ArgumentError(
+        "${options.all} Precision not allowed with format specifier '${options.specifier}'.");
   }
   if (options.alt && !altAllowed) {
     throw ArgumentError(
@@ -225,27 +256,25 @@ String _numberFormat<T extends num>(
   String result;
   num value = dyn;
 
-  final precision = options.precision;
+  // Числа по умолчанию прижимаются вправо
+  options.align ??= '>';
 
-  // Знак сохраняем отдельно, работаем с положительным числом.
+  // Сохраняем знак.
   var sign = options.sign;
   if (value.isNegative) {
-    value = -value;
     sign = '-';
   } else if (sign == null || sign == '-') {
     sign = '';
   }
 
   // Преобразуем в строку.
-  if (value.isNaN) {
-    result = 'nan';
-    options.zero = false;
-  } else if (value.isInfinite) {
-    result = 'inf';
-    options.zero = false;
-  } else {
-    result = toStr(value as T, precision);
-  }
+  if (value.isNaN) return 'nan';
+  if (value.isInfinite) return '${sign}inf';
+ 
+  result = toStr(value as T, options.precision);
+  
+  // Убираем минус, вернём его в конце.
+  if (result.isNotEmpty && result[0] == '-') result = result.substring(1);
 
   // Удаляем лишние нули.
   if (removeTrailingZeros && result.contains('.')) {
@@ -266,8 +295,8 @@ String _numberFormat<T extends num>(
   // Разделяем на группы.
   final grpo = options.groupOption;
   if (grpo != null) {
-    final searchRe = groupLength == 3 ? _triplesRe : _quadruplesRe;
-    final changeRe = groupLength == 3 ? _tripleRe : _quadrupleRe;
+    final searchRe = groupSize == 3 ? _triplesRe : _quadruplesRe;
+    final changeRe = groupSize == 3 ? _tripleRe : _quadrupleRe;
     var pointIndex = result.indexOf('.');
     if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
     if (pointIndex == -1) pointIndex = result.length;
@@ -290,12 +319,7 @@ String _numberFormat<T extends num>(
   }
 
   // Восстанавливаем знак, добавляем префикс.
-  result = '$sign$prefix$result';
-
-  // Числа по умолчанию прижимаются вправо
-  options.align ??= '>';
-
-  return result;
+  return '$sign$prefix$result';
 }
 
 String _intlNumberFormat<T extends num>(
@@ -313,8 +337,8 @@ String _intlNumberFormat<T extends num>(
   num value = dyn;
 
   final fmt = NumberFormat.decimalPattern();
-  final zeroDigitForRe = fmt.symbols.ZERO_DIGIT
-      .replaceFirstMapped(RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
+  final zeroDigitForRe = fmt.symbols.ZERO_DIGIT.replaceFirstMapped(
+      RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
   final expSymbolForRe = fmt.symbols.EXP_SYMBOL
       .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
   final decimalSepForRe = fmt.symbols.DECIMAL_SEP
@@ -345,6 +369,8 @@ String _intlNumberFormat<T extends num>(
   } else {
     fmt
       ..minimumFractionDigits = fmt.maximumFractionDigits = precision
+      // Т.к. форматирование может быть сложным, сразу добавляем достаточное
+      // кол-во нулей. Проще потом обрезать.
       ..minimumIntegerDigits = options.zero ? options.width ?? 1 : 1;
     if (options.groupOption != ',') fmt.turnOffGrouping();
 
@@ -377,39 +403,7 @@ String _intlNumberFormat<T extends num>(
     }
   }
 
-  // // Дополняем нулями (align и fill в этом случае игнорируются).
-  // final minWidth = (options.width ?? 0) - sign.length;
-  // if (options.zero && result.length < minWidth) {
-  //   result = zeroDigit * (minWidth - result.length) + result;
-  // }
-
-  // // Разделяем на группы.
-  // final grpo = options.groupOption;
-  // if (grpo != null) {
-  //   final searchRe = groupLength == 3 ? _triplesRe : _quadruplesRe;
-  //   final changeRe = groupLength == 3 ? _tripleRe : _quadrupleRe;
-  //   var pointIndex = result.indexOf('.');
-  //   if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
-  //   if (pointIndex == -1) pointIndex = result.length;
-
-  //   result = result.substring(0, pointIndex).replaceFirstMapped(
-  //           searchRe,
-  //           (m) =>
-  //               m[1]! +
-  //               m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[0]}')) +
-  //       result.substring(pointIndex);
-
-  //   // Если добавляли нули, надо обрезать лишние.
-  //   if (options.zero) {
-  //     final extraWidth = result.length - minWidth;
-  //     final extra = result.substring(0, extraWidth);
-  //     result = extra.replaceAll(RegExp('^[0$grpo]*'), '') +
-  //         result.substring(extraWidth);
-  //     if (result[0] == grpo) result = '0$result';
-  //   }
-  // }
-
-  // Восстанавливаем знак, добавляем префикс.
+  // Восстанавливаем знак.
   result = '$sign$result';
 
   // Числа по умолчанию прижимаются вправо
@@ -424,7 +418,7 @@ String _format(String template, List<dynamic> positionalArgs,
 
   // var removeEmptyStrings = false;
 
-  var result = template.replaceAllMapped(_formatSpecRe, (match) {
+  final result = template.replaceAllMapped(_formatSpecRe, (match) {
     options
       ..all = match.group(0)!
       ..argId = match.group(1)
@@ -458,9 +452,6 @@ String _format(String template, List<dynamic> positionalArgs,
 
     options.precision = _getWidth(options, match.group(9), 'Precision',
         min: spec == 'g' || spec == 'G' ? 1 : 0);
-    if (value is int && options.precision != null) {
-      throw ArgumentError('${options.all} Precision not allowed for int.');
-    }
 
     if (spec == null) {
       result = value.toString();
@@ -497,10 +488,11 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<int>(
             options,
             value,
+            precisionAllowed: false,
             altAllowed: false,
             standartGroupOptionAllowed: false,
             toStr: (value, precision) => value.toRadixString(2),
-            groupLength: 4,
+            groupSize: 4,
           );
           break;
 
@@ -508,10 +500,11 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<int>(
             options,
             value,
+            precisionAllowed: false,
             altAllowed: false,
             standartGroupOptionAllowed: false,
             toStr: (value, precision) => value.toRadixString(8),
-            groupLength: 4,
+            groupSize: 4,
           );
           break;
 
@@ -519,9 +512,10 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<int>(
             options,
             value,
+            precisionAllowed: false,
             standartGroupOptionAllowed: false,
             toStr: (value, precision) => value.toRadixString(16),
-            groupLength: 4,
+            groupSize: 4,
             prefix: options.alt ? '0x' : '',
           );
           break;
@@ -530,9 +524,10 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<int>(
             options,
             value,
+            precisionAllowed: false,
             standartGroupOptionAllowed: false,
             toStr: (value, precision) => value.toRadixString(16).toUpperCase(),
-            groupLength: 4,
+            groupSize: 4,
             prefix: options.alt ? '0x' : '',
           );
           break;
@@ -541,6 +536,7 @@ String _format(String template, List<dynamic> positionalArgs,
           result = _numberFormat<int>(
             options,
             value,
+            precisionAllowed: false,
             altAllowed: false,
             toStr: (value, _) => value.toString(),
           );
@@ -548,10 +544,11 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'f':
         case 'F':
-          result = _numberFormat<double>(
+          result = _numberFormat<num>(
             options,
             value,
-            toStr: (value, precision) => value.toStringAsFixed(precision ?? 6),
+            toStr: (value, precision) =>
+                value.toStringAsFixed(precision ?? (value is int ? 0 : 6)),
             needPoint: options.alt,
           );
           if (spec == 'F') result = result.toUpperCase();
@@ -559,7 +556,7 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'e':
         case 'E':
-          result = _numberFormat<double>(
+          result = _numberFormat<num>(
             options,
             value,
             toStr: (value, precision) =>
@@ -571,45 +568,29 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'g':
         case 'G':
-          result = _numberFormat<double>(
+          result = _numberFormat<num>(
             options,
             value,
-            toStr: (value, precision) =>
-                value.toStringAsPrecision(precision ?? 6),
-            removeTrailingZeros: true,
+            toStr: (value, precision) {
+              if (value is int) {
+                final p = precision ?? 21;
+                final result = value.toString();
+                return result.length <= p
+                    ? result
+                    : value.toStringAsPrecision(p);
+              } else {
+                return value.toStringAsPrecision(precision ?? 6);
+              }
+            },
+            removeTrailingZeros: !options.alt,
             needPoint: options.alt,
           );
           if (spec == 'G') result = result.toUpperCase();
           break;
 
         case 'n':
-          if (value is! num) {
-            throw ArgumentError(
-                '${options.all} Expected int or double. Passed ${value.runtimeType}.');
-          }
-
           result =
               _intlNumberFormat<num>(options, value, needPoint: options.alt);
-
-          // final precision = options.precision ?? (value is int ? 0 : 6);
-          // final fmt = NumberFormat.decimalPattern();
-          // fmt.minimumFractionDigits = fmt.maximumFractionDigits = precision;
-          // fmt.minimumIntegerDigits = options.zero ? options.width ?? 1 : 1;
-          // if (options.groupOption != ',') fmt.turnOffGrouping();
-
-          // result = fmt.format(value);
-
-          // if (options.zero) {
-          //   final extraWidth = result.length - fmt.minimumIntegerDigits;
-          //   final extra = result.substring(0, extraWidth);
-          //   final grpo = fmt.symbols.GROUP_SEP;
-          //   result = extra.replaceAll(
-          //           RegExp(
-          //               '^(${fmt.symbols.MINUS_SIGN})?(${fmt.symbols.ZERO_DIGIT}|$grpo)*'),
-          //           '') +
-          //       result.substring(extraWidth);
-          //   if (result[0] == grpo) result = '${fmt.symbols.ZERO_DIGIT}$result';
-          // }
 
           options.align ??= '>';
 
