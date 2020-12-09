@@ -17,7 +17,7 @@ import 'string_ext.dart';
 ///
 /// nan и inf не дополняются нулями при флаге zero (так делает msvc:spintf в msvc).
 /// sign не действует для nan (nan не может стать +nan) (msvc:sprintf выводит +nan)
-/// 
+///
 /// В форматах 'e', 'f', 'g', 'n' целые числа воспринимаются как Decimal
 /// в python:
 /// - в 'e' и 'f' precision = 0;
@@ -254,7 +254,7 @@ String _numberFormat<T extends num>(
   }
 
   String result;
-  num value = dyn;
+  final num value = dyn;
 
   // Числа по умолчанию прижимаются вправо
   options.align ??= '>';
@@ -270,9 +270,9 @@ String _numberFormat<T extends num>(
   // Преобразуем в строку.
   if (value.isNaN) return 'nan';
   if (value.isInfinite) return '${sign}inf';
- 
+
   result = toStr(value as T, options.precision);
-  
+
   // Убираем минус, вернём его в конце.
   if (result.isNotEmpty && result[0] == '-') result = result.substring(1);
 
@@ -325,6 +325,7 @@ String _numberFormat<T extends num>(
 String _intlNumberFormat<T extends num>(
   _Options options,
   dynamic dyn, {
+  bool removeTrailingZeros = false,
   bool needPoint = false,
 }) {
   // Проверки.
@@ -333,10 +334,74 @@ String _intlNumberFormat<T extends num>(
         '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
   }
 
-  String result;
-  num value = dyn;
+  final num value = dyn;
 
-  final fmt = NumberFormat.decimalPattern();
+  if (value.isNaN || value.isInfinite) {
+    return NumberFormat.decimalPattern().format(value);
+  }
+
+  String result;
+  NumberFormat fmt;
+  bool hasExp;
+
+  final precision = options.precision;
+  final width = options.width;
+
+  if (value is int) {
+    if (precision != null) {
+      throw ArgumentError(
+          "${options.all} Precision not allowed for int with format specifier '${options.specifier}'.");
+    }
+
+    fmt = NumberFormat.decimalPattern();
+    hasExp = false;
+  } else {
+    result = value.toStringAsPrecision(precision ?? 6);
+    final start = result[0] == '-' ? 1 : 0;
+    final decPoint = result.indexOf('.');
+    var end = result.indexOf('e');
+    if (end != -1) {
+      hasExp = true;
+      fmt = NumberFormat.scientificPattern();
+    } else {
+      hasExp = false;
+      fmt = NumberFormat.decimalPattern();
+      end = result.length;
+    }
+    if (decPoint == -1) {
+      fmt
+        ..minimumFractionDigits = fmt.maximumFractionDigits = 0
+        ..minimumIntegerDigits = end - start;
+    } else {
+      fmt
+        ..minimumFractionDigits = fmt.maximumFractionDigits = end - decPoint - 1
+        ..minimumIntegerDigits = decPoint - start;
+    }
+  }
+
+  if (options.groupOption != ',') fmt.turnOffGrouping();
+
+  // // Из-за сложного форматирования увеличиваем длину целой части для
+  // // заполнения нулями. Исходим из того, что вся дробная часть и точка могут
+  // // быть откинуты.
+  // final width = options.width;
+  // if (options.zero && width != null) {
+  //   fmt = NumberFormat.decimalPattern();
+  //   final dw = width - result.length + fmt.minimumFractionDigits + 1;
+  //   if (dw > 0) fmt.minimumIntegerDigits += dw;
+  // }
+
+  // Из-за того, что форматирование может быть сложным, не добиваем нулями
+  // самостоятельно, а формируем отдельную строку с нулями. Длину строки
+  // подбираем, исходя из того, что вся дробная часть и точка могут
+  // быть откинуты.
+  String? zeros;
+  if (options.zero && width != null) {
+    final zeroFmt = NumberFormat.decimalPattern()..minimumIntegerDigits = width;
+    if (options.groupOption != ',') zeroFmt.turnOffGrouping();
+    zeros = zeroFmt.format(0);
+  }
+
   final zeroDigitForRe = fmt.symbols.ZERO_DIGIT.replaceFirstMapped(
       RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
   final expSymbolForRe = fmt.symbols.EXP_SYMBOL
@@ -346,12 +411,9 @@ String _intlNumberFormat<T extends num>(
   final groupSepForRe =
       fmt.symbols.GROUP_SEP.replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
 
-  final precision = options.precision ?? (value is int ? 0 : 6);
-
-  // Знак сохраняем отдельно, работаем с положительным числом.
+  // Сохраняем знак.
   var sign = options.sign;
   if (value.isNegative) {
-    value = -value;
     sign = fmt.symbols.MINUS_SIGN;
   } else if (sign == null || sign == '-') {
     sign = '';
@@ -359,45 +421,59 @@ String _intlNumberFormat<T extends num>(
     sign = fmt.symbols.PLUS_SIGN;
   }
 
-  // Преобразуем в строку.
-  if (value.isNaN) {
-    result = fmt.symbols.NAN;
-    options.zero = false;
-  } else if (value.isInfinite) {
-    result = fmt.symbols.INFINITY;
-    options.zero = false;
-  } else {
-    fmt
-      ..minimumFractionDigits = fmt.maximumFractionDigits = precision
-      // Т.к. форматирование может быть сложным, сразу добавляем достаточное
-      // кол-во нулей. Проще потом обрезать.
-      ..minimumIntegerDigits = options.zero ? options.width ?? 1 : 1;
-    if (options.groupOption != ',') fmt.turnOffGrouping();
+  result = fmt.format(value);
 
-    result = fmt.format(value);
+  // Убираем минус, вернём его в конце.
+  if (result.isNotEmpty && result.startsWith(fmt.symbols.MINUS_SIGN)) {
+    result = result.substring(fmt.symbols.MINUS_SIGN.length);
   }
 
   // Удаляем лишние нули в конце.
-  final pointIndex = result.indexOf(fmt.symbols.DECIMAL_SEP);
-  if (pointIndex != -1) {
-    result = result.replaceFirst(
-        RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
-        '',
-        pointIndex);
+  if (removeTrailingZeros) {
+    final decPoint = result.indexOf(fmt.symbols.DECIMAL_SEP);
+    if (decPoint != -1) {
+      result = result.replaceFirst(
+          RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
+          '',
+          decPoint);
+    }
   }
 
   // Ставим обязательную точку.
-  if (needPoint && !result.contains('.')) {
-    result = result.replaceFirst(_placeForPointRe, '.');
+  if (needPoint && !result.contains(fmt.symbols.DECIMAL_SEP)) {
+    if (hasExp) {
+      final index = result.indexOf(fmt.symbols.EXP_SYMBOL);
+      assert(index != -1);
+      result = '${result.substring(0, index)}'
+          '${fmt.symbols.DECIMAL_SEP}'
+          '${result.substring(index)}';
+    } else {
+      result = '$result${fmt.symbols.DECIMAL_SEP}';
+    }
   }
 
-  // Удаляем лишние нули в начале.
-  if (options.zero) {
-    final extraWidth = result.length - (fmt.minimumIntegerDigits - sign.length);
-    final extra = result.substring(0, extraWidth);
-    result =
-        extra.replaceFirst(RegExp('^($zeroDigitForRe|$groupSepForRe)*'), '') +
-            result.substring(extraWidth);
+  // // Удаляем лишние нули в начале.
+  // if (options.zero) {
+  //   final extraWidth = result.length - (fmt.minimumIntegerDigits - sign.length);
+  //   final extra = result.substring(0, extraWidth);
+  //   result =
+  //       extra.replaceFirst(RegExp('^($zeroDigitForRe|$groupSepForRe)*'), '') +
+  //           result.substring(extraWidth);
+  //   if (result.startsWith(fmt.symbols.GROUP_SEP)) {
+  //     result = '${fmt.symbols.ZERO_DIGIT}$result';
+  //   }
+  // }
+
+  if (options.zero && width != null && result.length < width - sign.length) {
+    var integersCount = result.indexOf(fmt.symbols.DECIMAL_SEP);
+    if (integersCount == -1) {
+      integersCount =
+          hasExp ? result.indexOf(fmt.symbols.EXP_SYMBOL) : result.length;
+    }
+    final end = zeros!.length - integersCount;
+    final start = end - (width - sign.length - result.length);
+    final addZeros = zeros.substring(start, end);
+    result = '$addZeros$result';
     if (result.startsWith(fmt.symbols.GROUP_SEP)) {
       result = '${fmt.symbols.ZERO_DIGIT}$result';
     }
@@ -451,7 +527,7 @@ String _format(String template, List<dynamic> positionalArgs,
     final spec = options.specifier;
 
     options.precision = _getWidth(options, match.group(9), 'Precision',
-        min: spec == 'g' || spec == 'G' ? 1 : 0);
+        min: spec == 'g' || spec == 'G' || spec == 'n' ? 1 : 0);
 
     if (spec == null) {
       result = value.toString();
@@ -544,11 +620,10 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'f':
         case 'F':
-          result = _numberFormat<num>(
+          result = _numberFormat<double>(
             options,
             value,
-            toStr: (value, precision) =>
-                value.toStringAsFixed(precision ?? (value is int ? 0 : 6)),
+            toStr: (value, precision) => value.toStringAsFixed(precision ?? 6),
             needPoint: options.alt,
           );
           if (spec == 'F') result = result.toUpperCase();
@@ -556,7 +631,7 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'e':
         case 'E':
-          result = _numberFormat<num>(
+          result = _numberFormat<double>(
             options,
             value,
             toStr: (value, precision) =>
@@ -568,20 +643,11 @@ String _format(String template, List<dynamic> positionalArgs,
 
         case 'g':
         case 'G':
-          result = _numberFormat<num>(
+          result = _numberFormat<double>(
             options,
             value,
-            toStr: (value, precision) {
-              if (value is int) {
-                final p = precision ?? 21;
-                final result = value.toString();
-                return result.length <= p
-                    ? result
-                    : value.toStringAsPrecision(p);
-              } else {
-                return value.toStringAsPrecision(precision ?? 6);
-              }
-            },
+            toStr: (value, precision) =>
+                value.toStringAsPrecision(precision ?? 6),
             removeTrailingZeros: !options.alt,
             needPoint: options.alt,
           );
@@ -589,8 +655,12 @@ String _format(String template, List<dynamic> positionalArgs,
           break;
 
         case 'n':
-          result =
-              _intlNumberFormat<num>(options, value, needPoint: options.alt);
+          result = _intlNumberFormat<num>(
+            options,
+            value,
+            removeTrailingZeros: !options.alt,
+            needPoint: options.alt && value is! int,
+          );
 
           options.align ??= '>';
 
