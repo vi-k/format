@@ -1,3 +1,4 @@
+import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 
 import 'string_ext.dart';
@@ -373,7 +374,8 @@ String _intlNumberFormat<T extends num>(
           ..minimumIntegerDigits = end - start;
       } else {
         fmt
-          ..minimumFractionDigits = fmt.maximumFractionDigits = end - decPoint - 1
+          ..minimumFractionDigits =
+              fmt.maximumFractionDigits = end - decPoint - 1
           ..minimumIntegerDigits = decPoint - start;
       }
     }
@@ -385,7 +387,8 @@ String _intlNumberFormat<T extends num>(
     // подбираем, исходя из того, чтобы вся дробная часть и точка могут
     // быть откинуты.
     if (options.zero && width != null) {
-      final zeroFmt = NumberFormat.decimalPattern()..minimumIntegerDigits = width;
+      final zeroFmt = NumberFormat.decimalPattern()
+        ..minimumIntegerDigits = width;
       if (options.groupOption != ',') zeroFmt.turnOffGrouping();
       zeros = zeroFmt.format(0);
     }
@@ -421,7 +424,8 @@ String _intlNumberFormat<T extends num>(
       final decPoint = result.indexOf(fmt.symbols.DECIMAL_SEP);
       if (decPoint != -1) {
         result = result.replaceFirst(
-            RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
+            RegExp(
+                '(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
             '',
             decPoint);
       }
@@ -524,11 +528,14 @@ String _format(String template, List<dynamic> positionalArgs,
                 '${options.all} Expected String. Passed ${value.runtimeType}.');
           }
 
-          result = options.precision == null
+          final precision = options.precision;
+          result = precision == null
               ? value
               : options.alt
-                  ? value.cut(options.precision!)
-                  : value.substring(0, options.precision!);
+                  ? value.cut(precision)
+                  : precision > value.characters.length
+                      ? value
+                      : value.characters.take(precision).toString();
           break;
 
         // Число

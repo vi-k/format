@@ -157,7 +157,8 @@ void main() {
     });
 
     group('s:', () {
-      const s = 'abcdef';
+      const s = 'Hello world';
+      const s2 = '👨+👩+👦+👧=👨‍👩‍👦‍👧';
 
       test('basic use', () {
         expect(
@@ -165,12 +166,50 @@ void main() {
             throwsA(predicate((e) =>
                 e is ArgumentError &&
                 e.message == '{:s} Expected String. Passed int.')));
-        expect('{}'.format([s]), 'abcdef');
-        expect('{:s}'.format([s]), 'abcdef');
+
+        expect('{}'.format([s]), 'Hello world');
+        expect('{:s}'.format([s]), 'Hello world');
       });
 
-      test('align', () {
-        expect('{:10s}'.format([s]), 'abcdef    ');
+      test('precision', () {
+        expect('{:.11s}'.format([s]), 'Hello world');
+        expect('{:.20s}'.format([s]), 'Hello world');
+        expect('{:.5s}'.format([s]), 'Hello');
+        expect('{:#.5s}'.format([s]), 'Hell…');
+        expect('{:#.6s}'.format([s]), 'Hello…');
+        expect('{:#.7s}'.format([s]), 'Hello…');
+        expect('{:#.8s}'.format([s]), 'Hello w…');
+
+        expect('{:.1s}'.format([s2]), '👨');
+        expect('{:.3s}'.format([s2]), '👨+👩');
+        expect('{:.5s}'.format([s2]), '👨+👩+👦');
+        expect('{:.7s}'.format([s2]), '👨+👩+👦+👧');
+        expect('{:.9s}'.format([s2]), '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+
+        expect('{:#.2s}'.format([s2]), '👨…');
+        expect('{:#.4s}'.format([s2]), '👨+👩…');
+        expect('{:#.6s}'.format([s2]), '👨+👩+👦…');
+        expect('{:#.8s}'.format([s2]), '👨+👩+👦+👧…');
+        expect('{:#.10s}'.format([s2]), '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+      });
+
+      test('width, align and fill', () {
+        expect('{:16s}'.format([s]), 'Hello world     ');
+        expect('{:>16s}'.format([s]), '     Hello world');
+        expect('{:^16s}'.format([s]), '  Hello world   ');
+        expect('{:<16s}'.format([s]), 'Hello world     ');
+
+        expect('{:*>16s}'.format([s]), '*****Hello world');
+        expect('{:*^16s}'.format([s]), '**Hello world***');
+        expect('{:*<16s}'.format([s]), 'Hello world*****');
+
+        expect('{:*>16.5s}'.format([s]), '***********Hello');
+        expect('{:*^16.5s}'.format([s]), '*****Hello******');
+        expect('{:*<16.5s}'.format([s]), 'Hello***********');
+
+        expect('{:*>#16.6s}'.format([s]), '**********Hello…');
+        expect('{:*^#16.6s}'.format([s]), '*****Hello…*****');
+        expect('{:*<#16.6s}'.format([s]), 'Hello…**********');
       });
     });
 

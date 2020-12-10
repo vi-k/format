@@ -1,3 +1,5 @@
+import 'package:characters/characters.dart';
+
 extension StringExt on String {
   /// Обрезает строку и добавляет к ней троеточие [ellipsis], если она больше
   /// заданного размера [width].
@@ -5,12 +7,13 @@ extension StringExt on String {
   /// Пробелы в конце строки, появившиеся в результате операции, автоматически
   /// удаляются. Но можно их оставить, установив [trim] = true.
   String cut(int width, {String ellipsis = '…', bool trim = true}) {
-    if (length <= width) return this;
+    if (characters.length <= width) return this;
 
     // В заданный размер должно поместиться троеточие
-    if (width < ellipsis.length) return '';
+    final ellipsisLength = ellipsis.characters.length;
+    if (width < ellipsisLength) return '';
 
-    var result = substring(0, width - ellipsis.length);
+    var result = characters.take(width - ellipsisLength).toString();
     if (trim) result = result.trimRight();
 
     return result + ellipsis;
