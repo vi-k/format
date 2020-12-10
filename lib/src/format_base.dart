@@ -24,7 +24,7 @@ import 'string_ext.dart';
 /// - в 'g' и 'n' precision = 21.
 ///
 /// TODO:
-/// Длина в s через characters.
+/// Длина в s через characters. emoji
 
 final RegExp _formatSpecRe = RegExp(
     // begin
@@ -336,80 +336,60 @@ String _intlNumberFormat<T extends num>(
 
   final num value = dyn;
 
-  if (value.isNaN || value.isInfinite) {
-    return NumberFormat.decimalPattern().format(value);
-  }
+  // Числа по умолчанию прижимаются вправо
+  options.align ??= '>';
 
-  String result;
   NumberFormat fmt;
-  bool hasExp;
-
+  var hasExp = false;
+  String? zeros;
   final precision = options.precision;
   final width = options.width;
 
-  if (value is int) {
-    if (precision != null) {
-      throw ArgumentError(
-          "${options.all} Precision not allowed for int with format specifier '${options.specifier}'.");
-    }
-
+  if (value.isNaN || value.isInfinite) {
     fmt = NumberFormat.decimalPattern();
-    hasExp = false;
   } else {
-    result = value.toStringAsPrecision(precision ?? 6);
-    final start = result[0] == '-' ? 1 : 0;
-    final decPoint = result.indexOf('.');
-    var end = result.indexOf('e');
-    if (end != -1) {
-      hasExp = true;
-      fmt = NumberFormat.scientificPattern();
-    } else {
-      hasExp = false;
+    if (value is int) {
+      if (precision != null) {
+        throw ArgumentError(
+            "${options.all} Precision not allowed for int with format specifier '${options.specifier}'.");
+      }
+
       fmt = NumberFormat.decimalPattern();
-      end = result.length;
-    }
-    if (decPoint == -1) {
-      fmt
-        ..minimumFractionDigits = fmt.maximumFractionDigits = 0
-        ..minimumIntegerDigits = end - start;
     } else {
-      fmt
-        ..minimumFractionDigits = fmt.maximumFractionDigits = end - decPoint - 1
-        ..minimumIntegerDigits = decPoint - start;
+      final tmp = value.toStringAsPrecision(precision ?? 6);
+      final start = tmp[0] == '-' ? 1 : 0;
+      final decPoint = tmp.indexOf('.');
+      var end = tmp.indexOf('e');
+      if (end != -1) {
+        hasExp = true;
+        fmt = NumberFormat.scientificPattern();
+      } else {
+        fmt = NumberFormat.decimalPattern();
+        end = tmp.length;
+      }
+      if (decPoint == -1) {
+        fmt
+          ..minimumFractionDigits = fmt.maximumFractionDigits = 0
+          ..minimumIntegerDigits = end - start;
+      } else {
+        fmt
+          ..minimumFractionDigits = fmt.maximumFractionDigits = end - decPoint - 1
+          ..minimumIntegerDigits = decPoint - start;
+      }
+    }
+
+    if (options.groupOption != ',') fmt.turnOffGrouping();
+
+    // Из-за того, что форматирование может быть сложным, не добиваем нулями
+    // самостоятельно, а формируем отдельную строку с нулями. Длину строки
+    // подбираем, исходя из того, чтобы вся дробная часть и точка могут
+    // быть откинуты.
+    if (options.zero && width != null) {
+      final zeroFmt = NumberFormat.decimalPattern()..minimumIntegerDigits = width;
+      if (options.groupOption != ',') zeroFmt.turnOffGrouping();
+      zeros = zeroFmt.format(0);
     }
   }
-
-  if (options.groupOption != ',') fmt.turnOffGrouping();
-
-  // // Из-за сложного форматирования увеличиваем длину целой части для
-  // // заполнения нулями. Исходим из того, что вся дробная часть и точка могут
-  // // быть откинуты.
-  // final width = options.width;
-  // if (options.zero && width != null) {
-  //   fmt = NumberFormat.decimalPattern();
-  //   final dw = width - result.length + fmt.minimumFractionDigits + 1;
-  //   if (dw > 0) fmt.minimumIntegerDigits += dw;
-  // }
-
-  // Из-за того, что форматирование может быть сложным, не добиваем нулями
-  // самостоятельно, а формируем отдельную строку с нулями. Длину строки
-  // подбираем, исходя из того, что вся дробная часть и точка могут
-  // быть откинуты.
-  String? zeros;
-  if (options.zero && width != null) {
-    final zeroFmt = NumberFormat.decimalPattern()..minimumIntegerDigits = width;
-    if (options.groupOption != ',') zeroFmt.turnOffGrouping();
-    zeros = zeroFmt.format(0);
-  }
-
-  final zeroDigitForRe = fmt.symbols.ZERO_DIGIT.replaceFirstMapped(
-      RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
-  final expSymbolForRe = fmt.symbols.EXP_SYMBOL
-      .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
-  final decimalSepForRe = fmt.symbols.DECIMAL_SEP
-      .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
-  final groupSepForRe =
-      fmt.symbols.GROUP_SEP.replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
 
   // Сохраняем знак.
   var sign = options.sign;
@@ -421,71 +401,63 @@ String _intlNumberFormat<T extends num>(
     sign = fmt.symbols.PLUS_SIGN;
   }
 
-  result = fmt.format(value);
+  var result = fmt.format(value);
 
   // Убираем минус, вернём его в конце.
   if (result.isNotEmpty && result.startsWith(fmt.symbols.MINUS_SIGN)) {
     result = result.substring(fmt.symbols.MINUS_SIGN.length);
   }
 
-  // Удаляем лишние нули в конце.
-  if (removeTrailingZeros) {
-    final decPoint = result.indexOf(fmt.symbols.DECIMAL_SEP);
-    if (decPoint != -1) {
-      result = result.replaceFirst(
-          RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
-          '',
-          decPoint);
-    }
-  }
+  if (!value.isNaN && !value.isInfinite) {
+    final zeroDigitForRe = fmt.symbols.ZERO_DIGIT.replaceFirstMapped(
+        RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
+    final expSymbolForRe = fmt.symbols.EXP_SYMBOL
+        .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+    final decimalSepForRe = fmt.symbols.DECIMAL_SEP
+        .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
 
-  // Ставим обязательную точку.
-  if (needPoint && !result.contains(fmt.symbols.DECIMAL_SEP)) {
-    if (hasExp) {
-      final index = result.indexOf(fmt.symbols.EXP_SYMBOL);
-      assert(index != -1);
-      result = '${result.substring(0, index)}'
-          '${fmt.symbols.DECIMAL_SEP}'
-          '${result.substring(index)}';
-    } else {
-      result = '$result${fmt.symbols.DECIMAL_SEP}';
+    // Удаляем лишние нули в конце.
+    if (removeTrailingZeros) {
+      final decPoint = result.indexOf(fmt.symbols.DECIMAL_SEP);
+      if (decPoint != -1) {
+        result = result.replaceFirst(
+            RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
+            '',
+            decPoint);
+      }
     }
-  }
 
-  // // Удаляем лишние нули в начале.
-  // if (options.zero) {
-  //   final extraWidth = result.length - (fmt.minimumIntegerDigits - sign.length);
-  //   final extra = result.substring(0, extraWidth);
-  //   result =
-  //       extra.replaceFirst(RegExp('^($zeroDigitForRe|$groupSepForRe)*'), '') +
-  //           result.substring(extraWidth);
-  //   if (result.startsWith(fmt.symbols.GROUP_SEP)) {
-  //     result = '${fmt.symbols.ZERO_DIGIT}$result';
-  //   }
-  // }
-
-  if (options.zero && width != null && result.length < width - sign.length) {
-    var integersCount = result.indexOf(fmt.symbols.DECIMAL_SEP);
-    if (integersCount == -1) {
-      integersCount =
-          hasExp ? result.indexOf(fmt.symbols.EXP_SYMBOL) : result.length;
+    // Ставим обязательную точку.
+    if (needPoint && !result.contains(fmt.symbols.DECIMAL_SEP)) {
+      if (hasExp) {
+        final index = result.indexOf(fmt.symbols.EXP_SYMBOL);
+        assert(index != -1);
+        result = '${result.substring(0, index)}'
+            '${fmt.symbols.DECIMAL_SEP}'
+            '${result.substring(index)}';
+      } else {
+        result = '$result${fmt.symbols.DECIMAL_SEP}';
+      }
     }
-    final end = zeros!.length - integersCount;
-    final start = end - (width - sign.length - result.length);
-    final addZeros = zeros.substring(start, end);
-    result = '$addZeros$result';
-    if (result.startsWith(fmt.symbols.GROUP_SEP)) {
-      result = '${fmt.symbols.ZERO_DIGIT}$result';
+
+    if (options.zero && width != null && result.length < width - sign.length) {
+      var integersCount = result.indexOf(fmt.symbols.DECIMAL_SEP);
+      if (integersCount == -1) {
+        integersCount =
+            hasExp ? result.indexOf(fmt.symbols.EXP_SYMBOL) : result.length;
+      }
+      final end = zeros!.length - integersCount;
+      final start = end - (width - sign.length - result.length);
+      final addZeros = zeros.substring(start, end);
+      result = '$addZeros$result';
+      if (result.startsWith(fmt.symbols.GROUP_SEP)) {
+        result = '${fmt.symbols.ZERO_DIGIT}$result';
+      }
     }
   }
 
   // Восстанавливаем знак.
-  result = '$sign$result';
-
-  // Числа по умолчанию прижимаются вправо
-  options.align ??= '>';
-
-  return result;
+  return '$sign$result';
 }
 
 String _format(String template, List<dynamic> positionalArgs,
@@ -661,9 +633,6 @@ String _format(String template, List<dynamic> positionalArgs,
             removeTrailingZeros: !options.alt,
             needPoint: options.alt && value is! int,
           );
-
-          options.align ??= '>';
-
           break;
 
         //   //
