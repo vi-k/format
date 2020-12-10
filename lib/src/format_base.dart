@@ -1,32 +1,6 @@
 import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 
-import 'string_ext.dart';
-
-/// Отличия от Python:
-///
-/// Поддерживается автоматическия и ручная нумерация одновременно - когда
-/// встречается ручная нумерация, индекс автоматической нумерации сбрасывается
-/// на индекс ручной нумерации.
-///
-/// В альтернативном формате для X выводится 0x, а не 0X.
-///
-/// Не поддерживается альтернативный формат для b (0b..) и o (0o..), т.к. Дарт
-/// не поддерживает такие литералы.
-///
-/// Пока не поддерживается в именованных аргументах .key и [index].
-///
-/// nan и inf не дополняются нулями при флаге zero (так делает msvc:spintf в msvc).
-/// sign не действует для nan (nan не может стать +nan) (msvc:sprintf выводит +nan)
-///
-/// В форматах 'e', 'f', 'g', 'n' целые числа воспринимаются как Decimal
-/// в python:
-/// - в 'e' и 'f' precision = 0;
-/// - в 'g' и 'n' precision = 21.
-///
-/// TODO:
-/// Длина в s через characters. emoji
-
 final RegExp _formatSpecRe = RegExp(
     // begin
     r'\{\s*'
@@ -56,6 +30,24 @@ final RegExp _tripleRe = RegExp(r'\d{3}');
 final RegExp _quadrupleRe = RegExp('[0-9a-fA-F]{4}');
 final RegExp _trailingZerosRe = RegExp(r'\.?0+(?=e|$)');
 final RegExp _placeForPointRe = RegExp(r'(?=(e[-+]\d+)?$)');
+
+/// Обрезает строку [src] до необходимой ширины [width], вставляет
+/// при необходимости [ellipsis].
+///
+/// Пробелы после обрезки в конце полученной строки можно убрать, установив
+/// флаг [trim].
+String _cut(String src, int width, {String ellipsis = '…', bool trim = true}) {
+  if (src.characters.length <= width) return src;
+
+  // В заданный размер должно поместиться троеточие
+  final ellipsisLength = ellipsis.characters.length;
+  if (width < ellipsisLength) return '';
+
+  var result = src.characters.take(width - ellipsisLength).toString();
+  if (trim) result = result.trimRight();
+
+  return result + ellipsis;
+}
 
 /// Берёт значение в строке [str] внутри кавычек [left] и [right].
 ///
@@ -90,15 +82,6 @@ String? _getValueInQuotes(String str, String left, String right) {
 /// Если нет кавычек возвращает исходную строку [str] без имзменений.
 String _removeQuotesIfNeed(String str, String left, String right) =>
     _getValueInQuotes(str, left, right) ?? str;
-
-extension Let<T extends Object> on T {
-  R let<R>(R Function(T it) op) => op(this);
-
-  T also(void Function(T it) op) {
-    op(this);
-    return this;
-  }
-}
 
 class _Options {
   _Options(this.positionalArgs, this.namedArgs);
@@ -532,7 +515,7 @@ String _format(String template, List<dynamic> positionalArgs,
           result = precision == null
               ? value
               : options.alt
-                  ? value.cut(precision)
+                  ? _cut(value, precision)
                   : precision > value.characters.length
                       ? value
                       : value.characters.take(precision).toString();
@@ -756,10 +739,30 @@ String _format(String template, List<dynamic> positionalArgs,
   return result;
 }
 
+/// Функция форматирования строк как в Python'е.
+/// https://docs.python.org/3/library/string.html#format-specification-mini-language
+///
+/// Отличия от Python:
+///
+/// - Поддерживается автоматическия и ручная нумерация одновременно - когда
+///   встречается ручная нумерация, индекс автоматической нумерации сбрасывается
+///   на индекс ручной нумерации.
+///
+/// - В альтернативном формате для X выводится 0x, а не 0X.
+///
+/// - Не поддерживается альтернативный формат для b (0b..) и o (0o..), т.к. Дарт
+///   не поддерживает такие литералы.
+///
+/// - Пока не поддерживается в именованных аргументах .key и [index].
+///
+/// - nan и inf не дополняются нулями при флаге zero (так делает msvc:spintf).
+///   sign не действует для nan (nan не может стать +nan) (msvc:sprintf выводит
+///   +nan, но это его проблемы). Короче говоря ни nan, ни inf никак
+///   не меняются. Работает только выравнивание.
+///
+/// - В форматах 'g' и 'n' точность по-умолчанию 6.
 extension StringFormat on String {
   String format(List<dynamic> positionalArgs,
           [Map<String, dynamic>? namedArgs]) =>
       _format(this, positionalArgs, namedArgs);
 }
-
-const format = _format;
