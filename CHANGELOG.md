@@ -1,3 +1,3 @@
 ## 1.0.0
 
-- Initial version, created by Stagehand
+* First release. The basic version is ready. The tests are written.

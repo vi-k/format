@@ -1,88 +1,100 @@
 import 'package:format/format.dart';
 import 'package:intl/intl.dart';
-// ignore: import_of_legacy_library_into_null_safe
 // import 'package:sprintf/sprintf.dart';
 
 void main() {
-  // print(format('{} {} {} {0} {} {}', [1, 2, 3]));
-  // print(format('{a} {[a]} {[+]}', [], {'a': 'a', '+': '+'}));
-  // // print(format('{a:*<+#0{width}.{precision}n[z]}', [],
-  // //     {'a': 123, 'width': 22, 'precision': 33}));
-  // // print(format('{a:*<+#0{width}.{[precision]}n[z]}', [],
-  // //     {'a': 123, 'width': 22, 'precision': 33}));
+  print('hello {}'.format(['world'])); // hello world
+  print('{} {}'.format(['hello', 'world'])); // hello world
+  print('{1} {0}'.format(['hello', 'world'])); // world hello
+  print('{} {} {0} {}'.format(['hello', 'world'])); // hello world hello world
+  print('{a} {b}'.format([], {'a': 'hello', 'b': 'world'})); // hello world
 
-  // print(format('{:c}+{:c}+{:c}+{:c}={:c}', [
-  //   0x1F468, // 👨
-  //   0x1F469, // 👩
-  //   0x1F466, // 👦
-  //   0x1F467, // 👧
-  //   [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
-  // ]));
+  print(format('{a} {"a"} {"+"} {"hello world"}', [], {'a': 1, '+': 2, 'hello world': 3})); // 1 1 2 3
+  print(format("{a} {'a'} {'+'} {'hello world'}", [], {'a': 1, '+': 2, 'hello world': 3})); // 1 1 2 3
 
-  // print(format('[{:^#6.2s}]', ['hello']));
-  // print(format('[{:6d}]', [123]));
-  // print(format('[{:-}] [{:+}] [{: }]', [123, 123, 123]));
-  // print(format('[{:-}] [{:+}] [{: }]', [-123, -123, -123]));
-  // print(format('[{:06}] [{:06}]', [123, -123]));
-  // print(format('[{0:b}] [{0:o}] [{0:d}] [{0:x}] [{0:X}]', [255]));
-  // print(format('[{0:#b}] [{0:#o}] [{0:#d}] [{0:#x}] [{0:#X}] [0x{0:X}]', [255]));
-  // print(format('[{0:#b}] [{0:#o}] [{0:#d}] [{0:#x}] [{0:#X}]', [-255]));
-  // print(format('[{:_}] [{:_}] [{:_}] [{:_}] [{:_}] [{:_}] [{:_}]', [-1, -12, -123, -1234, -12345, -123456, -1234567]));
-  // print(format('[{:,}] [{:,}] [{:,}] [{:,}] [{:,}] [{:,}] [{:,}]', [-1, -12, -123, -1234, -12345, -123456, -1234567]));
-  // print(format('[{:_b}] [{:_b}] [{:_b}] [{:_b}] [{:_b}] [{:_b}] [{:_b}] [{:_b}] [{:_b}]', [-0x1, -0x2, -0x5, -0xA, -0x15, -0x2A, -0x55, -0xAA, -0x155]));
-  // print(format('[{:_X}] [{:_X}] [{:_X}] [{:_X}] [{:_X}] [{:_X}] [{:_X}] [{:_X}] [{:_X}]', [-0x1, -0x12, -0x123, -0x123A, -0x123AB, -0x123ABC, -0x123ABCD, -0x123ABCDE, -0x123ABCDEF]));
-  // // print(format('[{:,b}]', [-0x1]));
-  // // print(format('[{:,X}]', [-0x1]));
-  // print(format('[{:011b}] [{:011b}] [{:011b}] [{:011b}] [{:011b}] [{:011b}] [{:011b}] [{:011b}] [{:011b}]', [-0x1, -0x2, -0x5, -0xA, -0x15, -0x2A, -0x55, -0xAA, -0x155]));
+  const n = 123.4567;
+  print(format('{:.2f}', [n])); // 123.46
 
-  // print('');
-  // print(format('[{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}]', [1, 12, 123, 1234, 12345, 123456, 1234567]));
-  // print(format('[{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}] [{:010,}]', [-1, -12, -123, -1234, -12345, -123456, -1234567]));
-  // print(format('[{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}]', [1, 12, 123, 1234, 12345, 123456, 1234567]));
-  // print(format('[{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}] [{:09,}]', [-1, -12, -123, -1234, -12345, -123456, -1234567]));
+  print(format('{:10.2f}', [n])); // '    123.46'
+  print(format('{:<10.2f}', [n])); // '123.46    '
+  print(format('{:^10.2f}', [n])); // '  123.46  '
+  print(format('{:>10.2f}', [n])); // '    123.46'
 
-  // print('');
-  // print(format('[{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}]', [0x1, 0x2, 0x5, 0xA, 0x15, 0x2A, 0x55, 0xAA, 0x155]));
-  // print(format('[{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}] [{:012_b}]', [-0x1, -0x2, -0x5, -0xA, -0x15, -0x2A, -0x55, -0xAA, -0x155]));
-  // print(format('[{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}]', [0x1, 0x2, 0x5, 0xA, 0x15, 0x2A, 0x55, 0xAA, 0x155]));
-  // print(format('[{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}] [{:011_b}]', [-0x1, -0x2, -0x5, -0xA, -0x15, -0x2A, -0x55, -0xAA, -0x155]));
+  print(format('{:*<10.2f}', [n])); // 123.46****
+  print(format('{:*^10.2f}', [n])); // **123.46**
+  print(format('{:*>10.2f}', [n])); // ****123.46
 
-  // print('');
-  // print(format('[{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}]', [0x1, 0x12, 0x123, 0x123A, 0x123AB, 0x123ABC, 0x123ABCD, 0x123ABCDE, 0x123ABCDEF]));
-  // print(format('[{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}] [{:012_X}]', [-0x1, -0x12, -0x123, -0x123A, -0x123AB, -0x123ABC, -0x123ABCD, -0x123ABCDE, -0x123ABCDEF]));
-  // print(format('[{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}]', [0x1, 0x12, 0x123, 0x123A, 0x123AB, 0x123ABC, 0x123ABCD, 0x123ABCDE, 0x123ABCDEF]));
-  // print(format('[{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}] [{:011_X}]', [-0x1, -0x12, -0x123, -0x123A, -0x123AB, -0x123ABC, -0x123ABCD, -0x123ABCDE, -0x123ABCDEF]));
+  print(format('{:010.2f}', [n])); // 0000123.46
+  print(format('{:012,.2f}', [n])); // 0,000,123.46
+  print(format('{:012_.2f}', [n])); // 0_000_123.46
 
-  // print('');
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'en_US';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'ru_RU';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'fr';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'pt_BR';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'es';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'ln';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
-  // Intl.defaultLocale = 'de_DE';
-  // print("${Intl.defaultLocale}: ${format('[{:12,n}]', [-1234567])} [${Numberformat().symbols.GROUP_SEP}${Numberformat().symbols.DECIMAL_SEP}]");
+  print(format('{:0{},.{}f}', [n, 12, 2])); // 0,000,123.46
+  print(format('{value:0{width},.{precision}f}', [], {'value': n, 'width': 12, 'precision': 2})); // 0,000,123.46
 
+  const n1 = 123456.789;
+  const n2 = 1234567.89;
+  print(format('{:g}', [n1])); // 123457
+  print(format('{:g}', [n2])); // 1.23457e+6
+  print(format('{:.9g}', [n1])); // 123456.789
+  print(format('{:.9g}', [n2])); // 1234567.89
+  print(format('{:.5g}', [n1])); // 1.2346e+5
+  print(format('{:.5g}', [n2])); // 1.2346e+6
+
+  print(format('{:g}', [double.nan])); // nan
+  print(format('{:g}', [double.infinity])); // inf
+  print(format('{:g}', [double.negativeInfinity])); // -inf
+
+  const i = 12345678;
+  print(format('{:b}', [i])); // 101111000110000101001110
+  print(format('{:d}', [i])); // 12345678
+  print(format('{:x}', [i])); // bc614e
+  print(format('{:X}', [i])); // BC614E
+  print(format('{:#x}', [i])); // 0xbc614e
+  print(format('{:#X}', [i])); // 0xBC614E
+
+  print(format('{:_b}', [i])); // 1011_1100_0110_0001_0100_1110
+  print(format('{:,d}', [i])); // 12,345,678
+  print(format('{:_d}', [i])); // 12_345_678
+  print(format('{:_x}', [i])); // bc_614e
+  print(format('{:_X}', [i])); // BC_614E
+  print(format('{:#_x}', [i])); // 0xbc_614e
+  print(format('{:#_X}', [i])); // 0xBC_614E
+
+  print(format('{:c}+{:c}+{:c}+{:c}={:c}', [
+    0x1F468, // 👨
+    0x1F469, // 👩
+    0x1F466, // 👦
+    0x1F467, // 👧
+    [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
+  ]));
+
+  const m = 12345678.9;
   Intl.defaultLocale = 'ru_RU';
-  // print(format('[{:09,n}] [{:09,n}] [{:09,n}] [{:09,n}] [{:09,n}] [{:09,n}] [{:09,n}]', [-1, -12, -123, -1234, -12345, -123456, -1234567]));
+  print(format('{:n}', [m])); // 1,23457E7
+  print(format('{:.9n}', [m])); // 12345678,9
+  print(format('{:012,.9n}', [m])); // 12 345 678,9
+  print(format('{:n}', [double.nan])); // не число
+  print(format('{:n}', [double.infinity])); // ∞
+  print(format('{:n}', [double.negativeInfinity])); // -∞
 
-  print('{:012,.6f}'.format([-123.6]));
-  print('{:012,d}'.format([-123]));
-  print('{:012,n}'.format([-123]));
-  print('{:012,.6n}'.format([-123.0]));
-  print('\u043d\u0435\u00a0\u0447\u0438\u0441\u043b\u043e {:011,x}'
-      .format([-0x123ABCDEF]));
+  Intl.defaultLocale = 'de_DE';
+  print(format('{:n}', [m])); // 1,23457E7
+  print(format('{:.9n}', [m])); // 12345678,9
+  print(format('{:012,.9n}', [m])); // 12.345.678,9
 
-  // gu,hi DECIMAL_PATTERN
+  Intl.defaultLocale = 'en_IN';
+  print(format('{:n}', [m])); // 1.23457E7
+  print(format('{:.9n}', [m])); // 12345678.9
+  print(format('{:012,.9n}', [m])); // 1,23,45,678.9
 
-  // print(sprintf('%*<+#02.3f', [123.4]));
-  // print(sprintf('%+#02.3f', [123.4]));
-  // print(sprintf('%s', [123.4]));
+  Intl.defaultLocale = 'bn';
+  print(format('{:n}', [m])); // ১.২৩৪৫৭E৭
+  print(format('{:.9n}', [m])); // ১২৩৪৫৬৭৮.৯
+  print(format('{:012,.9n}', [m])); // ১,২৩,৪৫,৬৭৮.৯
+
+  Intl.defaultLocale = 'ar_EG';
+  print(format('{:n}', [m])); // ١٫٢٣٤٥٧اس٧
+  print(format('{:.9n}', [m])); // ١٢٣٤٥٦٧٨٫٩
+  print(format('{:012,.9n}', [m])); // ١٢٬٣٤٥٬٦٧٨٫٩
+  print(format('{:n}', [double.nan])); // ليس رقم
 }
