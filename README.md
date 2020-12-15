@@ -1,10 +1,23 @@
-# Formatting library for Dart
+Sorry, I don't know enough English to write this documentation in it. I will
+be glad to help.
 
-The format string syntax is almost similar to the one used by format in Python.
+# format
 
-## Usage
+format - это пакет для форматирования строк на Дарте. Сейчас в нём только одна
+функция, собственно, format().
 
-A simple usage example:
+## Содержание
+- [format()](#string-format)
+    - [Пример использования](#пример-использования)
+
+## String.format()
+
+Функция-расширение, созданная по аналогии с format()
+в [Python](https://docs.python.org/3/library/string.html#format-string-syntax)
+и [С++20](https://en.cppreference.com/w/cpp/utility/format/format).
+
+### Пример использования
+
 
 ```dart
 import 'package:format/format.dart';
