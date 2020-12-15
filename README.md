@@ -1,5 +1,5 @@
-Sorry, I don't know enough English to write this documentation in it. I will
-be glad to help.
+_Sorry, I don't know enough English to write this documentation in it. I will
+be glad to help._
 
 # format
 
@@ -7,17 +7,34 @@ format - это пакет для форматирования строк на �
 функция, собственно, format().
 
 ## Содержание
-- [format()](#string-format)
+- [format()](#stringformat)
     - [Пример использования](#пример-использования)
 
 ## String.format()
 
-Функция-расширение, созданная по аналогии с format()
-в [Python](https://docs.python.org/3/library/string.html#format-string-syntax)
-и [С++20](https://en.cppreference.com/w/cpp/utility/format/format).
+Функция-расширение класса [String](https://api.dart.dev/stable/dart-core/String-class.html),
+аналогичная методу [format](https://docs.python.org/3/library/string.html#format-string-syntax)
+в Python, функции [std::format](https://en.cppreference.com/w/cpp/utility/format/format)
+из С++20, которые в свою очередь стали развитием популярной функции [sprintf](https://en.cppreference.com/w/c/io/fprintf)
+из C. Суть её в том, чтобы вместо шаблонов, заключённых в фигурные скобки {},
+подставить значения переданных аргументов, отформатировав их требуемым образом.
+
+```
+template            ::=  '{' [argId] [':' formatSpec] '}'
+argId               ::=  index | identifier | doubleQuotedString | singleQuotedString
+index               ::=  digit+
+identifier          ::=  idStart idContinue*
+idStart             ::=  '_' | letter
+idContinue          ::=  '_' | letter | digit
+letter              ::=  <любая буква любого языка> (\p{Letter})
+doubleQuotedString  ::=  '"' <любые символы, с заменой ' на ''> "'"
+singleQuotedString  ::=  "'" <любые сиволы, с заменой " на ""> '"'
+arg_name            ::=  [identifier | digit+]
+attribute_name      ::=  identifier
+formatSpec          ::=  <в следующем разделе>
+```
 
 ### Пример использования
-
 
 ```dart
 import 'package:format/format.dart';
