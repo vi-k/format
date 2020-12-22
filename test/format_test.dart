@@ -62,10 +62,7 @@ void main() {
               e is ArgumentError &&
               e.message == '{a} Key [a] is missing in named args.')));
     });
-    test('width, align and fill', () {
-      expect('{:0}'.format([123]), '123'); // Flag zero and zero width
-      expect('{:00}'.format([123]), '123');
-
+    test('fill and align', () {
       const s = 'hello';
 
       expect('{:0}'.format([s]), 'hello');
@@ -81,6 +78,22 @@ void main() {
       expect('{:*>9}'.format([s]), '****hello');
       expect('{:*^9}'.format([s]), '**hello**');
       expect('{:*^10}'.format([s]), '**hello***');
+
+      expect('{:👨<9}'.format([s]), 'hello👨👨👨👨');
+      expect('{:👨>9}'.format([s]), '👨👨👨👨hello');
+      expect('{:👨^9}'.format([s]), '👨👨hello👨👨');
+
+      expect('{:👨‍👩‍👦‍👧<9}'.format([s]), 'hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
+      expect('{:👨‍👩‍👦‍👧>9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello');
+      expect('{:👨‍👩‍👦‍👧^9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
+
+      expect('{:(any symbols)<9}'.format([s]), 'hello(any symbols)(any symbols)(any symbols)(any symbols)');
+      expect('{:(any symbols)>9}'.format([s]), '(any symbols)(any symbols)(any symbols)(any symbols)hello');
+      expect('{:(any symbols)^9}'.format([s]), '(any symbols)(any symbols)hello(any symbols)(any symbols)');
+
+      expect('{:<^><9}'.format([s]), 'hello<^><^><^><^>');
+      expect('{:<^>>9}'.format([s]), '<^><^><^><^>hello');
+      expect('{:<^>^9}'.format([s]), '<^><^>hello<^><^>');
     });
 
     test('width and precision', () {
@@ -107,6 +120,9 @@ void main() {
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message == '{:.0} Precision must be >= 1. Passed 0.')));
+
+      expect('{:0}'.format([123]), '123'); // Flag zero and zero width
+      expect('{:00}'.format([123]), '123');
     });
   });
 

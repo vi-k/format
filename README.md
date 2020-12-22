@@ -1,10 +1,77 @@
-# Formatting library for Dart
+_Sorry, I don't know enough English to write this documentation in it. I will
+be glad to help._
 
-The format string syntax is almost similar to the one used by format in Python.
+# format
 
-## Usage
+format - это пакет для форматирования строк на Дарте. Сейчас в нём только одна
+функция, собственно, format().
 
-A simple usage example:
+## Содержание
+- [format()](#stringformat)
+    - [Пример использования](#пример-использования)
+
+## String.format()
+
+Функция-расширение класса [String](https://api.dart.dev/stable/dart-core/String-class.html),
+аналогичная методу [format](https://docs.python.org/3/library/string.html#format-string-syntax)
+в Python, функции [std::format](https://en.cppreference.com/w/cpp/utility/format/format)
+из С++20, которые в свою очередь стали развитием популярной функции [sprintf](https://en.cppreference.com/w/c/io/fprintf)
+из C. Суть её в том, чтобы вместо шаблонов, заключённых в фигурные скобки `{}`,
+подставить значения переданных аргументов, отформатировав их требуемым образом.
+
+```dart
+String result = '{...}'.format(...);
+```
+
+### Описание шаблона
+
+```
+template            ::=  '{' [argId] [':' formatSpec] '}'
+argId               ::=  index | identifier | doubleQuotedString | singleQuotedString
+index               ::=  digit+
+identifier          ::=  idStart idContinue*
+idStart             ::=  '_' | letter
+idContinue          ::=  '_' | letter | digit
+letter              ::=  <любая буква любого языка> (\p{Letter})
+doubleQuotedString  ::=  '"' <любые символы, с заменой " на ""> "'"
+singleQuotedString  ::=  "'" <любые символы, с заменой ' на ''> '"'
+arg_name            ::=  [identifier | digit+]
+attribute_name      ::=  identifier
+formatSpec          ::=  <в следующем разделе>
+```
+
+### Синтаксис строки форматирования
+
+```
+formatSpec      ::=  [[fill]align][sign][#][0][width][grouping_option][.precision][type]
+fill            ::=  <любые символы>
+align           ::=  '<' | '>' | '^'
+sign            ::=  '+' | '-' | ' '
+width           ::=  digit+ | '{' argId '}'
+groupingOption  ::=  '_' | ','
+precision       ::=  digit+ | '{' argId '}'
+type            ::=  'b' | 'c' | 'd' | 'e' | 'E' | 'f' | 'F' | 'g' | 'G' | 'n' | 'o' | 's' | 'x' | 'X'
+```
+
+Если выравнивание `align` задано, то строка заполнения `fill` может быть любым
+сочетанием символов, в то время как в Python'е допустим только один символ. Это
+сделано для того, чтобы можно было использовать символы, состоящие из нескольких
+Unicode-знаков. TODO: В будущем предполагается использование фигурных скобок
+`{}` внутри шаблона, чтобы формировать шаблон на лету. В этом случае `{}`
+не смогут быть использованы внутри `fill`.
+
+Возможные значения `align`:
+
+| Значение | Описание
+| :------: | :-------
+| '<'      | Выравнивание влево (это значение по умолчанию для строк и символов).
+| '>'      | Выравнивание вправо (это значение по умолчанию для чисел).
+| '^'      | Выравнивание по центру.
+
+Разумеется, `align` имеет значение только тогда, когда задана минимальная ширина
+поля `width` и она больше, чем реальная ширина поля.
+
+### Пример использования
 
 ```dart
 import 'package:format/format.dart';
