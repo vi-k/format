@@ -86,6 +86,10 @@ void main() {
       expect('{:👨‍👩‍👦‍👧<9}'.format([s]), 'hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
       expect('{:👨‍👩‍👦‍👧>9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello');
       expect('{:👨‍👩‍👦‍👧^9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
+      
+      expect('{:a\u{0308}<9}'.format([s]), 'helloääää');
+      expect('{:a\u{0308}>9}'.format([s]), 'äääähello');
+      expect('{:a\u{0308}^9}'.format([s]), 'äähelloää');
 
       expect('{:(any symbols)<9}'.format([s]), 'hello(any symbols)(any symbols)(any symbols)(any symbols)');
       expect('{:(any symbols)>9}'.format([s]), '(any symbols)(any symbols)(any symbols)(any symbols)hello');

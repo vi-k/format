@@ -67,6 +67,10 @@ void main() {
     [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
   ]));
 
+  print('{:👨>10}'.format([1]));
+  print('{:👨‍👩‍👦‍👧>10}'.format([1]));
+  print('{:ä>10}'.format([1]));
+
   const m = 12345678.9;
   Intl.defaultLocale = 'ru_RU';
   print('{:n}'.format([m])); // 1,23457E7
@@ -96,7 +100,4 @@ void main() {
   print('{:.9n}'.format([m])); // ١٢٣٤٥٦٧٨٫٩
   print('{:012,.9n}'.format([m])); // ١٢٬٣٤٥٬٦٧٨٫٩
   print('{:n}'.format([double.nan])); // ليس رقم
-
-  print('{:👨>10}'.format([1]));
-  print('{:👨‍👩‍👦‍👧>10}'.format([1]));
 }
