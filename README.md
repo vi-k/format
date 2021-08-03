@@ -8,7 +8,7 @@ Now it has only one function, actually format ().
 
 ## Content
 - [format()](#stringformat)
-    - [Usage example](#example-use)
+    - [Usage example](#usage-example)
 
 ## String.format()
 
