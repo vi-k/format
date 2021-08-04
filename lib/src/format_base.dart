@@ -1,3 +1,6 @@
+import 'dart:core';
+import 'dart:core' as core show print;
+
 import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 
@@ -27,7 +30,7 @@ import 'package:intl/intl.dart';
 ///   проку нет. Он же не может как JS интерпретировать свой код в runtime.
 ///   В общем, это решение спорное. Но что предпочесть, я не знаю. C++
 ///   не поддерживает 0o, а 0b поддерживает как в коде, так в sprintf. Я решил
-///   поступить также.
+///   не поддерживать их.
 ///
 /// - nan и inf не дополняются нулями при флаге zero (как это делат Python, но
 ///   не делает msvc:spintf). sign не действует для nan (nan не может стать
@@ -60,10 +63,70 @@ import 'package:intl/intl.dart';
 ///
 /// - TODO: {} поддерживает только для width и precision, в то время как Python
 ///   поддерживает {} в любом месте для формирования шаблона.
+String format(
+  String fmt,
+  Object values, [
+  Object? v2,
+  Object? v3,
+  Object? v4,
+  Object? v5,
+  Object? v6,
+  Object? v7,
+  Object? v8,
+  Object? v9,
+  Object? v10,
+]) {
+  if (values is List) {
+    return _format(fmt, positionalArgs: values);
+  } else if (values is Map<String, Object?>) {
+    return _format(fmt, namedArgs: values);
+  }
+
+  return _format(
+    fmt,
+    positionalArgs: [values, v2, v3, v4, v5, v6, v7, v8, v9, v10],
+  );
+}
+
 extension StringFormat on String {
-  String format(List<dynamic> positionalArgs,
-          [Map<String, dynamic>? namedArgs]) =>
-      _format(this, positionalArgs, namedArgs);
+  String format(
+    Object values, [
+    Object? v2,
+    Object? v3,
+    Object? v4,
+    Object? v5,
+    Object? v6,
+    Object? v7,
+    Object? v8,
+    Object? v9,
+    Object? v10,
+  ]) {
+    if (values is List) {
+      return _format(this, positionalArgs: values);
+    } else if (values is Map<String, Object?>) {
+      return _format(this, namedArgs: values);
+    }
+
+    return _format(
+      this,
+      positionalArgs: [values, v2, v3, v4, v5, v6, v7, v8, v9, v10],
+    );
+  }
+
+  void print(
+    Object values, [
+    Object? v2,
+    Object? v3,
+    Object? v4,
+    Object? v5,
+    Object? v6,
+    Object? v7,
+    Object? v8,
+    Object? v9,
+    Object? v10,
+  ]) {
+    core.print(format(values, v2, v3, v4, v5, v6, v7, v8, v9, v10));
+  }
 }
 
 final RegExp _formatSpecRe = RegExp(
@@ -151,13 +214,13 @@ String _removeQuotesIfNeed(String str, String left, String right) =>
 class _Options {
   _Options(this.positionalArgs, this.namedArgs);
 
-  final List<dynamic> positionalArgs;
-  final Map<String, dynamic>? namedArgs;
+  final List<Object?>? positionalArgs;
+  final Map<String, Object?>? namedArgs;
   final intlNumberFormat = NumberFormat();
   int positionalArgsIndex = 0;
   String all = '';
   String? argId;
-  dynamic? value;
+  Object? value;
   String? fill;
   String? align;
   String? sign;
@@ -172,7 +235,7 @@ class _Options {
   @override
   String toString() => '''
 _Options{
-  positionalArgs: ${positionalArgs.length},
+  positionalArgs: ${positionalArgs?.length ?? 'null'},
   namedArgs: ${namedArgs?.length ?? 'null'},
   positionalArgsIndex: $positionalArgsIndex,
   spec: $all,
@@ -190,14 +253,20 @@ _Options{
 }
 
 /// Поиск значения в [positionalArgs] по индексу [index].
-dynamic _getValueByIndex(_Options options, int index) {
-  if (index >= options.positionalArgs.length) {
+Object? _getValueByIndex(_Options options, int index) {
+  final positionalArgs = options.positionalArgs;
+
+  if (positionalArgs == null) {
+    throw ArgumentError('${options.all} Positional args is missing.');
+  }
+
+  if (index >= positionalArgs.length) {
     throw ArgumentError(
         '${options.all} Index #$index out of range of positional args.');
   }
 
   options.positionalArgsIndex = index + 1;
-  return options.positionalArgs[index];
+  return positionalArgs[index];
 }
 
 /// Поиск значения.
@@ -206,8 +275,8 @@ dynamic _getValueByIndex(_Options options, int index) {
 /// {} - перебираем параметры в positionalArgs по порядку;
 /// {index} - индекс параметра в positionalArgs;
 /// {id} или {[id]} - название параметра в namedArgs;
-dynamic _getValue(_Options options, String? rawId) {
-  dynamic value;
+Object? _getValue(_Options options, String? rawId) {
+  Object? value;
 
   if (rawId == null || rawId.isEmpty) {
     // Автоматическая нумерация.
@@ -254,7 +323,7 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
     value = int.tryParse(str);
     if (value == null) {
       // Значение передано в виде параметра.
-      final dynamic v = _getValue(options, _getValueInQuotes(str, '{', '}'));
+      final v = _getValue(options, _getValueInQuotes(str, '{', '}'));
       if (v is! int) {
         throw ArgumentError(
             '${options.all} $name must be int, passed ${v.runtimeType}.');
@@ -274,7 +343,7 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
 
 String _numberFormat<T extends num>(
   _Options options,
-  dynamic dyn, {
+  Object? dyn, {
   bool precisionAllowed = true,
   bool altAllowed = true,
   bool standartGroupOptionAllowed = true,
@@ -287,19 +356,29 @@ String _numberFormat<T extends num>(
   // Проверки.
   if (dyn is! T) {
     throw ArgumentError(
-        '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
+      '${options.all} Expected $T. Passed ${dyn.runtimeType}.',
+    );
   }
   if (options.precision != null && !precisionAllowed) {
     throw ArgumentError(
-        "${options.all} Precision not allowed with format specifier '${options.specifier}'.");
+      '${options.all} '
+      'Precision not allowed with format specifier '
+      "'${options.specifier}'.",
+    );
   }
   if (options.alt && !altAllowed) {
     throw ArgumentError(
-        "${options.all} Alternate form (#) not allowed with format specifier '${options.specifier}'.");
+      '${options.all} '
+      'Alternate form (#) not allowed with format specifier '
+      "'${options.specifier}'.",
+    );
   }
   if (options.groupOption == ',' && !standartGroupOptionAllowed) {
     throw ArgumentError(
-        "${options.all} Group option ',' not allowed with format specifier '${options.specifier}'.");
+      '${options.all} '
+      "Group option ',' not allowed with format specifier "
+      "'${options.specifier}'.",
+    );
   }
 
   String result;
@@ -351,10 +430,11 @@ String _numberFormat<T extends num>(
     if (pointIndex == -1) pointIndex = result.length;
 
     result = result.substring(0, pointIndex).replaceFirstMapped(
-            searchRe,
-            (m) =>
-                m[1]! +
-                m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[0]}')) +
+              searchRe,
+              (m) =>
+                  m[1]! +
+                  m[2]!.replaceAllMapped(changeRe, (m) => '$grpo${m[0]}'),
+            ) +
         result.substring(pointIndex);
 
     // Если добавляли нули, надо обрезать лишние.
@@ -373,14 +453,15 @@ String _numberFormat<T extends num>(
 
 String _intlNumberFormat<T extends num>(
   _Options options,
-  dynamic dyn, {
+  Object? dyn, {
   bool removeTrailingZeros = false,
   bool needPoint = false,
 }) {
   // Проверки.
   if (dyn is! T) {
     throw ArgumentError(
-        '${options.all} Expected $T. Passed ${dyn.runtimeType}.');
+      '${options.all} Expected $T. Passed ${dyn.runtimeType}.',
+    );
   }
 
   final num value = dyn;
@@ -400,7 +481,10 @@ String _intlNumberFormat<T extends num>(
     if (value is int) {
       if (precision != null) {
         throw ArgumentError(
-            "${options.all} Precision not allowed for int with format specifier '${options.specifier}'.");
+          '${options.all} '
+          'Precision not allowed for int with format specifier '
+          "'${options.specifier}'.",
+        );
       }
 
       fmt = NumberFormat.decimalPattern();
@@ -428,7 +512,9 @@ String _intlNumberFormat<T extends num>(
       }
     }
 
-    if (options.groupOption != ',') fmt.turnOffGrouping();
+    if (options.groupOption != ',') {
+      fmt.turnOffGrouping();
+    }
 
     // Из-за того, что форматирование может быть сложным, не добиваем нулями
     // самостоятельно, а формируем отдельную строку с нулями. Длину строки
@@ -437,7 +523,9 @@ String _intlNumberFormat<T extends num>(
     if (options.zero && width != null) {
       final zeroFmt = NumberFormat.decimalPattern()
         ..minimumIntegerDigits = width;
-      if (options.groupOption != ',') zeroFmt.turnOffGrouping();
+      if (options.groupOption != ',') {
+        zeroFmt.turnOffGrouping();
+      }
       zeros = zeroFmt.format(0);
     }
   }
@@ -472,10 +560,10 @@ String _intlNumberFormat<T extends num>(
       final decPoint = result.indexOf(fmt.symbols.DECIMAL_SEP);
       if (decPoint != -1) {
         result = result.replaceFirst(
-            RegExp(
-                '(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
-            '',
-            decPoint);
+          RegExp('(($decimalSepForRe)?$zeroDigitForRe)+(?=$expSymbolForRe|\$)'),
+          '',
+          decPoint,
+        );
       }
     }
 
@@ -512,8 +600,11 @@ String _intlNumberFormat<T extends num>(
   return '$sign$result';
 }
 
-String _format(String template, List<dynamic> positionalArgs,
-    [Map<String, dynamic>? namedArgs]) {
+String _format(
+  String template, {
+  List<Object?>? positionalArgs,
+  Map<String, Object?>? namedArgs,
+}) {
   final options = _Options(positionalArgs, namedArgs);
 
   // var removeEmptyStrings = false;

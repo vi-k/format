@@ -16,6 +16,11 @@ void main() {
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message == '{} Index #3 out of range of positional args.')));
+      expect(
+          () => '{}'.format(<String, Object?>{}),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{} Positional args is missing.')));
     });
 
     test('named arguments', () {
@@ -34,21 +39,21 @@ void main() {
 
       expect(
           '{test_1} {тест_2} {テスト_3} {"hello world"} {_} {_0}'
-              .format([], namedArgs),
+              .format(namedArgs),
           '1 2 3 4 5 6');
-      expect('{0} {"0"}'.format([123], namedArgs), '123 7');
-      expect('{+} {"+"}'.format([], namedArgs), '{+} 8');
+      // expect('{0} {"0"}'.format([123], namedArgs), '123 7');
+      expect('{+} {"+"}'.format(namedArgs), '{+} 8');
       expect(
           '{"""key in double quotes"""} {"\'key in single quotes\'"}'
-              .format([], namedArgs),
+              .format(namedArgs),
           '9 10');
       expect(
           "{'\"key in double quotes\"'} {'''key in single quotes'''}"
-              .format([], namedArgs),
+              .format(namedArgs),
           '9 10');
       expect(
           '{"""key in double quotes"""} ' "{'''key in single quotes'''}"
-              .format([], namedArgs),
+              .format(namedArgs),
           '9 10');
 
       expect(
@@ -57,7 +62,7 @@ void main() {
               e is ArgumentError &&
               e.message == '{a} Named args is missing.')));
       expect(
-          () => '{a}'.format([], namedArgs),
+          () => '{a}'.format(namedArgs),
           throwsA(predicate((e) =>
               e is ArgumentError &&
               e.message == '{a} Key [a] is missing in named args.')));
