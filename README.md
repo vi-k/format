@@ -1,9 +1,6 @@
-_Sorry, I don't know enough English to write this documentation in it. I will
-be glad to help._
-
 # format
 
-format is a package for formatting Dart strings. 
+*format* is a package for formatting Dart strings. 
 Now it has only one function, actually format ().
 
 ## Content
@@ -13,10 +10,10 @@ Now it has only one function, actually format ().
 ## String.format()
 
 
-Function-extension of the class [String] (https://api.dart.dev/stable/dart-core/String-class.html),
-similar to [format] method (https://docs.python.org/3/library/string.html#format-string-syntax)
-in Python, functions [std :: format] (https://en.cppreference.com/w/cpp/utility/format/format)
-from C ++ 20, which in turn became the development of the popular function [sprintf] (https://en.cppreference.com/w/c/io/fprintf)
+Function-extension of the class [String](https://api.dart.dev/stable/dart-core/String-class.html),
+similar to method [format](https://docs.python.org/3/library/string.html#format-string-syntax)
+in Python, function [std::format](https://en.cppreference.com/w/cpp/utility/format/format)
+from C++20, which in turn became the development of the popular function [sprintf](https://en.cppreference.com/w/c/io/fprintf)
 from C. Its essence is that instead of templates enclosed in curly braces `{}`,
 substitute the values of the passed arguments, formatting them as required.
 
@@ -65,14 +62,15 @@ and at the same time do not engage in unnecessary analysis.
 Python imposes only one constraint on the fill character - not allowed
 use curly braces `{}` because they are used to insert values
 inside the template. In Dart, there is no need for such a function, since he has
-built into the language is excellent [string interpolation] [https://dart.dev/guides/language/language-tour#strings].
+built into the language is excellent [string interpolation](https://dart.dev/guides/language/language-tour#strings).
 
 Possible `align` values:
-| Value | Description
+
+| Value     | Description
 | : ------: | : -------
-| '<' | Left justification (this is the default for strings and characters).
-| '>' | Right justification (this is the default for numbers).
-| '^' | Center alignment.
+|       '<' | Left justification (this is the default for strings and characters).
+|       '>' | Right justification (this is the default for numbers).
+|       '^' | Center alignment.
 
 Of course, `align` only matters when a minimum width is given
 the field is `width`, and it is larger than the actual width of the field. In this case, the result is
@@ -93,11 +91,11 @@ it is clear why exactly in these cases no exception was made for zeros.
 
 With this function, you can specify how to handle the sign of a number.
 
-| Value | Description
+| Value  | Description
 | : ---: | ---
-| '-' | The sign is placed only for negative numbers (this is the default value).
-| '+' | Positive numbers also have a sign (zero also comes with a plus).
-| '' | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
+|    '-' | The sign is placed only for negative numbers (this is the default value).
+|    '+' | Positive numbers also have a sign (zero also comes with a plus).
+|     '' | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
 
 ### Usage example
 
@@ -170,6 +168,10 @@ void main() {
     0x1F467, // 👧
     [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
   ]));
+
+  print('{:👨>10}'.format([1]));
+  print('{:👨‍👩‍👦‍👧>10}'.format([1]));
+  print('{:ä>10}'.format([1]));
 
   const m = 12345678.9;
   Intl.defaultLocale = 'ru_RU';
