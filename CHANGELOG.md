@@ -1,3 +1,7 @@
+## 1.1.1
+* English README.md.
+* Add extension method `print` and top-level function `format`.
+
 ## 1.1.0
 * Breaked changes: for named args use format({...}) instead of format([], {...}).
 
