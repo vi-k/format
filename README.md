@@ -3,27 +3,28 @@ be glad to help._
 
 # format
 
-format - это пакет для форматирования строк на Дарте. Сейчас в нём только одна
-функция, собственно, format().
+format is a package for formatting Dart strings. 
+Now it has only one function, actually format ().
 
-## Содержание
+## Content
 - [format()](#stringformat)
-    - [Пример использования](#пример-использования)
+    - [Usage example](#usage-example)
 
 ## String.format()
 
-Функция-расширение класса [String](https://api.dart.dev/stable/dart-core/String-class.html),
-аналогичная методу [format](https://docs.python.org/3/library/string.html#format-string-syntax)
-в Python, функции [std::format](https://en.cppreference.com/w/cpp/utility/format/format)
-из С++20, которые в свою очередь стали развитием популярной функции [sprintf](https://en.cppreference.com/w/c/io/fprintf)
-из C. Суть её в том, чтобы вместо шаблонов, заключённых в фигурные скобки `{}`,
-подставить значения переданных аргументов, отформатировав их требуемым образом.
+
+Function-extension of the class [String] (https://api.dart.dev/stable/dart-core/String-class.html),
+similar to [format] method (https://docs.python.org/3/library/string.html#format-string-syntax)
+in Python, functions [std :: format] (https://en.cppreference.com/w/cpp/utility/format/format)
+from C ++ 20, which in turn became the development of the popular function [sprintf] (https://en.cppreference.com/w/c/io/fprintf)
+from C. Its essence is that instead of templates enclosed in curly braces `{}`,
+substitute the values of the passed arguments, formatting them as required.
 
 ```dart
 String result = '{...}'.format(...);
 ```
 
-### Описание шаблона
+### Template description
 
 ```
 template            ::=  '{' [argId] [':' formatSpec] '}'
@@ -32,19 +33,19 @@ index               ::=  digit+
 identifier          ::=  idStart idContinue*
 idStart             ::=  '_' | letter
 idContinue          ::=  '_' | letter | digit
-letter              ::=  <любая буква любого языка> (\p{Letter})
-doubleQuotedString  ::=  '"' <любые символы, с заменой " на ""> "'"
-singleQuotedString  ::=  "'" <любые символы, с заменой ' на ''> '"'
+letter              ::=  <any letter of any language> (\ p {Letter})
+doubleQuotedString  ::=  '"' <any characters, with replacement" for ""> "'"
+singleQuotedString  ::=  "'" <any characters, replacing' with '>' "'
 arg_name            ::=  [identifier | digit+]
 attribute_name      ::=  identifier
-formatSpec          ::=  <в следующем разделе>
+formatSpec          ::=  <in the next section>
 ```
 
-### Синтаксис строки форматирования
+### Format string syntax
 
 ```
 formatSpec      ::=  [[fill]align][sign][#][0][width][grouping_option][.precision][type]
-fill            ::=  <любые символы>
+fill            ::=  <any characters>
 align           ::=  '<' | '>' | '^'
 sign            ::=  '+' | '-' | ' '
 width           ::=  digit+ | '{' argId '}'
@@ -55,51 +56,50 @@ type            ::=  'b' | 'c' | 'd' | 'e' | 'E' | 'f' | 'F' | 'g' | 'G' | 'n' |
 
 #### `fill` и `align`
 
-Если выравнивание `align` задано, то строка заполнения `fill` может быть любым
-сочетанием символов, в то время как в Python допустим только один символ. Это
-сделано для того, чтобы можно было использовать символы, состоящие из нескольких
-Unicode-знаков (символы с диакретическими знаками, суррогатные пары и т.д.),
-и при этом не заниматься лишним анализом.
+If `align` is specified, then the` fill` line can be anything
+a combination of characters, while only one character is allowed in Python. This is
+made in order to be able to use symbols consisting of several
+Unicode characters (accented characters, surrogate pairs, etc.),
+and at the same time do not engage in unnecessary analysis.
 
-Python накладывает только одно ограничение на символ заполнения - нельзя
-использовать фигурные скобки `{}`, т.к. они используется для вставки значений 
-внутрь шаблона. В Dart в такой функции необходимости нет, т.к. у него есть 
-встроенная в язык прекрасная [string interpolation][https://dart.dev/guides/language/language-tour#strings].
+Python imposes only one constraint on the fill character - not allowed
+use curly braces `{}` because they are used to insert values
+inside the template. In Dart, there is no need for such a function, since he has
+built into the language is excellent [string interpolation] [https://dart.dev/guides/language/language-tour#strings].
 
-Возможные значения `align`:
+Possible `align` values:
+| Value | Description
+| : ------: | : -------
+| '<' | Left justification (this is the default for strings and characters).
+| '>' | Right justification (this is the default for numbers).
+| '^' | Center alignment.
 
-| Значение | Описание
-| :------: | :-------
-| '<'      | Выравнивание влево (это значение по умолчанию для строк и символов).
-| '>'      | Выравнивание вправо (это значение по умолчанию для чисел).
-| '^'      | Выравнивание по центру.
+Of course, `align` only matters when a minimum width is given
+the field is `width`, and it is larger than the actual width of the field. In this case, the result is
+is complemented to the specified one from the corresponding side.
 
-Разумеется, `align` имеет значение только тогда, когда задана минимальная ширина
-поля `width`, и она больше, чем реальная ширина поля. В этом случае результат 
-дополняется до заданной с соответствующей стороны.
-
-Python включает ещё значение '=', посредством которого можно вставить любой 
-символ вместо ведущих нулей между знаком числа ('+' или '-') и первыми 
-значащими цифрами ('+    123', '-···42'). '0' перед шириной действует по тому же
-принципу. Я не стал реализовывать такую возможность. Во-первых, потому что я не 
-могу понять причин, зачем это нужно. Если была задача заменить ведущие нули
-любым символом, то это не совсем так, потому что опция расстановки разделителей
-тысяч (',') не влючается, если указан символ, отличный от '0'. Т.е. Python
-в данной функции отличает нули от прочих символов. Во-вторых, из-за этой
-особенности появляются все эти странные '00000nan', '-0000inf'. Хотя и не
-понятно, почему именно в этих случаях исключение для нулей сделано не было.
+Python also includes the '=' value, through which you can insert any
+character instead of leading zeros between the number sign ('+' or '-') and the first
+significant digits ('+ 123', '- 42'). '0' before width acts the same
+principle. I didn’t take this opportunity. First, because I am not
+I can understand the reasons why this is necessary. If the task was to replace leading zeros
+any character, then this is not entirely true, because the option of arranging separators
+thousand (',') is not included if a character other than '0' is specified. Those. Python
+distinguishes zeros from other characters in this function. Secondly, because of this
+features all these strange '00000nan', '-0000inf' appear. Although not
+it is clear why exactly in these cases no exception was made for zeros.
 
 #### `sign`
 
-С помощью этой функции можно указать, как обращаться со знаком числа.
+With this function, you can specify how to handle the sign of a number.
 
-| Значение | Описание
-| :---:    | ---
-| '-'      | Знак ставится только у отрицательных чисел (это значение по-умолчанию).
-| '+'      | У положительных чисел тоже ставится знак (ноль тоже идёт с плюсом).
-| ' '      | У положительных чисел вместо '+' ставится символ пробела. Это может пригодиться для выравнивания положительных и отрицательных чисел между собой.
+| Value | Description
+| : ---: | ---
+| '-' | The sign is placed only for negative numbers (this is the default value).
+| '+' | Positive numbers also have a sign (zero also comes with a plus).
+| '' | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
 
-### Пример использования
+### Usage example
 
 ```dart
 import 'package:format/format.dart';
