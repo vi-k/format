@@ -66,11 +66,11 @@ built into the language is excellent [string interpolation](https://dart.dev/gui
 
 Possible `align` values:
 
-| Value     | Description
-| : ------: | : -------
-|       '<' | Left justification (this is the default for strings and characters).
-|       '>' | Right justification (this is the default for numbers).
-|       '^' | Center alignment.
+| Value    | Description
+| :------: | :-------
+|    '<'   | Left justification (this is the default for strings and characters).
+|    '>'   | Right justification (this is the default for numbers).
+|    '^'   | Center alignment.
 
 Of course, `align` only matters when a minimum width is given
 the field is `width`, and it is larger than the actual width of the field. In this case, the result is
@@ -92,10 +92,10 @@ it is clear why exactly in these cases no exception was made for zeros.
 With this function, you can specify how to handle the sign of a number.
 
 | Value  | Description
-| : ---: | ---
-|    '-' | The sign is placed only for negative numbers (this is the default value).
-|    '+' | Positive numbers also have a sign (zero also comes with a plus).
-|     '' | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
+| :---:  | :---
+|  '-'   | The sign is placed only for negative numbers (this is the default value).
+|  '+'   | Positive numbers also have a sign (zero also comes with a plus).
+|  ''    | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
 
 ### Usage example
 
