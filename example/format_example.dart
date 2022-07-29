@@ -1,6 +1,7 @@
 import 'package:format/format.dart';
 import 'package:intl/intl.dart';
 
+// ignore: long-method
 void main() {
   print(format('{}', 'hello world')); // "hello world"
   print('{}'.format('hello world')); // "hello world"
@@ -12,6 +13,7 @@ void main() {
   '{0} {1}'.print('hello', 'world'); // "hello world"
   '{1} {0}'.print('hello', 'world'); // "world hello"
   '{h} {w}'.print({'h': 'hello', 'w': 'world'}); // "hello world"
+  '{w} {h}'.print({#h: 'hello', #w: 'world'}); // "hello world"
   '{"it\'s hello"} {"it\'s world"}'
       .print({"it's hello": 'hello', "it's world": 'world'}); // "hello world"
 
@@ -91,7 +93,8 @@ void main() {
 
   '{:👨>10}'.print('!'); // 👨👨👨👨👨👨👨👨👨!
   '{:👨‍👩‍👦‍👧>10}'.print(
-      '!'); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧!
+    '!',
+  ); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧!
   '{:ä>10}'.print('!'); // äääääääää!
 
   const m = 12345678.9;

@@ -12,15 +12,17 @@ void main() {
       expect('{2} {1} {0}'.format(positionalArgs), '3 2 1');
       expect('{} {} {} {0} {} {}'.format(positionalArgs), '1 2 3 1 2 3');
       expect(
-          () => '{2} {}'.format(positionalArgs),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{} Index #3 out of range of positional args.')));
+        () => '{2} {}'.format(positionalArgs),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{} Index #3 out of range of positional args.')),
+      );
       expect(
-          () => '{}'.format(<String, Object?>{}),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{} Positional args is missing.')));
+        () => '{}'.format(<String, Object?>{}),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{} Positional args is missing.')),
+      );
     });
 
     test('named arguments', () {
@@ -34,39 +36,91 @@ void main() {
         '0': 7,
         '+': 8,
         '"key in double quotes"': 9,
-        "'key in single quotes'": 10
+        "'key in single quotes'": 10,
       };
 
       expect(
-          '{test_1} {тест_2} {テスト_3} {"hello world"} {_} {_0}'
-              .format(namedArgs),
-          '1 2 3 4 5 6');
+        '{test_1} {тест_2} {テスト_3} {"hello world"} {_} {_0}'.format(namedArgs),
+        '1 2 3 4 5 6',
+      );
       // expect('{0} {"0"}'.format([123], namedArgs), '123 7');
       expect('{+} {"+"}'.format(namedArgs), '{+} 8');
       expect(
-          '{"""key in double quotes"""} {"\'key in single quotes\'"}'
-              .format(namedArgs),
-          '9 10');
+        '{"""key in double quotes"""} {"\'key in single quotes\'"}'
+            .format(namedArgs),
+        '9 10',
+      );
       expect(
-          "{'\"key in double quotes\"'} {'''key in single quotes'''}"
-              .format(namedArgs),
-          '9 10');
+        "{'\"key in double quotes\"'} {'''key in single quotes'''}"
+            .format(namedArgs),
+        '9 10',
+      );
       expect(
-          '{"""key in double quotes"""} ' "{'''key in single quotes'''}"
-              .format(namedArgs),
-          '9 10');
+        '{"""key in double quotes"""} ' "{'''key in single quotes'''}"
+            .format(namedArgs),
+        '9 10',
+      );
 
       expect(
-          () => '{a}'.format([]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{a} Named args is missing.')));
+        () => '{a}'.format(<dynamic>[]),
+        throwsA(predicate((e) =>
+            e is ArgumentError && e.message == '{a} Named args is missing.')),
+      );
       expect(
-          () => '{a}'.format(namedArgs),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{a} Key [a] is missing in named args.')));
+        () => '{a}'.format(namedArgs),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{a} Key [a] is missing in named args.')),
+      );
     });
+
+    test('named arguments with Symbol', () {
+      const namedArgs = {
+        #test_1: 1,
+        Symbol('тест_2'): 2,
+        Symbol('テスト_3'): 3,
+        #hello.world: 4,
+        Symbol('0'): 7,
+        #+: 8,
+        Symbol('"key in double quotes"'): 9,
+        Symbol("'key in single quotes'"): 10,
+      };
+
+      expect(
+        '{test_1} {тест_2} {テスト_3} {hello.world}'.format(namedArgs),
+        '1 2 3 4',
+      );
+      // expect('{0} {"0"}'.format([123], namedArgs), '123 7');
+      expect('{+} {"+"}'.format(namedArgs), '{+} 8');
+      expect(
+        '{"""key in double quotes"""} {"\'key in single quotes\'"}'
+            .format(namedArgs),
+        '9 10',
+      );
+      expect(
+        "{'\"key in double quotes\"'} {'''key in single quotes'''}"
+            .format(namedArgs),
+        '9 10',
+      );
+      expect(
+        '{"""key in double quotes"""} ' "{'''key in single quotes'''}"
+            .format(namedArgs),
+        '9 10',
+      );
+
+      expect(
+        () => '{a}'.format(<dynamic>[]),
+        throwsA(predicate((e) =>
+            e is ArgumentError && e.message == '{a} Named args is missing.')),
+      );
+      expect(
+        () => '{a}'.format(namedArgs),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{a} Key [Symbol("a")] is missing in named args.')),
+      );
+    });
+
     test('fill and align', () {
       const s = 'hello';
 
@@ -88,17 +142,35 @@ void main() {
       expect('{:👨>9}'.format([s]), '👨👨👨👨hello');
       expect('{:👨^9}'.format([s]), '👨👨hello👨👨');
 
-      expect('{:👨‍👩‍👦‍👧<9}'.format([s]), 'hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
-      expect('{:👨‍👩‍👦‍👧>9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello');
-      expect('{:👨‍👩‍👦‍👧^9}'.format([s]), '👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧');
-      
+      expect(
+        '{:👨‍👩‍👦‍👧<9}'.format([s]),
+        'hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧',
+      );
+      expect(
+        '{:👨‍👩‍👦‍👧>9}'.format([s]),
+        '👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello',
+      );
+      expect(
+        '{:👨‍👩‍👦‍👧^9}'.format([s]),
+        '👨‍👩‍👦‍👧👨‍👩‍👦‍👧hello👨‍👩‍👦‍👧👨‍👩‍👦‍👧',
+      );
+
       expect('{:a\u{0308}<9}'.format([s]), 'helloääää');
       expect('{:a\u{0308}>9}'.format([s]), 'äääähello');
       expect('{:a\u{0308}^9}'.format([s]), 'äähelloää');
 
-      expect('{:(any symbols)<9}'.format([s]), 'hello(any symbols)(any symbols)(any symbols)(any symbols)');
-      expect('{:(any symbols)>9}'.format([s]), '(any symbols)(any symbols)(any symbols)(any symbols)hello');
-      expect('{:(any symbols)^9}'.format([s]), '(any symbols)(any symbols)hello(any symbols)(any symbols)');
+      expect(
+        '{:(any symbols)<9}'.format([s]),
+        'hello(any symbols)(any symbols)(any symbols)(any symbols)',
+      );
+      expect(
+        '{:(any symbols)>9}'.format([s]),
+        '(any symbols)(any symbols)(any symbols)(any symbols)hello',
+      );
+      expect(
+        '{:(any symbols)^9}'.format([s]),
+        '(any symbols)(any symbols)hello(any symbols)(any symbols)',
+      );
 
       expect('{:<^><9}'.format([s]), 'hello<^><^><^><^>');
       expect('{:<^>>9}'.format([s]), '<^><^><^><^>hello');
@@ -107,28 +179,32 @@ void main() {
 
     test('width and precision', () {
       expect(
-          () => '{:{}}'.format([0.0, -1]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:{}} Width must be >= 0. Passed -1.')));
+        () => '{:{}}'.format([0.0, -1]),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{:{}} Width must be >= 0. Passed -1.')),
+      );
 
       expect(
-          () => '{:.{}f}'.format([0.0, -1]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:.{}f} Precision must be >= 0. Passed -1.')));
+        () => '{:.{}f}'.format([0.0, -1]),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{:.{}f} Precision must be >= 0. Passed -1.')),
+      );
 
       expect(
-          () => '{:.0g}'.format([0.0, 0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:.0g} Precision must be >= 1. Passed 0.')));
+        () => '{:.0g}'.format([0.0, 0]),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{:.0g} Precision must be >= 1. Passed 0.')),
+      );
 
       expect(
-          () => '{:.0}'.format([0.0, 0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:.0} Precision must be >= 1. Passed 0.')));
+        () => '{:.0}'.format([0.0, 0]),
+        throwsA(predicate((e) =>
+            e is ArgumentError &&
+            e.message == '{:.0} Precision must be >= 1. Passed 0.')),
+      );
 
       expect('{:0}'.format([123]), '123'); // Flag zero and zero width
       expect('{:00}'.format([123]), '123');
@@ -139,45 +215,48 @@ void main() {
     group('c:', () {
       test('basic use', () {
         expect(
-            () => '{:c}'.format(['a']),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    '{:c} Expected int or List<int>. Passed String.')));
+          () => '{:c}'.format(['a']),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:c} Expected int or List<int>. Passed String.')),
+        );
         expect('{:c}'.format([65]), 'A');
       });
 
       test('surrogate pairs', () {
         expect(
-            '{:c}+{:c}+{:c}+{:c}={:c}{:c}{:c}{:c}{:c}{:c}{:c}'.format([
-              0x1F468,
-              0x1F469,
-              0x1F466,
-              0x1F467,
-              0x1F468,
-              0x200D,
-              0x1F469,
-              0x200D,
-              0x1F466,
-              0x200D,
-              0x1F467,
-            ]),
-            '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+          '{:c}+{:c}+{:c}+{:c}={:c}{:c}{:c}{:c}{:c}{:c}{:c}'.format([
+            0x1F468,
+            0x1F469,
+            0x1F466,
+            0x1F467,
+            0x1F468,
+            0x200D,
+            0x1F469,
+            0x200D,
+            0x1F466,
+            0x200D,
+            0x1F467,
+          ]),
+          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+        );
         expect(
-            '{:c}+{:c}+{:c}+{:c}={:c}'.format([
-              0x1F468,
-              0x1F469,
-              0x1F466,
-              0x1F467,
-              [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
-            ]),
-            '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+          '{:c}+{:c}+{:c}+{:c}={:c}'.format([
+            0x1F468,
+            0x1F469,
+            0x1F466,
+            0x1F467,
+            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
+          ]),
+          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+        );
         expect(
-            '{:c}={:c}'.format([
-              [0x1F468, 0x2B, 0x1F469, 0x2B, 0x1F466, 0x2B, 0x1F467],
-              [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
-            ]),
-            '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+          '{:c}={:c}'.format([
+            [0x1F468, 0x2B, 0x1F469, 0x2B, 0x1F466, 0x2B, 0x1F467],
+            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
+          ]),
+          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+        );
       });
     });
 
@@ -187,10 +266,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:s}'.format([123]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:s} Expected String. Passed int.')));
+          () => '{:s}'.format([123]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:s} Expected String. Passed int.')),
+        );
 
         expect('{}'.format([s]), 'Hello world');
         expect('{:s}'.format([s]), 'Hello world');
@@ -243,20 +323,27 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:b}'.format([123.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:b} Expected int. Passed double.')));
+          () => '{:b}'.format([123.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:b} Expected int. Passed double.')),
+        );
 
         expect('{:b}'.format([n]), '10101010');
         expect('{:b}'.format([-n]), '-10101010');
 
-        expect('{:b}'.format([9223372036854775807]),
-            '111111111111111111111111111111111111111111111111111111111111111');
-        expect('{:b}'.format([-9223372036854775807]),
-            '-111111111111111111111111111111111111111111111111111111111111111');
-        expect('{:b}'.format([-9223372036854775808]),
-            '-1000000000000000000000000000000000000000000000000000000000000000');
+        expect(
+          '{:b}'.format([9223372036854775807]),
+          '111111111111111111111111111111111111111111111111111111111111111',
+        );
+        expect(
+          '{:b}'.format([-9223372036854775807]),
+          '-111111111111111111111111111111111111111111111111111111111111111',
+        );
+        expect(
+          '{:b}'.format([-9223372036854775808]),
+          '-1000000000000000000000000000000000000000000000000000000000000000',
+        );
       });
 
       test('sign', () {
@@ -293,29 +380,32 @@ void main() {
         expect('{:016_b}'.format([-n]), '-0_0000_1010_1010');
 
         expect(
-            () => '{:,b}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:,b} Group option ',' not allowed with format specifier 'b'.")));
+          () => '{:,b}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:,b} Group option ',' not allowed with format specifier 'b'.")),
+        );
       });
 
       test('alt', () {
         expect(
-            () => '{:#b}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:#b} Alternate form (#) not allowed with format specifier 'b'.")));
+          () => '{:#b}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:#b} Alternate form (#) not allowed with format specifier 'b'.")),
+        );
       });
 
       test('precision', () {
         expect(
-            () => '{:.2b}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2b} Precision not allowed with format specifier 'b'.")));
+          () => '{:.2b}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2b} Precision not allowed with format specifier 'b'.")),
+        );
       });
     });
 
@@ -324,10 +414,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:o}'.format([123.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:o} Expected int. Passed double.')));
+          () => '{:o}'.format([123.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:o} Expected int. Passed double.')),
+        );
 
         expect('{:o}'.format([n]), '12345670');
         expect('{:o}'.format([-n]), '-12345670');
@@ -335,7 +426,9 @@ void main() {
         expect('{:o}'.format([9223372036854775807]), '777777777777777777777');
         expect('{:o}'.format([-9223372036854775807]), '-777777777777777777777');
         expect(
-            '{:o}'.format([-9223372036854775808]), '-1000000000000000000000');
+          '{:o}'.format([-9223372036854775808]),
+          '-1000000000000000000000',
+        );
       });
 
       test('sign', () {
@@ -372,29 +465,32 @@ void main() {
         expect('{:016_o}'.format([-n]), '-0_0000_1234_5670');
 
         expect(
-            () => '{:,o}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:,o} Group option ',' not allowed with format specifier 'o'.")));
+          () => '{:,o}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:,o} Group option ',' not allowed with format specifier 'o'.")),
+        );
       });
 
       test('alt', () {
         expect(
-            () => '{:#o}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:#o} Alternate form (#) not allowed with format specifier 'o'.")));
+          () => '{:#o}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:#o} Alternate form (#) not allowed with format specifier 'o'.")),
+        );
       });
 
       test('precision', () {
         expect(
-            () => '{:.2o}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2o} Precision not allowed with format specifier 'o'.")));
+          () => '{:.2o}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2o} Precision not allowed with format specifier 'o'.")),
+        );
       });
     });
 
@@ -403,10 +499,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:x}'.format([123.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:x} Expected int. Passed double.')));
+          () => '{:x}'.format([123.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:x} Expected int. Passed double.')),
+        );
 
         expect('{:x}'.format([n]), '12abcdef');
         expect('{:x}'.format([-n]), '-12abcdef');
@@ -450,11 +547,12 @@ void main() {
         expect('{:016_x}'.format([-n]), '-0_0000_12ab_cdef');
 
         expect(
-            () => '{:,x}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:,x} Group option ',' not allowed with format specifier 'x'.")));
+          () => '{:,x}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:,x} Group option ',' not allowed with format specifier 'x'.")),
+        );
       });
 
       test('alt', () {
@@ -477,11 +575,12 @@ void main() {
 
       test('precision', () {
         expect(
-            () => '{:.2x}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2x} Precision not allowed with format specifier 'x'.")));
+          () => '{:.2x}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2x} Precision not allowed with format specifier 'x'.")),
+        );
       });
     });
 
@@ -490,10 +589,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:X}'.format([123.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:X} Expected int. Passed double.')));
+          () => '{:X}'.format([123.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:X} Expected int. Passed double.')),
+        );
 
         expect('{:X}'.format([n]), '12ABCDEF');
         expect('{:X}'.format([n]), '12ABCDEF');
@@ -528,11 +628,12 @@ void main() {
         expect('{:015_X}'.format([n]), '0_0000_12AB_CDEF');
         expect('{:016_X}'.format([n]), '0_0000_12AB_CDEF');
         expect(
-            () => '{:,X}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:,X} Group option ',' not allowed with format specifier 'X'.")));
+          () => '{:,X}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:,X} Group option ',' not allowed with format specifier 'X'.")),
+        );
       });
 
       test('alt', () {
@@ -542,11 +643,12 @@ void main() {
 
       test('precision', () {
         expect(
-            () => '{:.2X}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2X} Precision not allowed with format specifier 'X'.")));
+          () => '{:.2X}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2X} Precision not allowed with format specifier 'X'.")),
+        );
       });
     });
 
@@ -555,10 +657,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:d}'.format([123.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:d} Expected int. Passed double.')));
+          () => '{:d}'.format([123.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:d} Expected int. Passed double.')),
+        );
 
         expect('{}'.format([n]), '123456789');
         expect('{:d}'.format([n]), '123456789');
@@ -599,27 +702,30 @@ void main() {
 
       test('alt', () {
         expect(
-            () => '{:#d}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:#d} Alternate form (#) not allowed with format specifier 'd'.")));
+          () => '{:#d}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:#d} Alternate form (#) not allowed with format specifier 'd'.")),
+        );
       });
 
       test('precision', () {
         expect(
-            () => '{:.2}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2} Precision not allowed with format specifier 'd'.")));
+          () => '{:.2}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2} Precision not allowed with format specifier 'd'.")),
+        );
 
         expect(
-            () => '{:.2d}'.format([n]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.2d} Precision not allowed with format specifier 'd'.")));
+          () => '{:.2d}'.format([n]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.2d} Precision not allowed with format specifier 'd'.")),
+        );
       });
     });
 
@@ -628,10 +734,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:f}'.format([123]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:f} Expected double. Passed int.')));
+          () => '{:f}'.format([123]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:f} Expected double. Passed int.')),
+        );
 
         expect('{:f}'.format([n]), '12345.678900');
         expect('{:f}'.format([-n]), '-12345.678900');
@@ -747,10 +854,11 @@ void main() {
 
       test('basic use', () {
         expect(
-            () => '{:e}'.format([123]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:e} Expected double. Passed int.')));
+          () => '{:e}'.format([123]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:e} Expected double. Passed int.')),
+        );
 
         expect('{:e}'.format([n1]), '1.234568e-4');
         expect('{:E}'.format([n1]), '1.234568E-4');
@@ -910,10 +1018,11 @@ void main() {
     group('g:', () {
       test('basic use', () {
         expect(
-            () => '{:g}'.format([123]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:g} Expected double. Passed int.')));
+          () => '{:g}'.format([123]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:g} Expected double. Passed int.')),
+        );
 
         expect('{:g}'.format([0.0]), '0');
         expect('{:g}'.format([0.000001]), '0.000001');
@@ -997,25 +1106,28 @@ void main() {
 
       test('common use', () {
         expect(
-            () => '{:n}'.format(['123']),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:n} Expected num. Passed String.')));
+          () => '{:n}'.format(['123']),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:n} Expected num. Passed String.')),
+        );
 
         expect(
-            () => '{:.0n}'.format([0.0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message == '{:.0n} Precision must be >= 1. Passed 0.')));
+          () => '{:.0n}'.format([0.0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message == '{:.0n} Precision must be >= 1. Passed 0.')),
+        );
       });
 
       test('integers', () {
         expect(
-            () => '{:.1n}'.format([0]),
-            throwsA(predicate((e) =>
-                e is ArgumentError &&
-                e.message ==
-                    "{:.1n} Precision not allowed for int with format specifier 'n'.")));
+          () => '{:.1n}'.format([0]),
+          throwsA(predicate((e) =>
+              e is ArgumentError &&
+              e.message ==
+                  "{:.1n} Precision not allowed for int with format specifier 'n'.")),
+        );
 
         expect('{:n}'.format([0]), '0');
         expect('{:#n}'.format([0]), '0');
@@ -1032,9 +1144,18 @@ void main() {
         expect('{:n}'.format([9223372036854775807]), '9223372036854775807');
         expect('{:n}'.format([-9223372036854775807]), '-9223372036854775807');
         expect('{:n}'.format([-9223372036854775808]), '-9223372036854775808');
-        expect('{:,n}'.format([9223372036854775807]), '9,223,372,036,854,775,807');
-        expect('{:,n}'.format([-9223372036854775807]), '-9,223,372,036,854,775,807');
-        expect('{:,n}'.format([-9223372036854775808]), '-9,223,372,036,854,775,808');
+        expect(
+          '{:,n}'.format([9223372036854775807]),
+          '9,223,372,036,854,775,807',
+        );
+        expect(
+          '{:,n}'.format([-9223372036854775807]),
+          '-9,223,372,036,854,775,807',
+        );
+        expect(
+          '{:,n}'.format([-9223372036854775808]),
+          '-9,223,372,036,854,775,808',
+        );
       });
 
       group('floats:', () {
@@ -1477,6 +1598,12 @@ void main() {
         Intl.defaultLocale = 'zh_HK';
         expect('{:n}'.format([nan]), '非數值');
       });
+    });
+  });
+
+  group('bugs:', () {
+    test('fixed bugs', () {
+      expect('{:!>5} {:!>3}'.format('1', '3'), '!!!!1 !!3');
     });
   });
 

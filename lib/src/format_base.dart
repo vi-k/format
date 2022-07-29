@@ -63,6 +63,7 @@ import 'package:intl/intl.dart';
 ///
 /// - TODO: {} поддерживает только для width и precision, в то время как Python
 ///   поддерживает {} в любом месте для формирования шаблона.
+// ignore: long-parameter-list
 String format(
   String fmt,
   Object values, [
@@ -79,6 +80,8 @@ String format(
   if (values is List) {
     return _format(fmt, positionalArgs: values);
   } else if (values is Map<String, Object?>) {
+    return _format(fmt, namedArgs: values);
+  } else if (values is Map<Symbol, Object?>) {
     return _format(fmt, namedArgs: values);
   }
 
@@ -105,6 +108,8 @@ extension StringFormat on String {
       return _format(this, positionalArgs: values);
     } else if (values is Map<String, Object?>) {
       return _format(this, namedArgs: values);
+    } else if (values is Map<Symbol, Object?>) {
+      return _format(this, namedArgs: values);
     }
 
     return _format(
@@ -130,28 +135,29 @@ extension StringFormat on String {
 }
 
 final RegExp _formatSpecRe = RegExp(
-    // begin
-    r'\{\s*'
-    // argId
-    r'(\d*|[_\p{L}][_\p{L}\d]*|'
-    "'(?:''|[^'])*'"
-    '|"(?:""|[^"])*")'
-    //  :[  [fill ] align   ] [sign ] [#] [0]
-    '(?::(?:(.+)?([<>^|]))?([-+ ])?(#)?(0)?'
-    // width (number or {widthId})
-    r'(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?'
-    // group option
-    '([_,])?'
-    // .precision (number or {precissionId})
-    r'(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?'
-    // specifier
-    '([csbodxXfFeEgGn])?'
-    // additional template
-    "('(?:''|[^'])*'"
-    '|"(?:""|[^"])*")?)?'
-    // end
-    r'\s*\}',
-    unicode: true);
+  // begin
+  r'\{\s*'
+  // argId
+  r'(\d*|[_\p{L}][_.\p{L}\d]*|'
+  "'(?:''|[^'])*'"
+  '|"(?:""|[^"])*")'
+  //  :[  [fill ] align   ] [sign ] [#] [0]
+  '(?::(?:([^}]+)?([<>^|]))?([-+ ])?(#)?(0)?'
+  // width (number or {widthId})
+  r'(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?'
+  // group option
+  '([_,])?'
+  // .precision (number or {precissionId})
+  r'(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?'
+  // specifier
+  '([csbodxXfFeEgGn])?'
+  // additional template
+  "('(?:''|[^'])*'"
+  '|"(?:""|[^"])*")?)?'
+  // end
+  r'\s*\}',
+  unicode: true,
+);
 final RegExp _triplesRe = RegExp(r'(\d)((?:\d{3})+)$');
 final RegExp _quadruplesRe = RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
 final RegExp _tripleRe = RegExp(r'\d{3}');
@@ -191,6 +197,7 @@ String? _getValueInQuotes(String str, String left, String right) {
     if (index >= 0) {
       final l = firstChar;
       final r = right[index];
+
       return str
           .substring(1, str.length - 1)
           .replaceAll('$l$l', l)
@@ -215,7 +222,7 @@ class _Options {
   _Options(this.positionalArgs, this.namedArgs);
 
   final List<Object?>? positionalArgs;
-  final Map<String, Object?>? namedArgs;
+  final Map<Object, Object?>? namedArgs;
   final intlNumberFormat = NumberFormat();
   int positionalArgsIndex = 0;
   String all = '';
@@ -262,10 +269,12 @@ Object? _getValueByIndex(_Options options, int index) {
 
   if (index >= positionalArgs.length) {
     throw ArgumentError(
-        '${options.all} Index #$index out of range of positional args.');
+      '${options.all} Index #$index out of range of positional args.',
+    );
   }
 
   options.positionalArgsIndex = index + 1;
+
   return positionalArgs[index];
 }
 
@@ -292,16 +301,20 @@ Object? _getValue(_Options options, String? rawId) {
       value = _getValueByIndex(options, index);
     } else {
       // Именованный параметр.
-      final id = _removeQuotesIfNeed(rawId, '\'"', '\'"');
+      final stringId = _removeQuotesIfNeed(rawId, '\'"', '\'"');
 
       final namedArgs = options.namedArgs;
       if (namedArgs == null) {
         throw ArgumentError('${options.all} Named args is missing.');
       }
 
+      final id =
+          namedArgs is Map<Symbol, Object?> ? Symbol(stringId) : stringId;
+
       if (!namedArgs.containsKey(id)) {
         throw ArgumentError(
-            '${options.all} Key [$id] is missing in named args.');
+          '${options.all} Key [$id] is missing in named args.',
+        );
       }
 
       value = namedArgs[id];
@@ -326,7 +339,8 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
       final v = _getValue(options, _getValueInQuotes(str, '{', '}'));
       if (v is! int) {
         throw ArgumentError(
-            '${options.all} $name must be int, passed ${v.runtimeType}.');
+          '${options.all} $name must be int, passed ${v.runtimeType}.',
+        );
       }
 
       value = v;
@@ -334,13 +348,15 @@ int? _getWidth(_Options options, String? str, String name, {int min = 0}) {
 
     if (value < min) {
       throw ArgumentError(
-          '${options.all} $name must be >= $min. Passed $value.');
+        '${options.all} $name must be >= $min. Passed $value.',
+      );
     }
   }
 
   return value;
 }
 
+// ignore: long-method
 String _numberFormat<T extends num>(
   _Options options,
   Object? dyn, {
@@ -451,6 +467,7 @@ String _numberFormat<T extends num>(
   return '$sign$prefix$result';
 }
 
+// ignore: long-method
 String _intlNumberFormat<T extends num>(
   _Options options,
   Object? dyn, {
@@ -549,7 +566,9 @@ String _intlNumberFormat<T extends num>(
 
   if (!value.isNaN && !value.isInfinite) {
     final zeroDigitForRe = fmt.symbols.ZERO_DIGIT.replaceFirstMapped(
-        RegExp(r'(?:(\d)|(.))'), (m) => m[1] == null ? '\\${m[2]}' : m[1]!);
+      RegExp(r'(?:(\d)|(.))'),
+      (m) => m[1] == null ? '\\${m[2]}' : m[1]!,
+    );
     final expSymbolForRe = fmt.symbols.EXP_SYMBOL
         .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
     final decimalSepForRe = fmt.symbols.DECIMAL_SEP
@@ -600,10 +619,11 @@ String _intlNumberFormat<T extends num>(
   return '$sign$result';
 }
 
+// ignore: long-method
 String _format(
   String template, {
   List<Object?>? positionalArgs,
-  Map<String, Object?>? namedArgs,
+  Map<Object, Object?>? namedArgs,
 }) {
   final options = _Options(positionalArgs, namedArgs);
 
@@ -641,8 +661,12 @@ String _format(
 
     final spec = options.specifier;
 
-    options.precision = _getWidth(options, match.group(9), 'Precision',
-        min: spec == 'g' || spec == 'G' || spec == 'n' ? 1 : 0);
+    options.precision = _getWidth(
+      options,
+      match.group(9),
+      'Precision',
+      min: spec == 'g' || spec == 'G' || spec == 'n' ? 1 : 0,
+    );
 
     if (spec == null) {
       result = value.toString();
@@ -656,7 +680,8 @@ String _format(
             result = String.fromCharCodes(value);
           } else {
             throw ArgumentError(
-                '${options.all} Expected int or List<int>. Passed ${value.runtimeType}.');
+              '${options.all} Expected int or List<int>. Passed ${value.runtimeType}.',
+            );
           }
           break;
 
@@ -664,7 +689,8 @@ String _format(
         case 's':
           if (value is! String) {
             throw ArgumentError(
-                '${options.all} Expected String. Passed ${value.runtimeType}.');
+              '${options.all} Expected String. Passed ${value.runtimeType}.',
+            );
           }
 
           final precision = options.precision;

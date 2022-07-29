@@ -1,20 +1,16 @@
-# Customizing static analysis
-# https://dart.dev/guides/language/analysis-options/
-# https://dart-lang.github.io/linter/lints/
-
-#include: package:pedantic/analysis_options.1.9.0.yaml
+include: package:lints/recommended.yaml
 
 analyzer:
-  enable-experiment:
-    - non-nullable
-    
+  plugins:
+    - dart_code_metrics
+
   exclude:
     # Web
     - 'web/**'
     # Build
     - 'build/**'
     # Generated code
-    - 'lib/**.g.dart'
+    - '**.g.dart'
     - 'lib/**.freezed.dart'
     - 'lib/**.graphql.dart'
     - 'lib/generated_plugin_registrant.dart'
@@ -22,13 +18,20 @@ analyzer:
     # Assets
     - 'assets/**'
     # Mocks for test
-    - 'test/data/**'
+    - 'test/domain/model/**'
+    # Packages
+    - 'packages/advertising_id/**'
+    - 'packages/pod_player/**'
+    - 'packages/youtube_explode_dart/**'
 
   strong-mode:
     implicit-casts: false
-    implicit-dynamic: true
+    implicit-dynamic: false
 
   errors:
+    # Ignore
+    invalid_annotation_target: ignore
+
     # Info
     todo: info
     directives_ordering: info
@@ -66,12 +69,15 @@ linter:
     avoid_web_libraries_in_flutter: false
     always_put_control_body_on_new_line: false
     #diagnostic_describe_all_properties: false # ???
+    avoid_private_typedef_functions: false
 
     prefer_asserts_with_message: false
     always_put_required_named_parameters_first: false
     avoid_print: false
+    prefer_relative_imports: false
 
     # Enabled
+    always_use_package_imports: true
     #avoid_annotating_with_dynamic: true
     avoid_bool_literals_in_conditional_expressions: true
     avoid_double_and_int_checks: true
@@ -199,7 +205,6 @@ linter:
     directives_ordering: true
     package_api_docs: true
     implementation_imports: true
-    prefer_relative_imports: true
     prefer_interpolation_to_compose_strings: true
     unnecessary_brace_in_string_interps: true
     avoid_function_literals_in_foreach_calls: true
@@ -219,7 +224,26 @@ linter:
     avoid_returning_this: true
     type_annotate_public_apis: true
     avoid_types_on_closure_parameters: true
-    avoid_private_typedef_functions: true
     avoid_positional_boolean_parameters: true
     hash_and_equals: true
     avoid_equals_and_hash_code_on_mutable_classes: true
+
+dart_code_metrics:
+  anti-patterns:
+    - long-method
+    - long-parameter-list
+  metrics:
+    cyclomatic-complexity: 20
+    #lines-of-executable-code: 50
+    maximum-nesting-level: 5
+    number-of-parameters: 10
+    source-lines-of-code: 50
+  metrics-exclude:
+    - test/**
+  rules:
+    - newline-before-return
+    - no-boolean-literal-compare
+    - no-empty-block
+    - prefer-trailing-comma
+    - prefer-conditional-expressions
+    - no-equal-then-else
