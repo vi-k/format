@@ -13,15 +13,23 @@ void main() {
       expect('{} {} {} {0} {} {}'.format(positionalArgs), '1 2 3 1 2 3');
       expect(
         () => '{2} {}'.format(positionalArgs),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{} Index #3 out of range of positional args.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{} Index #3 out of range of positional args.',
+          ),
+        ),
       );
       expect(
         () => '{}'.format(<String, Object?>{}),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{} Positional args is missing.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{} Positional args is missing.',
+          ),
+        ),
       );
     });
 
@@ -63,14 +71,22 @@ void main() {
 
       expect(
         () => '{a}'.format(<dynamic>[]),
-        throwsA(predicate((e) =>
-            e is ArgumentError && e.message == '{a} Named args is missing.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError && e.message == '{a} Named args is missing.',
+          ),
+        ),
       );
       expect(
         () => '{a}'.format(namedArgs),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{a} Key [a] is missing in named args.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{a} Key [a] is missing in named args.',
+          ),
+        ),
       );
     });
 
@@ -110,14 +126,22 @@ void main() {
 
       expect(
         () => '{a}'.format(<dynamic>[]),
-        throwsA(predicate((e) =>
-            e is ArgumentError && e.message == '{a} Named args is missing.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError && e.message == '{a} Named args is missing.',
+          ),
+        ),
       );
       expect(
         () => '{a}'.format(namedArgs),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{a} Key [Symbol("a")] is missing in named args.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{a} Key [Symbol("a")] is missing in named args.',
+          ),
+        ),
       );
     });
 
@@ -180,30 +204,46 @@ void main() {
     test('width and precision', () {
       expect(
         () => '{:{}}'.format([0.0, -1]),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{:{}} Width must be >= 0. Passed -1.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{:{}} Width must be >= 0. Passed -1.',
+          ),
+        ),
       );
 
       expect(
         () => '{:.{}f}'.format([0.0, -1]),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{:.{}f} Precision must be >= 0. Passed -1.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{:.{}f} Precision must be >= 0. Passed -1.',
+          ),
+        ),
       );
 
       expect(
         () => '{:.0g}'.format([0.0, 0]),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{:.0g} Precision must be >= 1. Passed 0.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{:.0g} Precision must be >= 1. Passed 0.',
+          ),
+        ),
       );
 
       expect(
         () => '{:.0}'.format([0.0, 0]),
-        throwsA(predicate((e) =>
-            e is ArgumentError &&
-            e.message == '{:.0} Precision must be >= 1. Passed 0.')),
+        throwsA(
+          predicate(
+            (e) =>
+                e is ArgumentError &&
+                e.message == '{:.0} Precision must be >= 1. Passed 0.',
+          ),
+        ),
       );
 
       expect('{:0}'.format([123]), '123'); // Flag zero and zero width
@@ -216,9 +256,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:c}'.format(['a']),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:c} Expected int or List<int>. Passed String.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:c} Expected int or List<int>. Passed String.',
+            ),
+          ),
         );
         expect('{:c}'.format([65]), 'A');
       });
@@ -267,9 +311,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:s}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:s} Expected String. Passed int.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:s} Expected String. Passed int.',
+            ),
+          ),
         );
 
         expect('{}'.format([s]), 'Hello world');
@@ -324,9 +372,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:b}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:b} Expected int. Passed double.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:b} Expected int. Passed double.',
+            ),
+          ),
         );
 
         expect('{:b}'.format([n]), '10101010');
@@ -381,30 +433,44 @@ void main() {
 
         expect(
           () => '{:,b}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:,b} Group option ',' not allowed with format specifier 'b'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:,b} Group option ',' not allowed"
+                          " with format specifier 'b'.",
+            ),
+          ),
         );
       });
 
       test('alt', () {
         expect(
           () => '{:#b}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:#b} Alternate form (#) not allowed with format specifier 'b'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      '{:#b} Alternate form (#) not allowed'
+                          " with format specifier 'b'.",
+            ),
+          ),
         );
       });
 
       test('precision', () {
         expect(
           () => '{:.2b}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2b} Precision not allowed with format specifier 'b'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2b} Precision not allowed with format specifier 'b'.",
+            ),
+          ),
         );
       });
     });
@@ -415,9 +481,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:o}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:o} Expected int. Passed double.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:o} Expected int. Passed double.',
+            ),
+          ),
         );
 
         expect('{:o}'.format([n]), '12345670');
@@ -466,30 +536,44 @@ void main() {
 
         expect(
           () => '{:,o}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:,o} Group option ',' not allowed with format specifier 'o'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:,o} Group option ',' not allowed"
+                          " with format specifier 'o'.",
+            ),
+          ),
         );
       });
 
       test('alt', () {
         expect(
           () => '{:#o}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:#o} Alternate form (#) not allowed with format specifier 'o'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      '{:#o} Alternate form (#) not allowed'
+                          " with format specifier 'o'.",
+            ),
+          ),
         );
       });
 
       test('precision', () {
         expect(
           () => '{:.2o}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2o} Precision not allowed with format specifier 'o'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2o} Precision not allowed with format specifier 'o'.",
+            ),
+          ),
         );
       });
     });
@@ -500,9 +584,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:x}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:x} Expected int. Passed double.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:x} Expected int. Passed double.',
+            ),
+          ),
         );
 
         expect('{:x}'.format([n]), '12abcdef');
@@ -548,10 +636,15 @@ void main() {
 
         expect(
           () => '{:,x}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:,x} Group option ',' not allowed with format specifier 'x'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:,x} Group option ',' not allowed"
+                          " with format specifier 'x'.",
+            ),
+          ),
         );
       });
 
@@ -576,10 +669,14 @@ void main() {
       test('precision', () {
         expect(
           () => '{:.2x}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2x} Precision not allowed with format specifier 'x'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2x} Precision not allowed with format specifier 'x'.",
+            ),
+          ),
         );
       });
     });
@@ -590,9 +687,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:X}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:X} Expected int. Passed double.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:X} Expected int. Passed double.',
+            ),
+          ),
         );
 
         expect('{:X}'.format([n]), '12ABCDEF');
@@ -629,10 +730,15 @@ void main() {
         expect('{:016_X}'.format([n]), '0_0000_12AB_CDEF');
         expect(
           () => '{:,X}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:,X} Group option ',' not allowed with format specifier 'X'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:,X} Group option ',' not allowed"
+                          " with format specifier 'X'.",
+            ),
+          ),
         );
       });
 
@@ -644,10 +750,14 @@ void main() {
       test('precision', () {
         expect(
           () => '{:.2X}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2X} Precision not allowed with format specifier 'X'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2X} Precision not allowed with format specifier 'X'.",
+            ),
+          ),
         );
       });
     });
@@ -658,9 +768,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:d}'.format([123.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:d} Expected int. Passed double.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:d} Expected int. Passed double.',
+            ),
+          ),
         );
 
         expect('{}'.format([n]), '123456789');
@@ -703,28 +817,41 @@ void main() {
       test('alt', () {
         expect(
           () => '{:#d}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:#d} Alternate form (#) not allowed with format specifier 'd'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      '{:#d} Alternate form (#) not allowed'
+                          " with format specifier 'd'.",
+            ),
+          ),
         );
       });
 
       test('precision', () {
         expect(
           () => '{:.2}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2} Precision not allowed with format specifier 'd'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2} Precision not allowed with format specifier 'd'.",
+            ),
+          ),
         );
 
         expect(
           () => '{:.2d}'.format([n]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.2d} Precision not allowed with format specifier 'd'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      "{:.2d} Precision not allowed with format specifier 'd'.",
+            ),
+          ),
         );
       });
     });
@@ -735,9 +862,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:f}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:f} Expected double. Passed int.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:f} Expected double. Passed int.',
+            ),
+          ),
         );
 
         expect('{:f}'.format([n]), '12345.678900');
@@ -855,9 +986,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:e}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:e} Expected double. Passed int.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:e} Expected double. Passed int.',
+            ),
+          ),
         );
 
         expect('{:e}'.format([n1]), '1.234568e-4');
@@ -1019,9 +1154,13 @@ void main() {
       test('basic use', () {
         expect(
           () => '{:g}'.format([123]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:g} Expected double. Passed int.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:g} Expected double. Passed int.',
+            ),
+          ),
         );
 
         expect('{:g}'.format([0.0]), '0');
@@ -1107,26 +1246,39 @@ void main() {
       test('common use', () {
         expect(
           () => '{:n}'.format(['123']),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:n} Expected num. Passed String.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:n} Expected num. Passed String.',
+            ),
+          ),
         );
 
         expect(
           () => '{:.0n}'.format([0.0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message == '{:.0n} Precision must be >= 1. Passed 0.')),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message == '{:.0n} Precision must be >= 1. Passed 0.',
+            ),
+          ),
         );
       });
 
       test('integers', () {
         expect(
           () => '{:.1n}'.format([0]),
-          throwsA(predicate((e) =>
-              e is ArgumentError &&
-              e.message ==
-                  "{:.1n} Precision not allowed for int with format specifier 'n'.")),
+          throwsA(
+            predicate(
+              (e) =>
+                  e is ArgumentError &&
+                  e.message ==
+                      '{:.1n} Precision not allowed'
+                          " for int with format specifier 'n'.",
+            ),
+          ),
         );
 
         expect('{:n}'.format([0]), '0');
@@ -1606,533 +1758,4 @@ void main() {
       expect('{:!>5} {:!>3}'.format('1', '3'), '!!!!1 !!3');
     });
   });
-
-  // Describe("Строки (s)", function () {
-  //   It("без параметров", function () {
-  //     var s = "abcdef";
-
-  //     Assert.StrictEqual("{}"  .format(s), "abcdef");
-  //     Assert.StrictEqual("{:}" .format(s), "abcdef");
-  //     Assert.StrictEqual("{:s}".format(s), "abcdef");
-
-  //     Assert.StrictEqual("{}"  .format(new String(s)), "abcdef");
-  //     Assert.StrictEqual("{:s}".format(new String(s)), "abcdef");
-
-  //     Assert.StrictEqual("{:s}".format(123), "123");
-  //     Assert.StrictEqual("{:s}".format(true), "true");
-  //     Assert.StrictEqual("{:s}".format(undefined), "undefined");
-  //     Assert.StrictEqual("{:s}".format({}), "object {\n}");
-  //   });
-
-  // Describe("Строки для SQL (S)", function () {
-  //   It("без параметров", function () {
-  //     var s = "l'amour";
-  //     Assert.StrictEqual("{:S}".format(s), "'l''amour'");
-  //     Assert.StrictEqual("{:S}".format(new String(s)), "'l''amour'");
-  //   });
-
-  //   It("размер", function () {
-  //     var s = "l'amour";
-  //     Assert.StrictEqual("{:.0S}" .format(s), "''");
-
-  //     Assert.StrictEqual("{:.1S}" .format(s), "'l'");
-  //     Assert.StrictEqual("{:#.1S}".format(s), "'…'");
-
-  //     Assert.StrictEqual("{:.4S}" .format(s), "'l''am'");
-  //     Assert.StrictEqual("{:#.4S}".format(s), "'l''a…'");
-
-  //     Assert.StrictEqual("{:.7S}" .format(s), "'l''amour'");
-  //     Assert.StrictEqual("{:#.7S}".format(s), "'l''amour'");
-
-  //     Assert.StrictEqual("{:.8S}" .format(s), "'l''amour'");
-  //     Assert.StrictEqual("{:#.8S}".format(s), "'l''amour'");
-  //   });
-
-  //   It("ширина", function () {
-  //     var s = "l'amour";
-  //     Assert.StrictEqual("{:9S}"    .format(s), "*********");
-  //     Assert.StrictEqual("{:10S}"   .format(s), "'l''amour'");
-  //     Assert.StrictEqual("{:#10S}"  .format(s), "'l''amour'");
-  //     Assert.StrictEqual("{:13S}"   .format(s), "'l''amour'   ");
-  //     Assert.StrictEqual("{:#13S}"  .format(s), "'l''amour'   ");
-  //     Assert.StrictEqual("{:6.4S}"  .format(s), "******");
-  //     Assert.StrictEqual("{:7.4S}"  .format(s), "'l''am'");
-  //     Assert.StrictEqual("{:#7.4S}" .format(s), "'l''a…'");
-  //     Assert.StrictEqual("{:10.4S}" .format(s), "'l''am'   ");
-  //     Assert.StrictEqual("{:#10.4S}".format(s), "'l''a…'   ");
-  //   });
-
-  //   It("выравнивание и заполнение", function () {
-  //     var s = "l'amour";
-  //     Assert.StrictEqual("{:<13S}" .format(s), "'l''amour'   ");
-  //     Assert.StrictEqual("{:.<13S}".format(s), "'l''amour'...");
-
-  //     Assert.StrictEqual("{:>13S}" .format(s), "   'l''amour'");
-  //     Assert.StrictEqual("{:.>13S}".format(s), "...'l''amour'");
-
-  //     Assert.StrictEqual("{:^13S}" .format(s), " 'l''amour'  ");
-  //     Assert.StrictEqual("{:.^13S}".format(s), ".'l''amour'..");
-  //   });
-  // });
-
-  // Describe("Дата и время (d,t,D,T,q,p)", function () {
-  //   It("автораспознавание", function () {
-  //     Assert.StrictEqual("{}".format( EncodeDate(9, 1, 2020) ),          "09.01.2020");
-  //     Assert.StrictEqual("{}".format( new Date(2020, 0, 9) ),            "09.01.2020");
-  //     Assert.StrictEqual("{}".format( Datetime({d: 9, m: 1, y: 2020}) ), "09.01.2020");
-
-  //     Assert.StrictEqual("{}".format( EncodeTime(10, 20, 30, 500) ),                "10:20:30.500");
-  //     Assert.StrictEqual("{}".format( new Date(1899, 11, 30, 10, 20, 30, 500) ),    "10:20:30.500");
-  //     Assert.StrictEqual("{}".format( Datetime({h: 10, min: 20, s: 30, ms: 500}) ), "10:20:30.500");
-
-  //     Assert.StrictEqual("{}".format( EncodeDate(Double(EncodeDate(9, 1, 2020)) + Double(EncodeTime(10, 20, 30, 500))) ), "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{}".format( new Date(2020, 0, 9, 10, 20, 30, 500) ),                                            "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{}".format( Datetime("09.01.2020 10:20:30.500") ),                                              "09.01.2020 10:20:30.500");
-  //   });
-
-  //   It("с указанием типа, разные типы даты/времени", function () {
-  //     Assert.StrictEqual("{:T}".format( Datetime("09.01.2020 10:20:30.500") ),                             "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format( Datetime({d: 9, m: 1, y: 2020, h: 10, min: 20, s: 30, ms: 500}) ), "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format("09.01.2020 10:20:30.500"),                                         "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format({d: 9, m: 1, y: 2020, h: 10, min: 20, s: 30, ms: 500}),             "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format(43839.4309085648),                                                  "09.01.2020 10:20:30.500");
-  //   });
-
-  //   It("дата (d)", function () {
-  //     Assert.StrictEqual("{:d}".format("09.01.2020 10:20:30.500"), "09.01.2020");
-  //     Assert.StrictEqual("{:d}".format("09.01.2020"),              "09.01.2020");
-  //     Assert.StrictEqual("{:d}".format("10:20:30.500"),            "30.12.1899");
-
-  //     Assert.StrictEqual("{:d}".format(null), "null");
-  //     Assert.StrictEqual("{:d}".format(), "null");
-  //   });
-
-  //   It("время (t)", function () {
-  //     Assert.StrictEqual("{:t}".format("09.01.2020 10:20:30.500"), "10:20:30.500");
-  //     Assert.StrictEqual("{:t}".format("09.01.2020 10:20:30"),     "10:20:30");
-  //     Assert.StrictEqual("{:t}".format("09.01.2020 10:20"),        "10:20");
-  //     Assert.StrictEqual("{:t}".format("09.01.2020"),              "00:00");
-  //     Assert.StrictEqual("{:t}".format("10:20:30.500"),            "10:20:30.500");
-
-  //     Assert.StrictEqual("{:t}".format(null), "null");
-  //     Assert.StrictEqual("{:t}".format(), "null");
-  //   });
-
-  //   It("дата (D)", function () {
-  //     Assert.StrictEqual("{:D}".format("09.01.2020 10:20:30.500"), "9 января 2020");
-  //     Assert.StrictEqual("{:D}".format("09.01.2020"),              "9 января 2020");
-  //     Assert.StrictEqual("{:D}".format("10:20:30.500"),            "30 декабря 1899");
-
-  //     Assert.StrictEqual("{:D}".format(null), "null");
-  //     Assert.StrictEqual("{:D}".format(), "null");
-  //   });
-
-  //   It("дата/время (T)", function () {
-  //     Assert.StrictEqual("{:T}".format("09.01.2020 10:20:30.500"), "09.01.2020 10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format("09.01.2020 10:20:30"),     "09.01.2020 10:20:30");
-  //     Assert.StrictEqual("{:T}".format("09.01.2020 10:20"),        "09.01.2020 10:20");
-  //     Assert.StrictEqual("{:T}".format("09.01.2020"),              "09.01.2020");
-  //     Assert.StrictEqual("{:T}".format("10:20:30.500"),            "10:20:30.500");
-  //     Assert.StrictEqual("{:T}".format("10:20:30"),                "10:20:30");
-  //     Assert.StrictEqual("{:T}".format("10:20"),                   "10:20");
-  //     Assert.StrictEqual("{:T}".format(null),                      "null");
-  //     Assert.StrictEqual("{:T}".format(),                          "null");
-  //   });
-
-  //   It("дата/время для SQL (q)", function () {
-  //     Assert.StrictEqual("{:q}".format("09.01.2020 10:20:30.500"), "{ts'2020-01-09 10:20:30.500'}");
-  //     Assert.StrictEqual("{:q}".format("09.01.2020 10:20:30"),     "{ts'2020-01-09 10:20:30'}");
-  //     Assert.StrictEqual("{:q}".format("09.01.2020 10:20"),        "{ts'2020-01-09 10:20:00'}");
-  //     Assert.StrictEqual("{:q}".format("09.01.2020"),              "{d'2020-01-09'}");
-  //     Assert.StrictEqual("{:q}".format("10:20:30.500"),            "{t'10:20:30.500'}");
-  //     Assert.StrictEqual("{:q}".format("10:20:30"),                "{t'10:20:30'}");
-  //     Assert.StrictEqual("{:q}".format("10:20"),                   "{t'10:20:00'}");
-  //     Assert.StrictEqual("{:q}".format(null),                      "null");
-  //     Assert.StrictEqual("{:q}".format(),                          "null");
-  //   });
-
-  //   It("месяц и год (p)", function () {
-  //     var dt1 = Datetime("09.01.2020");
-  //     var dt2 = EncodeDate(9, 1, 2020);
-  //     var p1 = dt1.GetYear() * 12 + dt1.GetMonth();
-  //     var p2 = GetYear(dt2) * 12 + GetMonth(dt2);
-
-  //     Assert.StrictEqual("{:p}".format(p1),              "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format(p2),              "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format(dt1),             "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format(dt2),             "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format("09.01.2020"),    "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format({m: 1, y: 2020}), "Январь 2020");
-  //     Assert.StrictEqual("{:p}".format(null),            "null");
-  //     Assert.StrictEqual("{:p}".format(),                "null");
-  //   });
-
-  //   It("формат пользователя", function () {
-  //     var dt = "28.04.2020 12:46:49.500";
-  //     Assert.StrictEqual("{:d'd month y г. h ч n мин s сек ms мс (weekday)'}".format(dt), "28 апреля 2020 г. 12 ч 46 мин 49 сек 500 мс (вторник)");
-  //     Assert.StrictEqual("{:t'd mon y hh:nn (wd)'}".format(dt), "28 апр 2020 12:46 (вт)");
-  //     Assert.StrictEqual("{:d'Weekday, d mon y'}".format(dt), "Вторник, 28 апр 2020");
-  //     Assert.StrictEqual("{:t'Wd, d mon y'}".format(dt), "Вт, 28 апр 2020");
-  //     Assert.StrictEqual("{:d'Monthname y'}".format(dt), "Апрель 2020");
-  //     Assert.StrictEqual("{:t'p'}".format(dt), "Апрель 2020");
-  //     Assert.StrictEqual("{:d'monthname'}".format(dt), "апрель");
-  //     Assert.StrictEqual("{:t'dd.mm.yyyy hh:nn:ss.ms'}".format(dt), "28.04.2020 12:46:49.500");
-  //     Assert.StrictEqual("{:d'yyyy-mm-dd hh:nn:ss.ms'}".format(dt), "2020-04-28 12:46:49.500");
-  //     Assert.StrictEqual("{:t'yyyy-mm-dd hh:nn:ss.ms TZD'}".format(dt), "2020-04-28 12:46:49.500 +10:00");
-  //     Assert.StrictEqual("{:d'dd.mm.yyyy'}".format(dt), "28.04.2020");
-  //     Assert.StrictEqual("{:t'dd.mm.yy'}".format(dt), "28.04.20");
-  //     Assert.StrictEqual("{:d'hh:nn:ss.ms'}".format(dt), "12:46:49.500");
-
-  //     Assert.StrictEqual("{:t'n'' = n мин'}"    .format({min: 1}), "1' = 1 мин");
-  //     Assert.StrictEqual('{:t"n\' = n мин"}'    .format({min: 1}), "1' = 1 мин");
-  //     Assert.StrictEqual("{:t\"n' = n мин\"}"   .format({min: 1}), "1' = 1 мин");
-  //     Assert.StrictEqual('{:t\'n\'\' = n мин\'}'.format({min: 1}), "1' = 1 мин");
-
-  //     Assert.StrictEqual('{:t"s"" = s сек"}'    .format({s: 1}), '1" = 1 сек');
-  //     Assert.StrictEqual("{:t's\" = s сек'}"    .format({s: 1}), '1" = 1 сек');
-  //     Assert.StrictEqual('{:t\'s" = s сек\'}'   .format({s: 1}), '1" = 1 сек');
-  //     Assert.StrictEqual("{:t\"s\"\" = s сек\"}".format({s: 1}), '1" = 1 сек');
-  //   });
-  // });
-
-  // Describe("Выравнивание текста", function () {
-  //   It("вставка на этой же строке", function () {
-  //     var sql =
-  //       #sql
-  //       select *
-  //       from t {from:|}
-  //       where {where:|}
-  //       #endsql
-
-  //     var result =
-  //       #sql
-  //       select *
-  //       from t
-  //       where
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "", where: ""}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t join t2
-  //       where 1=1
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "join t2", where: "1=1"}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t join t2
-  //              join t3
-  //              join t4
-  //       where 1=1
-  //             and n>2
-  //             and m=3
-  //       #endsql
-
-  //       Assert.StrictEqual(
-  //         sql.format({from: "join t2\r\njoin t3\r\njoin t4", where: "1=1\r\nand n>2\r\nand m=3"}).trimIndent(),
-  //         result.trimIndent());
-  //   });
-
-  //   It("на этой же строке с фиксированным отступом", function () {
-  //     var sql =
-  //       #sql
-  //       select *
-  //       from t {from:|2}
-  //       where {where:|2}
-  //       #endsql
-
-  //     var result =
-  //       #sql
-  //       select *
-  //       from t
-  //       where
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "", where: ""}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t join t2
-  //       where 1=1
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "join t2", where: "1=1"}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t join t2
-  //         join t3
-  //         join t4
-  //       where 1=1
-  //         and n>2
-  //         and m=3
-  //       #endsql
-
-  //     Assert.StrictEqual(
-  //         sql.format({from: "join t2\r\njoin t3\r\njoin t4", where: "1=1\r\nand n>2\r\nand m=3"}).trimIndent(),
-  //         result.trimIndent());
-  //   });
-
-  //   It("на отдельной строке", function () {
-  //     var sql =
-  //       #sql
-  //       select *
-  //       from t
-  //         {from:|}
-  //       where
-  //         {where:|}
-  //       #endsql
-
-  //     var result =
-  //       #sql
-  //       select *
-  //       from t
-  //       where
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "", where: ""}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t
-  //         join t2
-  //       where
-  //         1=1
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "join t2", where: "1=1"}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t
-  //         join t2
-  //         join t3
-  //         join t4
-  //       where
-  //         1=1
-  //         and n>2
-  //         and m=3
-  //       #endsql
-
-  //     Assert.StrictEqual(
-  //         sql.format({from: "join t2\r\njoin t3\r\njoin t4", where: "1=1\r\nand n>2\r\nand m=3"}).trimIndent(),
-  //         result.trimIndent());
-  //   });
-
-  //   It("на отдельной строке с дополнительным отступом", function () {
-  //     var sql =
-  //       #sql
-  //       select *
-  //       from t
-  //         {from:|2}
-  //       where
-  //         {where:|2}
-  //       #endsql
-
-  //     var result =
-  //       #sql
-  //       select *
-  //       from t
-  //       where
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "", where: ""}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t
-  //         join t2
-  //       where
-  //         1=1
-  //       #endsql
-
-  //     Assert.StrictEqual( sql.format({from: "join t2", where: "1=1"}).trimIndent(), result.trimIndent());
-
-  //     result =
-  //       #sql
-  //       select *
-  //       from t
-  //         join t2
-  //           join t3
-  //           join t4
-  //       where
-  //         1=1
-  //           and n>2
-  //           and m=3
-  //       #endsql
-
-  //     Assert.StrictEqual(
-  //         sql.format({from: "join t2\r\njoin t3\r\njoin t4", where: "1=1\r\nand n>2\r\nand m=3"}).trimIndent(),
-  //         result.trimIndent());
-  //   });
-  // });
-
-  // Describe("Пустые строки", function () {
-
-  //   It("строка обрезается", function () {
-  //     var str =
-  //       #text
-  //       111
-  //       ...  {:|}
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-  //       ...
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка посередине - удаляется", function () {
-  //     var str =
-  //       #text
-  //       111
-  //         {:|}
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка посередине, прижата к верху - удаляется", function () {
-  //     var str =
-  //       #text
-  //       111
-  //         {:|}
-
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка посередине, прижата к низу - удаляется", function () {
-  //     var str =
-  //       #text
-  //       111
-
-  //         {:|}
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка сверху - удаляется", function () {
-  //     var str =
-  //       #text
-  //         {:|}
-  //       222
-  //       #endtext
-
-  //       var result =
-  //       #text
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка снизу - удаляется", function () {
-  //     var str =
-  //       #text
-  //       111
-  //         {:|}
-  //       #endtext
-
-  //       var result =
-  //       #text
-  //       111
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка посередине, не прижата - удаляются все строки снизу", function () {
-  //     var str =
-  //       #text
-  //       111
-
-  //         {:|}
-
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка сверху - удаляются все строки снизу", function () {
-  //     var str =
-  //       #text
-  //         {:|}
-
-  //       222
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       222
-  //       #endtext
-
-  //     Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-
-  //   It("строка снизу - удаляются все строки сверху", function () {
-  //     // Если удаляемая строка внизу, удаляем также пустые строки сверху
-  //     var str =
-  //       #text
-  //       111
-
-  //         {:|}
-  //       #endtext
-
-  //     var result =
-  //       #text
-  //       111
-  //       #endtext
-
-  //       Assert.StrictEqual( str.trimIndent().format(""), result.trimIndent() );
-  //   });
-  // });
 }

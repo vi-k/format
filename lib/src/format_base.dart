@@ -44,7 +44,7 @@ import 'package:intl/intl.dart';
 ///   может принимать не один, а любое количество символов, лишь бы в конце
 ///   стоял один из символов align ('>', '<', '^').
 ///
-/// - TODO: Пока не поддерживается в именованных аргументах .key и [index].
+/// - TODO: Пока не поддерживается в именованных аргументах .key и index.
 ///   Интересное решение. Мне нравится. Но в C++ оно не вошло. А я format()
 ///   впервые встретил там.
 ///
@@ -259,7 +259,7 @@ _Options{
 }''';
 }
 
-/// Поиск значения в [positionalArgs] по индексу [index].
+/// Поиск значения в positionalArgs по индексу [index].
 Object? _getValueByIndex(_Options options, int index) {
   final positionalArgs = options.positionalArgs;
 
@@ -281,9 +281,9 @@ Object? _getValueByIndex(_Options options, int index) {
 /// Поиск значения.
 ///
 /// Варианты:
-/// {} - перебираем параметры в positionalArgs по порядку;
-/// {index} - индекс параметра в positionalArgs;
-/// {id} или {[id]} - название параметра в namedArgs;
+/// `{}` - перебираем параметры в positionalArgs по порядку;
+/// `{index}` - индекс параметра в positionalArgs;
+/// `{id}` или `{[id]}` - название параметра в namedArgs;
 Object? _getValue(_Options options, String? rawId) {
   Object? value;
 
@@ -680,7 +680,8 @@ String _format(
             result = String.fromCharCodes(value);
           } else {
             throw ArgumentError(
-              '${options.all} Expected int or List<int>. Passed ${value.runtimeType}.',
+              '${options.all} Expected int or List<int>.'
+              ' Passed ${value.runtimeType}.',
             );
           }
           break;
@@ -806,79 +807,8 @@ String _format(
             needPoint: options.alt && value is! int,
           );
           break;
-
-        //   //
-        //   // Дата/время
-        //   //
-        //   case "d":
-        //     result = template === undefined ? Datetime(value).ToDateStr() : Datetime(value).ToStr(template);
-        //     break;
-
-        //   case "t":
-        //     result = template === undefined ? Datetime(value).ToTimeStr() : Datetime(value).ToStr(template);
-        //     break;
-
-        //   case "D":
-        //     result = Datetime(value).ToStr("d month y");
-        //     break;
-
-        //   case "T":
-        //     result = Datetime(value).ToStr();
-        //     break;
-
-        //   case "q":
-        //     result = Datetime(value).ToSQL();
-        //     break;
-
-        //   //
-        //   // Период (Январь 2020)
-        //   //
-        //   case "p":
-        //     if (classOf === "Number") {
-        //       var n = +value;
-        //       var year = Math.floor(n / 12);
-        //       var month = n % 12;
-        //       if (month === 0) {
-        //         month = 12;
-        //         year--;
-        //       }
-        //       result = Datetime.GetMonthName(month, true) + " " + year;
-        //     }
-        //     else result = Datetime(value).ToStr("Monthname y");
-        //     break;
-
-        //   default:
-        //     result = "-";//value;
       }
     }
-
-    // // Размещение строк относительно текущего отступа
-    // if (align === "|") {
-    //   if (result === "") {
-    //     result = "{remove}";
-    //     removeEmptyStrings = true;
-    //   }
-    //   else {
-    //     var lineStart = src.lastIndexOf("\n", pos - 1) + 1;
-    //     var indent = pos - lineStart;
-
-    //     if (width !== undefined) {
-    //       var textStart = lineStart;
-    //       while (textStart < pos && src.charAt(textStart) === " ") textStart++;
-    //       indent = textStart - lineStart + width;
-    //     }
-
-    //     if (fill === undefined) fill = " ";
-    //     result = result.addIndent(fill.repeat(indent), true);
-    //   }
-    // }
-    // // Ограничение по ширине
-    // else if (width !== undefined) {
-    //   if (result.length > width) {
-    //     // Если не вмещаемся, заполняем '*'
-    //     result = "*".repeat(width);
-    //   }
-    // else
 
     final width = options.width;
     if (result != null && width != null && result.length < width) {
@@ -906,17 +836,6 @@ String _format(
 
     return options.toString();
   });
-
-  // Удаляем пустые строки для параметра "|"
-  // if (removeEmptyStrings) {
-  //   result = result
-  //     // В случае, когда вокруг пустые строки или удаляемая строка наверху, удаляем также пустые строки снизу
-  //     .replace(/(^|(\r?\n *\r?\n)) *{remove}\r?\n( *\r?\n)*/g, "$1")
-  //     // В случае, когда удаляемая строка внизу, удаляем также пустые строки сверху
-  //     .replace(/( *\r?\n)* *{remove}(\r?\n)?$/g, "")
-  //     // В любом другом случае удаляем либо всю строку, если она пустая, либо триммим строку справа
-  //     .replace(/(\r?\n)? *{remove}/g, "");
-  // }
 
   return result;
 }
