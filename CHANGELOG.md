@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.0
+
+* Upgrade dependencies
+
 ## 1.2.0
 
 * Named arguments can now accept Symbol:
