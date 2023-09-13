@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.3.1
+
+* Remove dart_code_metrics from dependencies
+
 ## 1.3.0
 
 * Upgrade dependencies
