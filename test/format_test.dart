@@ -272,41 +272,96 @@ void main() {
           '{:c}+{:c}+{:c}+{:c}={:c}{:c}{:c}{:c}{:c}{:c}{:c}'.format([
             0x1F468,
             0x1F469,
-            0x1F466,
             0x1F467,
+            0x1F466,
             0x1F468,
             0x200D,
             0x1F469,
             0x200D,
-            0x1F466,
-            0x200D,
             0x1F467,
+            0x200D,
+            0x1F466,
           ]),
-          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+          '👨+👩+👧+👦=👨‍👩‍👧‍👦',
         );
         expect(
           '{:c}+{:c}+{:c}+{:c}={:c}'.format([
             0x1F468,
             0x1F469,
-            0x1F466,
             0x1F467,
-            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
+            0x1F466,
+            [
+              0x1F468,
+              0x200D,
+              0x1F469,
+              0x200D,
+              0x1F467,
+              0x200D,
+              0x1F466,
+            ],
           ]),
-          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+          '👨+👩+👧+👦=👨‍👩‍👧‍👦',
         );
         expect(
           '{:c}={:c}'.format([
-            [0x1F468, 0x2B, 0x1F469, 0x2B, 0x1F466, 0x2B, 0x1F467],
-            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467],
+            [0x1F468, 0x2B, 0x1F469, 0x2B, 0x1F467, 0x2B, 0x1F466],
+            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467, 0x200D, 0x1F466],
           ]),
-          '👨+👩+👦+👧=👨‍👩‍👦‍👧',
+          '👨+👩+👧+👦=👨‍👩‍👧‍👦',
         );
+      });
+
+      test('width, align and fill', () {
+        const c = 65;
+        expect('{:4c}'.format([c]), 'A   ');
+        expect('{:>4c}'.format([c]), '   A');
+        expect('{:^4c}'.format([c]), ' A  ');
+        expect('{:<4c}'.format([c]), 'A   ');
+
+        expect('{:*>4c}'.format([c]), '***A');
+        expect('{:*^4c}'.format([c]), '*A**');
+        expect('{:*<4c}'.format([c]), 'A***');
+
+        expect('{:*>4.0c}'.format([c]), '****');
+        expect('{:*^4.0c}'.format([c]), '****');
+        expect('{:*<4.0c}'.format([c]), '****');
+
+        expect('{:*>4.1c}'.format([c]), '***A');
+        expect('{:*^4.1c}'.format([c]), '*A**');
+        expect('{:*<4.1c}'.format([c]), 'A***');
+
+        expect('{:*>4.2c}'.format([c]), '***A');
+        expect('{:*^4.2c}'.format([c]), '*A**');
+        expect('{:*<4.2c}'.format([c]), 'A***');
+
+        const c2 = [0xD83C, 0xDDFA, 0xD83C, 0xDDE6];
+
+        expect('{:5c}'.format([c2]), '🇺🇦    ');
+        expect('{:>5c}'.format([c2]), '    🇺🇦');
+        expect('{:^5c}'.format([c2]), '  🇺🇦  ');
+        expect('{:<5c}'.format([c2]), '🇺🇦    ');
+
+        expect('{:🙏>5c}'.format([c2]), '🙏🙏🙏🙏🇺🇦');
+        expect('{:🙏^5c}'.format([c2]), '🙏🙏🇺🇦🙏🙏');
+        expect('{:🙏<5c}'.format([c2]), '🇺🇦🙏🙏🙏🙏');
+
+        expect('{:🙏>5.0c}'.format([c2]), '🙏🙏🙏🙏🙏');
+        expect('{:🙏^5.0c}'.format([c2]), '🙏🙏🙏🙏🙏');
+        expect('{:🙏<5.0c}'.format([c2]), '🙏🙏🙏🙏🙏');
+
+        expect('{:🙏>5.1c}'.format([c2]), '🙏🙏🙏🙏🇺🇦');
+        expect('{:🙏^5.1c}'.format([c2]), '🙏🙏🇺🇦🙏🙏');
+        expect('{:🙏<5.1c}'.format([c2]), '🇺🇦🙏🙏🙏🙏');
+
+        expect('{:🙏>5.2c}'.format([c2]), '🙏🙏🙏🙏🇺🇦');
+        expect('{:🙏^5.2c}'.format([c2]), '🙏🙏🇺🇦🙏🙏');
+        expect('{:🙏<5.2c}'.format([c2]), '🇺🇦🙏🙏🙏🙏');
       });
     });
 
     group('s:', () {
       const s = 'Hello world';
-      const s2 = '👨+👩+👦+👧=👨‍👩‍👦‍👧';
+      const s2 = '👨+👩+👧+👦=👨‍👩‍👧‍👦';
 
       test('basic use', () {
         expect(
@@ -335,15 +390,15 @@ void main() {
 
         expect('{:.1s}'.format([s2]), '👨');
         expect('{:.3s}'.format([s2]), '👨+👩');
-        expect('{:.5s}'.format([s2]), '👨+👩+👦');
-        expect('{:.7s}'.format([s2]), '👨+👩+👦+👧');
-        expect('{:.9s}'.format([s2]), '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+        expect('{:.5s}'.format([s2]), '👨+👩+👧');
+        expect('{:.7s}'.format([s2]), '👨+👩+👧+👦');
+        expect('{:.9s}'.format([s2]), '👨+👩+👧+👦=👨‍👩‍👧‍👦');
 
         expect('{:#.2s}'.format([s2]), '👨…');
         expect('{:#.4s}'.format([s2]), '👨+👩…');
-        expect('{:#.6s}'.format([s2]), '👨+👩+👦…');
-        expect('{:#.8s}'.format([s2]), '👨+👩+👦+👧…');
-        expect('{:#.10s}'.format([s2]), '👨+👩+👦+👧=👨‍👩‍👦‍👧');
+        expect('{:#.6s}'.format([s2]), '👨+👩+👧…');
+        expect('{:#.8s}'.format([s2]), '👨+👩+👧+👦…');
+        expect('{:#.10s}'.format([s2]), '👨+👩+👧+👦=👨‍👩‍👧‍👦');
       });
 
       test('width, align and fill', () {
@@ -356,6 +411,10 @@ void main() {
         expect('{:*^16s}'.format([s]), '**Hello world***');
         expect('{:*<16s}'.format([s]), 'Hello world*****');
 
+        expect('{:*>16.0s}'.format([s]), '****************');
+        expect('{:*^16.0s}'.format([s]), '****************');
+        expect('{:*<16.0s}'.format([s]), '****************');
+
         expect('{:*>16.5s}'.format([s]), '***********Hello');
         expect('{:*^16.5s}'.format([s]), '*****Hello******');
         expect('{:*<16.5s}'.format([s]), 'Hello***********');
@@ -363,6 +422,31 @@ void main() {
         expect('{:*>#16.6s}'.format([s]), '**********Hello…');
         expect('{:*^#16.6s}'.format([s]), '*****Hello…*****');
         expect('{:*<#16.6s}'.format([s]), 'Hello…**********');
+
+        expect('{:15s}'.format([s2]), '👨+👩+👧+👦=👨‍👩‍👧‍👦      ');
+        expect('{:>15s}'.format([s2]), '      👨+👩+👧+👦=👨‍👩‍👧‍👦');
+        expect('{:^15s}'.format([s2]), '   👨+👩+👧+👦=👨‍👩‍👧‍👦   ');
+        expect('{:<15s}'.format([s2]), '👨+👩+👧+👦=👨‍👩‍👧‍👦      ');
+
+        expect('{:💜>15s}'.format([s2]), '💜💜💜💜💜💜👨+👩+👧+👦=👨‍👩‍👧‍👦');
+        expect('{:💜^15s}'.format([s2]), '💜💜💜👨+👩+👧+👦=👨‍👩‍👧‍👦💜💜💜');
+        expect('{:💜<15s}'.format([s2]), '👨+👩+👧+👦=👨‍👩‍👧‍👦💜💜💜💜💜💜');
+
+        expect('{:❓>15.0s}'.format([s2]), '❓❓❓❓❓❓❓❓❓❓❓❓❓❓❓');
+        expect('{:❓^15.0s}'.format([s2]), '❓❓❓❓❓❓❓❓❓❓❓❓❓❓❓');
+        expect('{:❓<15.0s}'.format([s2]), '❓❓❓❓❓❓❓❓❓❓❓❓❓❓❓');
+
+        expect('{:💚>15.7s}'.format([s2]), '💚💚💚💚💚💚💚💚👨+👩+👧+👦');
+        expect('{:💚^15.7s}'.format([s2]), '💚💚💚💚👨+👩+👧+👦💚💚💚💚');
+        expect('{:💚<15.7s}'.format([s2]), '👨+👩+👧+👦💚💚💚💚💚💚💚💚');
+
+        expect('{:🩵>#15.8s}'.format([s2]), '🩵🩵🩵🩵🩵🩵🩵👨+👩+👧+👦…');
+        expect('{:🩵^#15.8s}'.format([s2]), '🩵🩵🩵👨+👩+👧+👦…🩵🩵🩵🩵');
+        expect('{:🩵<#15.8s}'.format([s2]), '👨+👩+👧+👦…🩵🩵🩵🩵🩵🩵🩵');
+
+        expect('{:0>4}'.format(['5']), '0005');
+        expect('{:0<4}'.format(['5']), '5000');
+        expect('{:04}'.format(['5']), '5000');
       });
     });
 
@@ -416,6 +500,9 @@ void main() {
         expect('{:0b}'.format([n]), '10101010');
         expect('{:012b}'.format([n]), '000010101010');
         expect('{:012b}'.format([-n]), '-00010101010');
+        // zero flag is ignored
+        expect('{:@>012b}'.format([n]), '@@@@10101010');
+        expect('{:@>012b}'.format([-n]), '@@@-10101010');
       });
 
       test('group', () {
@@ -430,6 +517,10 @@ void main() {
         expect('{:014_b}'.format([-n]), '-000_1010_1010');
         expect('{:015_b}'.format([-n]), '-0000_1010_1010');
         expect('{:016_b}'.format([-n]), '-0_0000_1010_1010');
+
+        // zero flag is ignored
+        expect('{:@>016_b}'.format([n]), '@@@@@@@1010_1010');
+        expect('{:@>016_b}'.format([-n]), '@@@@@@-1010_1010');
 
         expect(
           () => '{:,b}'.format([n]),
@@ -519,6 +610,9 @@ void main() {
         expect('{:0o}'.format([n]), '12345670');
         expect('{:012o}'.format([n]), '000012345670');
         expect('{:012o}'.format([-n]), '-00012345670');
+        // zero flag is ignored
+        expect('{:@>012o}'.format([n]), '@@@@12345670');
+        expect('{:@>012o}'.format([-n]), '@@@-12345670');
       });
 
       test('group', () {
@@ -533,6 +627,10 @@ void main() {
         expect('{:014_o}'.format([-n]), '-000_1234_5670');
         expect('{:015_o}'.format([-n]), '-0000_1234_5670');
         expect('{:016_o}'.format([-n]), '-0_0000_1234_5670');
+
+        // zero flag is ignored
+        expect('{:@>016_o}'.format([n]), '@@@@@@@1234_5670');
+        expect('{:@>016_o}'.format([-n]), '@@@@@@-1234_5670');
 
         expect(
           () => '{:,o}'.format([n]),
@@ -619,6 +717,8 @@ void main() {
         expect('{:0x}'.format([n]), '12abcdef');
         expect('{:012x}'.format([n]), '000012abcdef');
         expect('{:012x}'.format([-n]), '-00012abcdef');
+        // zero flag is ignored
+        expect('{:@>012x}'.format([n]), '@@@@12abcdef');
       });
 
       test('group', () {
@@ -633,6 +733,10 @@ void main() {
         expect('{:014_x}'.format([-n]), '-000_12ab_cdef');
         expect('{:015_x}'.format([-n]), '-0000_12ab_cdef');
         expect('{:016_x}'.format([-n]), '-0_0000_12ab_cdef');
+
+        // zero flag is ignored
+        expect('{:@>016_x}'.format([n]), '@@@@@@@12ab_cdef');
+        expect('{:@>016_x}'.format([-n]), '@@@@@@-12ab_cdef');
 
         expect(
           () => '{:,x}'.format([n]),
@@ -720,6 +824,8 @@ void main() {
       test('zero', () {
         expect('{:0X}'.format([n]), '12ABCDEF');
         expect('{:012X}'.format([n]), '000012ABCDEF');
+        // zero flag is ignored
+        expect('{:@>012X}'.format([n]), '@@@@12ABCDEF');
       });
 
       test('group', () {
@@ -728,6 +834,9 @@ void main() {
         expect('{:014_X}'.format([n]), '0000_12AB_CDEF');
         expect('{:015_X}'.format([n]), '0_0000_12AB_CDEF');
         expect('{:016_X}'.format([n]), '0_0000_12AB_CDEF');
+        // zero flag is ignored
+        expect('{:@>016_X}'.format([n]), '@@@@@@@12AB_CDEF');
+
         expect(
           () => '{:,X}'.format([n]),
           throwsA(
@@ -801,6 +910,8 @@ void main() {
       test('zero', () {
         expect('{:0d}'.format([n]), '123456789');
         expect('{:013d}'.format([n]), '0000123456789');
+        // zero flag is ignored
+        expect('{:@>013d}'.format([n]), '@@@@123456789');
       });
 
       test('group', () {
@@ -812,6 +923,9 @@ void main() {
         expect('{:015_d}'.format([n]), '000_123_456_789');
         expect('{:016,d}'.format([n]), '0,000,123,456,789');
         expect('{:017,d}'.format([n]), '0,000,123,456,789');
+
+        // zero flag is ignored
+        expect('{:@>017,d}'.format([n]), '@@@@@@123,456,789');
       });
 
       test('alt', () {
@@ -893,6 +1007,10 @@ void main() {
         expect('{:016f}'.format([n]), '000012345.678900');
         expect('{:0f}'.format([-n]), '-12345.678900');
         expect('{:016f}'.format([-n]), '-00012345.678900');
+
+        // zero flag is ignored
+        expect('{:@>016f}'.format([n]), '@@@@12345.678900');
+        expect('{:@>016f}'.format([-n]), '@@@-12345.678900');
       });
 
       test('group', () {
@@ -906,6 +1024,8 @@ void main() {
         expect('{:019_f}'.format([n]), '0_000_012_345.678900');
         expect('{:020,f}'.format([n]), '0,000,012,345.678900');
         expect('{:020_f}'.format([n]), '0_000_012_345.678900');
+        // zero flag is ignored
+        expect('{:@>020_f}'.format([n]), '@@@@@@@12_345.678900');
       });
 
       test('alt', () {
@@ -937,6 +1057,9 @@ void main() {
         expect('{:+f}'.format([-nan]), 'nan');
         expect('{: f}'.format([-nan]), 'nan');
 
+        expect('{:0>06f}'.format([nan]), '000nan');
+        expect('{:@>06f}'.format([nan]), '@@@nan');
+
         expect('{:06f}'.format([nan]), '   nan');
         expect('{:-06f}'.format([nan]), '   nan');
         expect('{:+06f}'.format([nan]), '   nan');
@@ -957,6 +1080,9 @@ void main() {
         expect('{:-f}'.format([-inf]), '-inf');
         expect('{:+f}'.format([-inf]), '-inf');
         expect('{: f}'.format([-inf]), '-inf');
+
+        expect('{:0>06f}'.format([inf]), '000inf');
+        expect('{:@>06f}'.format([inf]), '@@@inf');
 
         expect('{:06f}'.format([inf]), '   inf');
         expect('{:-06f}'.format([inf]), '   inf');
@@ -1032,11 +1158,17 @@ void main() {
         expect('{:015e}'.format([n1]), '00001.234568e-4');
         expect('{:0e}'.format([-n1]), '-1.234568e-4');
         expect('{:015e}'.format([-n1]), '-0001.234568e-4');
+        // zero flag is ignored
+        expect('{:@>015e}'.format([n1]), '@@@@1.234568e-4');
+        expect('{:@>015e}'.format([-n1]), '@@@-1.234568e-4');
 
         expect('{:0e}'.format([n2]), '1.234568e+4');
         expect('{:015e}'.format([n2]), '00001.234568e+4');
         expect('{:0e}'.format([-n2]), '-1.234568e+4');
         expect('{:015e}'.format([-n2]), '-0001.234568e+4');
+        // zero flag is ignored
+        expect('{:@>015e}'.format([n2]), '@@@@1.234568e+4');
+        expect('{:@>015e}'.format([-n2]), '@@@-1.234568e+4');
       });
 
       test('group', () {
@@ -1049,6 +1181,8 @@ void main() {
         expect('{:018,e}'.format([n1]), '0,000,001.234568e-4');
         expect('{:019,e}'.format([n1]), '0,000,001.234568e-4');
         expect('{:012,.0e}'.format([n1]), '0,000,001e-4');
+        // zero flag is ignored
+        expect('{:@>012,.0e}'.format([n1]), '@@@@@@@@1e-4');
 
         expect('{:,e}'.format([n2]), '1.234568e+4');
         expect('{:_e}'.format([n2]), '1.234568e+4');
@@ -1059,6 +1193,8 @@ void main() {
         expect('{:018,e}'.format([n2]), '0,000,001.234568e+4');
         expect('{:019,e}'.format([n2]), '0,000,001.234568e+4');
         expect('{:012,.0e}'.format([n2]), '0,000,001e+4');
+        // zero flag is ignored
+        expect('{:@>012,.0e}'.format([n2]), '@@@@@@@@1e+4');
       });
 
       test('alt', () {
@@ -1213,6 +1349,8 @@ void main() {
         expect('{:0g}'.format([0.0000001]), '1e-7');
         expect('{:014g}'.format([0.0000001]), '00000000001e-7');
         expect('{:#014g}'.format([0.0000001]), '00001.00000e-7');
+        // zero flag is ignored
+        expect('{:@>#014g}'.format([0.0000001]), '@@@@1.00000e-7');
       });
 
       test('group', () {
@@ -1222,14 +1360,20 @@ void main() {
         expect('{:012_.9g}'.format([123456789.0]), '0_123_456_789');
         expect('{:013,.9g}'.format([123456789.0]), '0,123,456,789');
         expect('{:013_.9g}'.format([123456789.0]), '0_123_456_789');
+        // zero flag is ignored
+        expect('{:@>013_.9g}'.format([123456789.0]), '@@123_456_789');
 
         expect('{:010,g}'.format([0.0000001]), '000,001e-7');
         expect('{:011,g}'.format([0.0000001]), '0,000,001e-7');
         expect('{:012,g}'.format([0.0000001]), '0,000,001e-7');
+        // zero flag is ignored
+        expect('{:@>012,g}'.format([0.0000001]), '@@@@@@@@1e-7');
 
         expect('{:019,.9g}'.format([1234567890.0]), '000,001.23456789e+9');
         expect('{:020,.9g}'.format([1234567890.0]), '0,000,001.23456789e+9');
         expect('{:021,.9g}'.format([1234567890.0]), '0,000,001.23456789e+9');
+        // zero flag is ignored
+        expect('{:@>021,.9g}'.format([1234567890.0]), '@@@@@@@@1.23456789e+9');
       });
     });
 
@@ -1239,9 +1383,6 @@ void main() {
       const n2 = 1234567.89;
       const nan = double.nan;
       const inf = double.infinity;
-
-      // void printA(String str) =>
-      //     print('(${str.length}/${str.characters.length}) $str ');
 
       test('common use', () {
         expect(
@@ -1287,11 +1428,15 @@ void main() {
         expect('{:n}'.format([1]), '1');
         expect('{:04n}'.format([1]), '0001');
         expect('{:07n}'.format([1]), '0000001');
+        // zero flag is ignored
+        expect('{:@>07n}'.format([1]), '@@@@@@1');
 
         expect('{:04,n}'.format([1]), '0,001');
         expect('{:05,n}'.format([1]), '0,001');
         expect('{:08,n}'.format([1]), '0,000,001');
         expect('{:09,n}'.format([1]), '0,000,001');
+        // zero flag is ignored
+        expect('{:@>09,n}'.format([1]), '@@@@@@@@1');
 
         expect('{:n}'.format([9223372036854775807]), '9223372036854775807');
         expect('{:n}'.format([-9223372036854775807]), '-9223372036854775807');
@@ -1370,6 +1515,15 @@ void main() {
           expect('{:013n}'.format([n2]), '00001.23457E6');
           expect('{:013g}'.format([-n2]), '-001.23457e+6');
           expect('{:013n}'.format([-n2]), '-0001.23457E6');
+          // zero flag is ignored
+          expect('{:@>09g}'.format([n]), '@@@123457');
+          expect('{:@>09n}'.format([n]), '@@@123457');
+          expect('{:@>09g}'.format([-n]), '@@-123457');
+          expect('{:@>09n}'.format([-n]), '@@-123457');
+          expect('{:@>013g}'.format([n2]), '@@@1.23457e+6');
+          expect('{:@>013n}'.format([n2]), '@@@@1.23457E6');
+          expect('{:@>013g}'.format([-n2]), '@@-1.23457e+6');
+          expect('{:@>013n}'.format([-n2]), '@@@-1.23457E6');
 
           expect('{:013.9g}'.format([n]), '000123456.789');
           expect('{:013.9n}'.format([n]), '000123456.789');

@@ -400,7 +400,12 @@ String _numberFormat<T extends num>(
   String result;
   final num value = dyn;
 
-  // Числа по умолчанию прижимаются вправо
+  // Если задан fill, игнорируем zero.
+  if (options.fill != null) {
+    options.zero = false;
+  }
+
+  // Числа по умолчанию прижимаются вправо.
   options.align ??= '>';
 
   // Сохраняем знак.
@@ -412,8 +417,13 @@ String _numberFormat<T extends num>(
   }
 
   // Преобразуем в строку.
-  if (value.isNaN) return 'nan';
-  if (value.isInfinite) return '${sign}inf';
+  if (value.isNaN) {
+    return 'nan';
+  }
+
+  if (value.isInfinite) {
+    return '${sign}inf';
+  }
 
   result = toStr(value as T, options.precision);
 
@@ -482,6 +492,11 @@ String _intlNumberFormat<T extends num>(
   }
 
   final num value = dyn;
+
+  // Если задан fill, игнорируем zero.
+  if (options.fill != null) {
+    options.zero = false;
+  }
 
   // Числа по умолчанию прижимаются вправо
   options.align ??= '>';
@@ -646,7 +661,7 @@ String _format(
 
     String? result;
 
-    final value = options.value;
+    var value = options.value;
 
     // Типы форматирования по умолчанию.
     if (options.specifier == null) {
@@ -672,26 +687,30 @@ String _format(
       result = value.toString();
     } else {
       switch (spec) {
-        // Символ
+        // Строка и символ
         case 'c':
-          if (value is int) {
-            result = String.fromCharCode(value);
-          } else if (value is List<int>) {
-            result = String.fromCharCodes(value);
-          } else {
-            throw ArgumentError(
-              '${options.all} Expected int or List<int>.'
-              ' Passed ${value.runtimeType}.',
-            );
-          }
-          break;
-
-        // Строка
         case 's':
+          if (spec == 'c') {
+            if (value is int) {
+              value = String.fromCharCode(value);
+            } else if (value is List<int>) {
+              value = String.fromCharCodes(value);
+            } else {
+              throw ArgumentError(
+                '${options.all} Expected int or List<int>.'
+                ' Passed ${value.runtimeType}.',
+              );
+            }
+          }
+
           if (value is! String) {
             throw ArgumentError(
               '${options.all} Expected String. Passed ${value.runtimeType}.',
             );
+          }
+
+          if (options.zero) {
+            options.fill = '0';
           }
 
           final precision = options.precision;
@@ -811,24 +830,25 @@ String _format(
     }
 
     final width = options.width;
-    if (result != null && width != null && result.length < width) {
-      // Выравниваем относительно заданной ширины
-      final fill = options.fill ?? ' ';
-      final n = width - result.length;
+    if (result != null && width != null) {
+      final resultWidth = result.characters.length;
+      if (resultWidth < width) {
+        // Выравниваем относительно заданной ширины
+        final fill = options.fill ?? ' ';
+        final n = width - resultWidth;
 
-      switch (options.align ?? '<') {
-        case '<':
-          result += fill * n;
-          break;
-        case '>':
-          result = fill * n + result;
-          break;
-        case '^':
-          {
+        switch (options.align ?? '<') {
+          case '<':
+            result += fill * n;
+            break;
+          case '>':
+            result = fill * n + result;
+            break;
+          case '^':
             final half = n ~/ 2;
             result = fill * half + result + fill * (n - half);
             break;
-          }
+        }
       }
     }
 

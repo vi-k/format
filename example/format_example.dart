@@ -7,127 +7,149 @@ void main() {
   print('{}'.format('hello world')); // "hello world"
   '{}'.print('hello world'); // "hello world"
 
-  '{} {}'.print('hello', 'world'); // "hello world" (max 10 values)
-  '{} {}'
-      .print(['hello', 'world']); // "hello world" (unlimited number of values)
-  '{0} {1}'.print('hello', 'world'); // "hello world"
-  '{1} {0}'.print('hello', 'world'); // "world hello"
-  '{h} {w}'.print({'h': 'hello', 'w': 'world'}); // "hello world"
-  '{w} {h}'.print({#h: 'hello', #w: 'world'}); // "hello world"
-  '{"it\'s hello"} {"it\'s world"}'
-      .print({"it's hello": 'hello', "it's world": 'world'}); // "hello world"
+  print(format('{} {}', 'hello', 'world')); // "hello world" (max 10 arguments)
+  print(
+    format('{} {}', ['hello', 'world']),
+  ); // "hello world" (unlimited number of arguments)
+  print(format('{0} {1}', 'hello', 'world')); // "hello world"
+  print(format('{1} {0}', 'hello', 'world')); // "world hello"
+  print(format('{h} {w}', {'h': 'hello', 'w': 'world'})); // "hello world"
+  print(format('{w} {h}', {#h: 'hello', #w: 'world'})); // "hello world"
+  print(
+    format(
+      '{"it\'s hello"} {"it\'s world"}',
+      {"it's hello": 'hello', "it's world": 'world'},
+    ),
+  ); // "hello world"
 
-  '{:d}'.print(123); // "123"
-  '{:7d}'.print(123); // "    123"
-  '{:<7d}'.print(123); // "123    "
-  '{:^7d}'.print(123); // "  123  "
-  '{:*^7d}'.print(123); // "**123**"
+  print(format('{:d}', 123)); // "123"
+  print(format('{:7d}', 123)); // "    123"
+  print(format('{:<7d}', 123)); // "123    "
+  print(format('{:^7d}', 123)); // "  123  "
+  print(format('{:*^7d}', 123)); // "**123**"
 
-  '{:07d}'.print(123); // "0000123"
-  '{:09,d}'.print(123); // "0,000,123"
-  '{:09_d}'.print(123); // "0_000_123"
+  print(format('{:07d}', 123)); // "0000123"
+  print(format('{:09,d}', 123)); // "0,000,123"
+  print(format('{:09_d}', 123)); // "0_000_123"
 
-  '{:0{},d}'.print(123, 9); // "0,000,123"
-  '{:0{},d}'.print(123, 11); // "000,000,123"
-  '{value:0{width},d}'.print({'value': 123, 'width': 13}); // "0,000,000,123"
+  print(format('{:0{},d}', 123, 9)); // "0,000,123"
+  print(format('{:0{},d}', 123, 11)); // "000,000,123"
+  print(
+    format('{value:0{width},d}', {'value': 123, 'width': 13}),
+  ); // "0,000,000,123"
 
-  '{:+d}'.print(123); // "+123"
-  '{: d}'.print(123); // " 123"
+  print(format('{:+d}', 123)); // "+123"
+  print(format('{: d}', 123)); // " 123"
 
   // Automatic type inference.
-  '{}'.print(123); // "123"
-  '{}'.print('aaa'); // "aaa"
-  '{:7}'.print(123); // "    123"
-  '{:7}'.print('aaa'); // "aaa    "
+  print(format('{}', 123)); // "123"
+  print(format('{}', 'aaa')); // "aaa"
+  print(format('{:7}', 123)); // "    123"
+  print(format('{:7}', 'aaa')); // "aaa    "
 
   const n = 123.4567;
-  '{:.2f}'.print(n); // 123.46
-  '{:10.2f}'.print(n); // '    123.46'
-  '{:010.2f}'.print(n); // 0000123.46
-  '{:012,.2f}'.print(n); // 0,000,123.46
-  '{:012_.2f}'.print(n); // 0_000_123.46
+  print(format('{:.2f}', n)); // 123.46
+  print(format('{:10.2f}', n)); // '    123.46'
+  print(format('{:010.2f}', n)); // 0000123.46
+  print(format('{:012,.2f}', n)); // 0,000,123.46
+  print(format('{:012_.2f}', n)); // 0_000_123.46
 
-  '{:0{},.{}f}'.print(n, 12, 2); // 0,000,123.46
-  '{value:0{width},.{precision}f}'.print({
-    'value': n,
-    'width': 12,
-    'precision': 2,
-  }); // 0,000,123.46
+  print(format('{:0{},.{}f}', n, 12, 2)); // 0,000,123.46
+  print(
+    format('{value:0{width},.{precision}f}', {
+      'value': n,
+      'width': 12,
+      'precision': 2,
+    }),
+  ); // 0,000,123.46
 
   const n1 = 123456.789;
   const n2 = 1234567.89;
-  '{:g}'.print(n1); // 123457
-  '{:g}'.print(n2); // 1.23457e+6
-  '{:.9g}'.print(n1); // 123456.789
-  '{:.9g}'.print(n2); // 1234567.89
-  '{:.5g}'.print(n1); // 1.2346e+5
-  '{:.5g}'.print(n2); // 1.2346e+6
+  print(format('{:g}', n1)); // 123457
+  print(format('{:g}', n2)); // 1.23457e+6
+  print(format('{:.9g}', n1)); // 123456.789
+  print(format('{:.9g}', n2)); // 1234567.89
+  print(format('{:.5g}', n1)); // 1.2346e+5
+  print(format('{:.5g}', n2)); // 1.2346e+6
 
-  '{:g}'.print(double.nan); // nan
-  '{:g}'.print(double.infinity); // inf
-  '{:g}'.print(double.negativeInfinity); // -inf
+  print(format('{:g}', double.nan)); // nan
+  print(format('{:g}', double.infinity)); // inf
+  print(format('{:g}', double.negativeInfinity)); // -inf
 
   const i = 12345678;
-  '{:b}'.print(i); // 101111000110000101001110
-  '{:d}'.print(i); // 12345678
-  '{:x}'.print(i); // bc614e
-  '{:X}'.print(i); // BC614E
-  '{:#x}'.print(i); // 0xbc614e
-  '{:#X}'.print(i); // 0xBC614E
+  print(format('{:b}', i)); // 101111000110000101001110
+  print(format('{:d}', i)); // 12345678
+  print(format('{:x}', i)); // bc614e
+  print(format('{:X}', i)); // BC614E
+  print(format('{:#x}', i)); // 0xbc614e
+  print(format('{:#X}', i)); // 0xBC614E
 
-  '{:_b}'.print(i); // 1011_1100_0110_0001_0100_1110
-  '{:,d}'.print(i); // 12,345,678
-  '{:_d}'.print(i); // 12_345_678
-  '{:_x}'.print(i); // bc_614e
-  '{:_X}'.print(i); // BC_614E
-  '{:#_x}'.print(i); // 0xbc_614e
-  '{:#_X}'.print(i); // 0xBC_614E
+  print(format('{:_b}', i)); // 1011_1100_0110_0001_0100_1110
+  print(format('{:,d}', i)); // 12,345,678
+  print(format('{:_d}', i)); // 12_345_678
+  print(format('{:_x}', i)); // bc_614e
+  print(format('{:_X}', i)); // BC_614E
+  print(format('{:#_x}', i)); // 0xbc_614e
+  print(format('{:#_X}', i)); // 0xBC_614E
 
-  '{:c}+{:c}+{:c}+{:c}={:c}'.print(
-    0x1F468, // 👨
-    0x1F469, // 👩
-    0x1F466, // 👦
-    0x1F467, // 👧
-    [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
-  ); // 👨+👩+👦+👧=👨‍👩‍👦‍👧
+  // Surrogate pairs
+  print(
+    format(
+      '{:c}+{:c}+{:c}+{:c}={:c}',
+      0x1F468, // 👨
+      0x1F469, // 👩
+      0x1F467, // 👧
+      0x1F466, // 👦
+      [
+        0x1F468, // 👨
+        0x200D,
+        0x1F469, // 👩
+        0x200D,
+        0x1F467, // 👧
+        0x200D,
+        0x1F466, // 👦
+      ], // 👨‍👩‍👧‍👦
+    ),
+  ); // 👨+👩+👧+👦=👨‍👩‍👧‍👦
 
-  '{:👨>10}'.print('!'); // 👨👨👨👨👨👨👨👨👨!
-  '{:👨‍👩‍👦‍👧>10}'.print(
-    '!',
-  ); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧! // ignore: lines_longer_than_80_chars
-  '{:ä>10}'.print('!'); // äääääääää!
+  print(format('{:🇺🇦^10}', 'No war')); // 🇺🇦🇺🇦No war🇺🇦🇺🇦
 
   const m = 12345678.9;
+  Intl.defaultLocale = 'en_US';
+  print(format('{:n}', m)); // 1.23457E7
+  print(format('{:.9n}', m)); // 12345678.9
+  print(format('{:012,.9n}', m)); // 1,23,45,678.9
+  print(format('{:n}', double.nan)); // NaN
+  print(format('{:n}', double.infinity)); // ∞
+  print(format('{:n}', double.negativeInfinity)); // -∞
+
+  Intl.defaultLocale = 'uk_UA';
+  print(format('{:n}', m)); // 1,23457E7
+  print(format('{:.9n}', m)); // 12345678,9
+  print(format('{:012,.9n}', m)); // 12 345 678,9
+  print(format('{:n}', double.nan)); // NaN
+
   Intl.defaultLocale = 'ru_RU';
-  '{:n}'.print(m); // 1,23457E7
-  '{:.9n}'.print(m); // 12345678,9
-  '{:012,.9n}'.print(m); // 12 345 678,9
-  '{:n}'.print(double.nan); // не число
-  '{:n}'.print(double.infinity); // ∞
-  '{:n}'.print(double.negativeInfinity); // -∞
+  print(format('{:n}', m)); // 1,23457E7
+  print(format('{:.9n}', m)); // 12345678,9
+  print(format('{:012,.9n}', m)); // 12 345 678,9
+  print(format('{:n}', double.nan)); // не число
 
   Intl.defaultLocale = 'de_DE';
-  '{:n}'.print(m); // 1,23457E7
-  '{:.9n}'.print(m); // 12345678,9
-  '{:012,.9n}'.print(m); // 12.345.678,9
-
-  Intl.defaultLocale = 'en_IN';
-  '{:n}'.print(m); // 1.23457E7
-  '{:.9n}'.print(m); // 12345678.9
-  '{:012,.9n}'.print(m); // 1,23,45,678.9
+  print(format('{:n}', m)); // 1,23457E7
+  print(format('{:.9n}', m)); // 12345678,9
+  print(format('{:012,.9n}', m)); // 12.345.678,9
 
   Intl.defaultLocale = 'bn';
-  '{:n}'.print(m); // ১.২৩৪৫৭E৭
-  '{:.9n}'.print(m); // ১২৩৪৫৬৭৮.৯
-  '{:012,.9n}'.print(m); // ১,২৩,৪৫,৬৭৮.৯
+  print(format('{:n}', m)); // ১.২৩৪৫৭E৭
+  print(format('{:.9n}', m)); // ১২৩৪৫৬৭৮.৯
+  print(format('{:012,.9n}', m)); // ১,২৩,৪৫,৬৭৮.৯
 
   Intl.defaultLocale = 'ar_EG';
-  '{:n}'.print(m); // ١٫٢٣٤٥٧اس٧
-  '{:.9n}'.print(m); // ١٢٣٤٥٦٧٨٫٩
-  '{:012,.9n}'.print(m); // ١٢٬٣٤٥٬٦٧٨٫٩
-  '{:n}'.print(double.nan); // ليس رقم
+  print(format('{:n}', m)); // ١٫٢٣٤٥٧اس٧
+  print(format('{:.9n}', m)); // ١٢٣٤٥٦٧٨٫٩
+  print(format('{:012,.9n}', m)); // ١٢٬٣٤٥٬٦٧٨٫٩
+  print(format('{:n}', double.nan)); // ليس رقم
 
-  '{:👨^5}'.print(':'); // 👨👨:👨👨
-  '{:👨‍👩‍👦‍👧^5}'
-      .print(':'); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧:👨‍👩‍👦‍👧👨‍👩‍👦‍👧
+  print(format('{:0>4} - {:04}', '5', '5'));
 }

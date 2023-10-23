@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.4.0
+
+* Breaked changes: in numbers, if fill is specified, the zero flag is ignored.
+* Fix: the zero flag was ignored in the strings.
+
 ## 1.3.1
 
 * Remove dart_code_metrics from dependencies
