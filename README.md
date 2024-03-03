@@ -113,12 +113,12 @@ format('{:,.8n}', 123456.789); // ১,২৩,৪৫৬.৭৯
 - I did not support an alternative format for `b` (`0b...`) and `o` (`0o...`),
   since Dart does not support such literals. Let me know if you need it.
 
-- `nan` and `inf` are not complemented with zeros when the zero flag is set (as
-  Python does, but msvc:spintf does not). `sign` does not work for `nan` (`nan`
-  cannot become `+nan`) (Python and msvc:sprintf output `+nan`). In short,
-  neither `nan` nor `inf` changes in any way. Only the width alignment works.
-  And this is done deliberately. Nobody, as I think, needs `+nan`, `000nan` and
-  `000inf`.
+- `nan` and `inf` are not complemented with zeros when the `zero` flag is set
+  (as Python does, but msvc:spintf does not). `sign` does not work for `nan`
+  (`nan` cannot become `+nan`) (Python and msvc:sprintf output `+nan`).
+  In short, neither `nan` nor `inf` changes in any way. Only the `width`
+  alignment works. And this is done deliberately. Nobody, as I think, needs
+  `+nan`, `000nan` and `000inf`.
 
 - In `g` and `n` formats, the default precision is 6.
 
