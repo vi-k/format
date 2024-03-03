@@ -93,7 +93,7 @@ format('{:,.8n}', 123456.789); // ১,২৩,৪৫৬.৭৯
 
 - Named parameters can be specified in national languages according to the same
   principle as Latin characters: the identifier must start with a letter or an
-  underscore and then digits can be added (Unicode is ised). Parameter names
+  underscore and then digits can be added (Unicode is used). Parameter names
   can be specified in quotes (both single and double). There are no
   restrictions in this case. Quotation marks inside names must be double-quoted
   to avoid being perceived as the end of the identifier.
@@ -126,10 +126,10 @@ format('{:,.8n}', 123456.789); // ১,২৩,৪৫৬.৭৯
   `fill` can accept any number of characters, as long as it ends with one of
   the `align` characters (`>`, `<`, `^`).
 
-- Not supported in named arguments .key and index. That's an interesting
+- Not supported in named arguments `.key` and `index`. That's an interesting
   solution. I like it. But I didn't.
 
-- In exponential notation ('e' and 'g') in Python, the exponent is returned
+- In exponential notation (`e` and `g`) in Python, the exponent is returned
   with at least two digits. I have one.
 
 - In `n` format, `E5` is output instead of `e+05`. This is how NumberFormat
