@@ -152,4 +152,6 @@ void main() {
   print(format('{:n}', double.nan)); // ليس رقم
 
   print(format('{:0>4} - {:04}', '5', '5'));
+
+  print(format('{{0}}->{0}', 9));
 }

@@ -9,7 +9,7 @@ import 'package:intl/intl.dart';
 ///
 /// Отличия от Python:
 ///
-/// - Поддерживается автоматическия и ручная нумерация одновременно - когда
+/// - Поддерживается автоматическая и ручная нумерация одновременно - когда
 ///   встречается ручная нумерация, индекс автоматической нумерации сбрасывается
 ///   на индекс ручной нумерации. Почему-то мне показалось, что так естественно.
 ///   Но, возможно, я не вижу каких-то подводных камней.
@@ -63,7 +63,6 @@ import 'package:intl/intl.dart';
 ///
 /// - TODO: {} поддерживает только для width и precision, в то время как Python
 ///   поддерживает {} в любом месте для формирования шаблона.
-// ignore: long-parameter-list
 String format(
   String fmt,
   Object values, [
@@ -136,7 +135,7 @@ extension StringFormat on String {
 
 final RegExp _formatSpecRe = RegExp(
   // begin
-  r'\{\s*'
+  r'(?:\{\{|\}\}|\{\s*'
   // argId
   r'(\d*|[_\p{L}][_.\p{L}\d]*|'
   "'(?:''|[^'])*'"
@@ -155,7 +154,7 @@ final RegExp _formatSpecRe = RegExp(
   "('(?:''|[^'])*'"
   '|"(?:""|[^"])*")?)?'
   // end
-  r'\s*\}',
+  r'\s*\})',
   unicode: true,
 );
 final RegExp _triplesRe = RegExp(r'(\d)((?:\d{3})+)$');
@@ -645,8 +644,18 @@ String _format(
   // var removeEmptyStrings = false;
 
   final result = template.replaceAllMapped(_formatSpecRe, (match) {
+    final all = match.group(0)!;
+
+    if (all == '{{') {
+      return '{';
+    }
+
+    if (all == '}}') {
+      return '}';
+    }
+
     options
-      ..all = match.group(0)!
+      ..all = all
       ..argId = match.group(1)
       ..value = _getValue(options, options.argId)
       ..fill = match.group(2)

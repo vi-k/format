@@ -5,6 +5,10 @@ import 'package:test/test.dart';
 void main() {
   group('Common use:', () {
     //setUp(() );
+    test('escaping', () {
+      expect('{{0}}->{0}'.format(9), '{0}->9');
+    });
+
     test('positional arguments', () {
       const positionalArgs = [1, 2, 3];
 
