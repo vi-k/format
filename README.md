@@ -1,144 +1,7 @@
 # format
 
-*format* is a package for formatting Dart strings. It contains: the `format`
+It is a package for formatting Dart strings. It contains: the `format`
 function and the extension methods of the String class: `format` and `print`.
-
-## Usage example
-
-```dart
-import 'package:format/format.dart';
-import 'package:intl/intl.dart';
-
-void main() {
-  print(format('{}', 'hello world')); // "hello world"
-  print('{}'.format('hello world')); // "hello world"
-  '{}'.print('hello world'); // "hello world"
-
-  '{} {}'.print('hello', 'world'); // "hello world" (max 10 values)
-  '{} {}'
-      .print(['hello', 'world']); // "hello world" (unlimited number of values)
-  '{0} {1}'.print('hello', 'world'); // "hello world"
-  '{1} {0}'.print('hello', 'world'); // "world hello"
-  '{h} {w}'.print({'h': 'hello', 'w': 'world'}); // "hello world"
-  '{"it\'s hello"} {"it\'s world"}'
-      .print({"it's hello": 'hello', "it's world": 'world'}); // "hello world"
-
-  '{:d}'.print(123); // "123"
-  '{:7d}'.print(123); // "    123"
-  '{:<7d}'.print(123); // "123    "
-  '{:^7d}'.print(123); // "  123  "
-  '{:*^7d}'.print(123); // "**123**"
-
-  '{:07d}'.print(123); // "0000123"
-  '{:09,d}'.print(123); // "0,000,123"
-  '{:09_d}'.print(123); // "0_000_123"
-
-  '{:0{},d}'.print(123, 9); // "0,000,123"
-  '{:0{},d}'.print(123, 11); // "000,000,123"
-  '{value:0{width},d}'.print({'value': 123, 'width': 13}); // "0,000,000,123"
-
-  '{:+d}'.print(123); // "+123"
-  '{: d}'.print(123); // " 123"
-
-  // Automatic type inference.
-  '{}'.print(123); // "123"
-  '{}'.print('aaa'); // "aaa"
-  '{:7}'.print(123); // "    123"
-  '{:7}'.print('aaa'); // "aaa    "
-
-  const n = 123.4567;
-  '{:.2f}'.print(n); // 123.46
-  '{:10.2f}'.print(n); // '    123.46'
-  '{:010.2f}'.print(n); // 0000123.46
-  '{:012,.2f}'.print(n); // 0,000,123.46
-  '{:012_.2f}'.print(n); // 0_000_123.46
-
-  '{:0{},.{}f}'.print(n, 12, 2); // 0,000,123.46
-  '{value:0{width},.{precision}f}'.print({
-    'value': n,
-    'width': 12,
-    'precision': 2,
-  }); // 0,000,123.46
-
-  const n1 = 123456.789;
-  const n2 = 1234567.89;
-  '{:g}'.print(n1); // 123457
-  '{:g}'.print(n2); // 1.23457e+6
-  '{:.9g}'.print(n1); // 123456.789
-  '{:.9g}'.print(n2); // 1234567.89
-  '{:.5g}'.print(n1); // 1.2346e+5
-  '{:.5g}'.print(n2); // 1.2346e+6
-
-  '{:g}'.print(double.nan); // nan
-  '{:g}'.print(double.infinity); // inf
-  '{:g}'.print(double.negativeInfinity); // -inf
-
-  const i = 12345678;
-  '{:b}'.print(i); // 101111000110000101001110
-  '{:d}'.print(i); // 12345678
-  '{:x}'.print(i); // bc614e
-  '{:X}'.print(i); // BC614E
-  '{:#x}'.print(i); // 0xbc614e
-  '{:#X}'.print(i); // 0xBC614E
-
-  '{:_b}'.print(i); // 1011_1100_0110_0001_0100_1110
-  '{:,d}'.print(i); // 12,345,678
-  '{:_d}'.print(i); // 12_345_678
-  '{:_x}'.print(i); // bc_614e
-  '{:_X}'.print(i); // BC_614E
-  '{:#_x}'.print(i); // 0xbc_614e
-  '{:#_X}'.print(i); // 0xBC_614E
-
-  '{:c}+{:c}+{:c}+{:c}={:c}'.print(
-    0x1F468, // 👨
-    0x1F469, // 👩
-    0x1F466, // 👦
-    0x1F467, // 👧
-    [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F466, 0x200D, 0x1F467], // 👨‍👩‍👦‍👧
-  ); // 👨+👩+👦+👧=👨‍👩‍👦‍👧
-
-  '{:👨>10}'.print('!'); // 👨👨👨👨👨👨👨👨👨!
-  '{:👨‍👩‍👦‍👧>10}'.print(
-      '!'); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧👨‍👩‍👦‍👧!
-  '{:ä>10}'.print('!'); // äääääääää!
-
-  const m = 12345678.9;
-  Intl.defaultLocale = 'ru_RU';
-  '{:n}'.print(m); // 1,23457E7
-  '{:.9n}'.print(m); // 12345678,9
-  '{:012,.9n}'.print(m); // 12 345 678,9
-  '{:n}'.print(double.nan); // не число
-  '{:n}'.print(double.infinity); // ∞
-  '{:n}'.print(double.negativeInfinity); // -∞
-
-  Intl.defaultLocale = 'de_DE';
-  '{:n}'.print(m); // 1,23457E7
-  '{:.9n}'.print(m); // 12345678,9
-  '{:012,.9n}'.print(m); // 12.345.678,9
-
-  Intl.defaultLocale = 'en_IN';
-  '{:n}'.print(m); // 1.23457E7
-  '{:.9n}'.print(m); // 12345678.9
-  '{:012,.9n}'.print(m); // 1,23,45,678.9
-
-  Intl.defaultLocale = 'bn';
-  '{:n}'.print(m); // ১.২৩৪৫৭E৭
-  '{:.9n}'.print(m); // ১২৩৪৫৬৭৮.৯
-  '{:012,.9n}'.print(m); // ১,২৩,৪৫,৬৭৮.৯
-
-  Intl.defaultLocale = 'ar_EG';
-  '{:n}'.print(m); // ١٫٢٣٤٥٧اس٧
-  '{:.9n}'.print(m); // ١٢٣٤٥٦٧٨٫٩
-  '{:012,.9n}'.print(m); // ١٢٬٣٤٥٬٦٧٨٫٩
-  '{:n}'.print(double.nan); // ليس رقم
-
-  '{:👨^5}'.print(':'); // 👨👨:👨👨
-  '{:👨‍👩‍👦‍👧^5}'
-      .print(':'); // 👨‍👩‍👦‍👧👨‍👩‍👦‍👧:👨‍👩‍👦‍👧👨‍👩‍👦‍👧
-}
-```
-
-## Description
 
 Function `format` similar to [format](https://docs.python.org/3/library/string.html#format-string-syntax)
 method in Python, [std::format](https://en.cppreference.com/w/cpp/utility/format/format)
@@ -151,81 +14,124 @@ the values of the passed arguments, formatting them as required.
 String result = '{...}'.format(...);
 ```
 
-### Template description
+## Usage example
 
-```text
-template            ::=  '{' [argId] [':' formatSpec] '}'
-argId               ::=  index | identifier | doubleQuotedString | singleQuotedString
-index               ::=  digit+
-identifier          ::=  idStart idContinue*
-idStart             ::=  '_' | letter
-idContinue          ::=  '_' | letter | digit
-letter              ::=  <any letter of any language> (\ p {Letter})
-doubleQuotedString  ::=  '"' <any characters, with replacement" for ""> "'"
-singleQuotedString  ::=  "'" <any characters, replacing' with '>' "'
-arg_name            ::=  [identifier | digit+]
-attribute_name      ::=  identifier
-formatSpec          ::=  <in the next section>
+Hello world:
+
+```dart
+format('{}', 'hello world'); // hello world
 ```
 
-### Format string syntax
+Values as function arguments (max 10 values):
 
-```text
-formatSpec      ::=  [[fill]align][sign][#][0][width][grouping_option][.precision][type]
-fill            ::=  <any characters>
-align           ::=  '<' | '>' | '^'
-sign            ::=  '+' | '-' | ' '
-width           ::=  digit+ | '{' argId '}'
-groupingOption  ::=  '_' | ','
-precision       ::=  digit+ | '{' argId '}'
-type            ::=  'b' | 'c' | 'd' | 'e' | 'E' | 'f' | 'F' | 'g' | 'G' | 'n' | 'o' | 's' | 'x' | 'X'
+```dart
+format('{} {}', 'hello', 'world'); // hello world
 ```
 
-#### `fill` и `align`
+Values as positional arguments (unlimited number of values):
 
-If `align` is specified, then the `fill` line can be anything a combination of
-characters, while only one character is allowed in Python. This is made in order
-to be able to use symbols consisting of several Unicode characters (accented
-characters, surrogate pairs, etc.), and at the same time do not engage in
-unnecessary analysis.
+```dart
+format('{} {}', ['hello', 'world']);
+format('{0} {1}', 'hello', 'world'); // hello world
+format('{1} {0}', 'hello', 'world'); // world hello
+```
 
-Python imposes only one constraint on the fill character - not allowed use curly
-braces `{}` because they are used to insert values inside the template. In Dart,
-there is no need for such a function, since he has built into the language is
-excellent [string interpolation](https://dart.dev/guides/language/language-tour#strings).
+Values as named arguments:
 
-Possible `align` values:
+```dart
+format('{h} {w}', {'h': 'hello', 'w': 'world'}); // hello world
+```
 
-| Value    | Description
-| :------: | :-------
-|    '<'   | Left justification (this is the default for strings and characters).
-|    '>'   | Right justification (this is the default for numbers).
-|    '^'   | Center alignment.
+Numbers:
 
-Of course, `align` only matters when a minimum width is given the field is
-`width`, and it is larger than the actual width of the field. In this case, the
-result is is complemented to the specified one from the corresponding side.
+```dart
+print('| Name     |    Price |    Count |      Sum |');
+print(
+  '| {name:8s} | {price:8.2f} | {count:8d} | {sum:8.2f} |'.format({
+    #name: 'Apple',
+    #price: 1.2,
+    #count: 9,
+    #sum: 10.8,
+  }),
+);
 
-Python also includes the '=' value, through which you can insert any character
-instead of leading zeros between the number sign ('+' or '-') and the first
-significant digits ('+ 123', '- 42'). '0' before width acts the same principle.
-I didn’t take this opportunity. First, because I am not I can understand the
-reasons why this is necessary. If the task was to replace leading zeros any
-character, then this is not entirely true, because the option of arranging
-separators thousand (',') is not included if a character other than '0' is
-specified. Those. Python distinguishes zeros from other characters in this
-function. Secondly, because of this features all these strange '00000nan',
-'-0000inf' appear. Although not it is clear why exactly in these cases no
-exception was made for zeros.
+// | Name     |    Price |    Count |      Sum |
+// | Apple    |     1.20 |        9 |    10.80 |
+```
 
-#### `sign`
+Unicode:
 
-With this function, you can specify how to handle the sign of a number.
+```dart
+format('{:🇺🇦^12}', ' No war '); // 🇺🇦🇺🇦 No war 🇺🇦🇺🇦
+```
 
-| Value  | Description
-| :---:  | :---
-|  '-'   | The sign is placed only for negative numbers (this is the default value).
-|  '+'   | Positive numbers also have a sign (zero also comes with a plus).
-|  ''    | Positive numbers have a space character instead of '+'. This can be useful for aligning positive and negative numbers with each other.
+Locale:
 
-...to be continued
+```dart
+Intl.defaultLocale = 'uk_UA';
+format('{:,.8n}', 123456.789); // 123 456,79
+
+Intl.defaultLocale = 'bn';
+format('{:,.8n}', 123456.789); // ১,২৩,৪৫৬.৭৯
+```
+
+## Differences from Python
+
+- Python supports only one type of argument numbering at a time: either
+  automatic numbering (`{} {} {}`) or manual numbering (`{0} {1} {2}`).
+  I've added the ability to use both types of numbering at the same time:
+
+  ```dart
+  format('{0} {}->1 {}->2 {5} {}->6'); // 0 1 2 5 6
+  ```
+
+- Named parameters can be specified in national languages according to the same
+  principle as Latin characters: the identifier must start with a letter or an
+  underscore and then digits can be added (Unicode is ised). Parameter names
+  can be specified in quotes (both single and double). There are no
+  restrictions in this case. Quotation marks inside names must be double-quoted
+  to avoid being perceived as the end of the identifier.
+
+  ```dart
+  format('{가격}', {'가격': 123.45});
+  format("{'It''s a name'}", {"It's a name": 'Name'});
+  ```
+
+- The alternative format for `X` outputs `0x` instead of `0X` (`0xABCDEF`
+  instead of `0XABCDEF`).
+
+  ```dart
+  format('{0:#x} {0:#X}', 0xabcdef); // 0xabcdef
+  ```
+
+- I did not support an alternative format for `b` (`0b...`) and `o` (`0o...`),
+  since Dart does not support such literals. Let me know if you need it.
+
+- `nan` and `inf` are not complemented with zeros when the zero flag is set (as
+  Python does, but msvc:spintf does not). `sign` does not work for `nan` (`nan`
+  cannot become `+nan`) (Python and msvc:sprintf output `+nan`). In short,
+  neither `nan` nor `inf` changes in any way. Only the width alignment works.
+  And this is done deliberately. Nobody, as I think, needs `+nan`, `000nan` and
+  `000inf`.
+
+- In `g` and `n` formats, the default precision is 6.
+
+- To support surrogate pairs and other combinations of Unicode characters,
+  `fill` can accept any number of characters, as long as it ends with one of
+  the `align` characters (`>`, `<`, `^`).
+
+- Not supported in named arguments .key and index. That's an interesting
+  solution. I like it. But I didn't.
+
+- In exponential notation ('e' and 'g') in Python, the exponent is returned
+  with at least two digits. I have one.
+
+- In `n` format, `E5` is output instead of `e+05`. This is how NumberFormat
+  works by default.
+
+- Does not support `=` in `align`.
+
+- Doesn't support `%`.
+
+- `{}` only supports `width` and `precision`, while Python supports `{}`
+  anywhere to form a pattern. But this can easily be replaced with `${}`.

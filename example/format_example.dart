@@ -150,8 +150,4 @@ void main() {
   print(format('{:.9n}', m)); // ١٢٣٤٥٦٧٨٫٩
   print(format('{:012,.9n}', m)); // ١٢٬٣٤٥٬٦٧٨٫٩
   print(format('{:n}', double.nan)); // ليس رقم
-
-  print(format('{:0>4} - {:04}', '5', '5'));
-
-  print(format('{{0}}->{0}', 9));
 }

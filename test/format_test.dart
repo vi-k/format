@@ -9,6 +9,13 @@ void main() {
       expect('{{0}}->{0}'.format(9), '{0}->9');
     });
 
+    test('auto and manual numeration of arguments', () {
+      expect(
+        format('{0} {} {} {5} {}', 0, 1, 2, 3, 4, 5, 6),
+        '0 1 2 5 6',
+      );
+    });
+
     test('positional arguments', () {
       const positionalArgs = [1, 2, 3];
 
