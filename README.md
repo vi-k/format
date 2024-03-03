@@ -32,6 +32,11 @@ Values as positional arguments (unlimited number of values):
 
 ```dart
 format('{} {}', ['hello', 'world']);
+```
+
+Manual numbering of positional arguments:
+
+```dart
 format('{0} {1}', 'hello', 'world'); // hello world
 format('{1} {0}', 'hello', 'world'); // world hello
 ```
@@ -40,9 +45,10 @@ Values as named arguments:
 
 ```dart
 format('{h} {w}', {'h': 'hello', 'w': 'world'}); // hello world
+format('{w} {h}', {#h: 'hello', #w: 'world'}); // world hello
 ```
 
-Numbers:
+Number formatting:
 
 ```dart
 print('| Name     |    Price |    Count |      Sum |');
@@ -101,7 +107,7 @@ format('{:,.8n}', 123456.789); // ১,২৩,৪৫৬.৭৯
   instead of `0XABCDEF`).
 
   ```dart
-  format('{0:#x} {0:#X}', 0xabcdef); // 0xabcdef
+  format('{0:#x} {0:#X}', 0xabcdef); // 0xabcdef 0xABCDEF
   ```
 
 - I did not support an alternative format for `b` (`0b...`) and `o` (`0o...`),
