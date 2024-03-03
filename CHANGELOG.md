@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.5.1
+
+* Update README.md.
+
 ## 1.5.0
 
 * Add escaping of the `{`.
