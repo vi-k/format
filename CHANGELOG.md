@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.5.0
+
+* Add escaping of the `{`.
+
 ## 1.4.0
 
 * Breaked changes: in numbers, if fill is specified, the zero flag is ignored.
