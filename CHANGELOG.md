@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.5.2
+
+* Upgrade intl. Fix tests.
+
 ## 1.5.1
 
 * Update README.md.
