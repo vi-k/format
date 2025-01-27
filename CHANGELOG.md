@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.6.0
+
+* Upgrade depencencies.
+* Min sdk: 3.3.0.
+
 ## 1.5.2
 
 * Upgrade intl. Fix tests.
