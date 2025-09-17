@@ -8,7 +8,14 @@
             "name": "format",
             "request": "launch",
             "type": "dart",
-            "program": "example/format_example.dart",
+            "program": "example2/format_example.dart",
+            "args": []
+        },
+        {
+            "name": "benchmark",
+            "request": "launch",
+            "type": "dart",
+            "program": "example/bin/benchmark.dart",
             "args": []
         },
         {

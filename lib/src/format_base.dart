@@ -3,6 +3,7 @@ import 'dart:core' as core show print;
 
 import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
+import 'package:meta/meta.dart';
 
 /// String formatting function like in Python.
 String format(
@@ -575,11 +576,24 @@ String _intlNumberFormat<T extends num>(
   return '$sign$result';
 }
 
-// ignore: long-method
+@visibleForTesting
+String testFormat(
+  String template, {
+  List<Object?>? positionalArgs,
+  Map<Object, Object?>? namedArgs,
+}) =>
+    _format(
+      template,
+      positionalArgs: positionalArgs,
+      namedArgs: namedArgs,
+      debug: true,
+    );
+
 String _format(
   String template, {
   List<Object?>? positionalArgs,
   Map<Object, Object?>? namedArgs,
+  bool debug = false,
 }) {
   final options = _Options(positionalArgs, namedArgs);
 
@@ -672,7 +686,6 @@ String _format(
                   : precision > value.characters.length
                       ? value
                       : value.characters.take(precision).toString();
-          break;
 
         // Число
         case 'b':
@@ -682,10 +695,9 @@ String _format(
             precisionAllowed: false,
             altAllowed: false,
             standartGroupOptionAllowed: false,
-            toStr: (value, precision) => value.toRadixString(2),
+            toStr: (value, _) => value.toRadixString(2),
             groupSize: 4,
           );
-          break;
 
         case 'o':
           result = _numberFormat<int>(
@@ -694,10 +706,9 @@ String _format(
             precisionAllowed: false,
             altAllowed: false,
             standartGroupOptionAllowed: false,
-            toStr: (value, precision) => value.toRadixString(8),
+            toStr: (value, _) => value.toRadixString(8),
             groupSize: 4,
           );
-          break;
 
         case 'x':
           result = _numberFormat<int>(
@@ -705,11 +716,10 @@ String _format(
             value,
             precisionAllowed: false,
             standartGroupOptionAllowed: false,
-            toStr: (value, precision) => value.toRadixString(16),
+            toStr: (value, _) => value.toRadixString(16),
             groupSize: 4,
             prefix: options.alt ? '0x' : '',
           );
-          break;
 
         case 'X':
           result = _numberFormat<int>(
@@ -717,11 +727,10 @@ String _format(
             value,
             precisionAllowed: false,
             standartGroupOptionAllowed: false,
-            toStr: (value, precision) => value.toRadixString(16).toUpperCase(),
+            toStr: (value, _) => value.toRadixString(16).toUpperCase(),
             groupSize: 4,
             prefix: options.alt ? '0x' : '',
           );
-          break;
 
         case 'd':
           result = _numberFormat<int>(
@@ -731,7 +740,6 @@ String _format(
             altAllowed: false,
             toStr: (value, _) => value.toString(),
           );
-          break;
 
         case 'f':
         case 'F':
@@ -742,7 +750,6 @@ String _format(
             needPoint: options.alt,
           );
           if (spec == 'F') result = result.toUpperCase();
-          break;
 
         case 'e':
         case 'E':
@@ -754,7 +761,6 @@ String _format(
             needPoint: options.alt,
           );
           if (spec == 'E') result = result.toUpperCase();
-          break;
 
         case 'g':
         case 'G':
@@ -767,7 +773,6 @@ String _format(
             needPoint: options.alt,
           );
           if (spec == 'G') result = result.toUpperCase();
-          break;
 
         case 'n':
           result = _intlNumberFormat<num>(
@@ -776,7 +781,6 @@ String _format(
             removeTrailingZeros: !options.alt,
             needPoint: options.alt && value is! int,
           );
-          break;
       }
     }
 
@@ -791,14 +795,13 @@ String _format(
         switch (options.align ?? '<') {
           case '<':
             result += fill * n;
-            break;
+
           case '>':
             result = fill * n + result;
-            break;
+
           case '^':
             final half = n ~/ 2;
             result = fill * half + result + fill * (n - half);
-            break;
         }
       }
     }

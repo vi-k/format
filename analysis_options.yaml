@@ -83,7 +83,6 @@ linter:
     throw_in_finally: true
     unnecessary_statements: true
     # unrelated_type_equality_checks: true # [core]
-    unsafe_html: true
     # use_build_context_synchronously: true # [flutter]
     # use_key_in_widget_constructors: true # [flutter]
     # valid_regexps: true # [core]
@@ -168,9 +167,8 @@ linter:
     one_member_abstracts: true
     only_throw_errors: true
     # overridden_fields: true # [recommended]
-    package_api_docs: true # DO provide doc comments for all public APIs.
     # package_prefixed_library_names: true # [core]
-    parameter_assignments: true
+    # parameter_assignments: true
     # prefer_adjacent_string_concatenation: true # [recommended]
     prefer_asserts_in_initializer_lists: true
     # prefer_asserts_with_message: true
@@ -216,7 +214,7 @@ linter:
     sized_box_shrink_expand: true
     # slash_for_doc_comments: true # [recommended]
     # sort_child_properties_last: true # [flutter]
-    sort_constructors_first: true
+    # sort_constructors_first: true
     sort_unnamed_constructors_first: true
     tighten_type_of_initializing_formals: true
     type_annotate_public_apis: true

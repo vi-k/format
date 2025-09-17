@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.0 - not ready
+
+* Improve performance.
+
 ## 1.6.0
 
 * Upgrade depencencies.

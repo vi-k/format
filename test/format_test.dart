@@ -1792,47 +1792,48 @@ void main() {
         Intl.defaultLocale = 'ar_EG';
         expect('{:n}'.format([i]), '١٢٣٤٥٦٧٨٩');
         // printA('{:n}'.format([-i]));
-        expect('{:n}'.format([-i]), '؜-١٢٣٤٥٦٧٨٩');
+        // \u061C - отметка об арабском письме
+        expect('{:n}'.format([-i]), '\u061C-١٢٣٤٥٦٧٨٩');
         expect('{:012n}'.format([i]), '٠٠٠١٢٣٤٥٦٧٨٩');
-        expect('{:014n}'.format([-i]), '؜-٠٠٠١٢٣٤٥٦٧٨٩');
+        expect('{:014n}'.format([-i]), '\u061C-٠٠٠١٢٣٤٥٦٧٨٩');
 
         expect('{:,n}'.format([i]), '١٢٣٬٤٥٦٬٧٨٩');
-        expect('{:,n}'.format([-i]), '؜-١٢٣٬٤٥٦٬٧٨٩');
+        expect('{:,n}'.format([-i]), '\u061C-١٢٣٬٤٥٦٬٧٨٩');
         expect('{:015,n}'.format([i]), '٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
-        expect('{:017,n}'.format([-i]), '؜-٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
+        expect('{:017,n}'.format([-i]), '\u061C-٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
         expect('{:016,n}'.format([i]), '٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
-        expect('{:018,n}'.format([-i]), '؜-٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
+        expect('{:018,n}'.format([-i]), '\u061C-٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
         expect('{:017,n}'.format([i]), '٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
-        expect('{:019,n}'.format([-i]), '؜-٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
+        expect('{:019,n}'.format([-i]), '\u061C-٠٬٠٠٠٬١٢٣٬٤٥٦٬٧٨٩');
 
         expect('{:n}'.format([0.0]), '٠');
-        expect('{:n}'.format([-0.0]), '؜-٠');
+        expect('{:n}'.format([-0.0]), '\u061C-٠');
         expect('{:#n}'.format([0.0]), '٠٫٠٠٠٠٠');
-        expect('{:#n}'.format([-0.0]), '؜-٠٫٠٠٠٠٠');
+        expect('{:#n}'.format([-0.0]), '\u061C-٠٫٠٠٠٠٠');
 
         expect('{:n}'.format([n]), '١٢٣٤٥٧');
-        expect('{:n}'.format([-n]), '؜-١٢٣٤٥٧');
+        expect('{:n}'.format([-n]), '\u061C-١٢٣٤٥٧');
         expect('{:#n}'.format([n]), '١٢٣٤٥٧٫');
-        expect('{:#n}'.format([-n]), '؜-١٢٣٤٥٧٫');
+        expect('{:#n}'.format([-n]), '\u061C-١٢٣٤٥٧٫');
         expect('{:#014.10n}'.format([n]), '٠٠٠١٢٣٤٥٦٫٧٨٩٠');
-        expect('{:#014.10n}'.format([-n]), '؜-٠١٢٣٤٥٦٫٧٨٩٠');
+        expect('{:#014.10n}'.format([-n]), '\u061C-٠١٢٣٤٥٦٫٧٨٩٠');
         expect('{:#018,.10n}'.format([n]), '٠٬٠٠٠٬١٢٣٬٤٥٦٫٧٨٩٠');
-        expect('{:#018,.10n}'.format([-n]), '؜-٠٠٠٬١٢٣٬٤٥٦٫٧٨٩٠');
+        expect('{:#018,.10n}'.format([-n]), '\u061C-٠٠٠٬١٢٣٬٤٥٦٫٧٨٩٠');
 
         expect('{:n}'.format([n2]), '١٫٢٣٤٥٧أس٦');
-        expect('{:n}'.format([-n2]), '؜-١٫٢٣٤٥٧أس٦');
+        expect('{:n}'.format([-n2]), '\u061C-١٫٢٣٤٥٧أس٦');
         expect('{:#.7n}'.format([n2]), '١٢٣٤٥٦٨٫');
-        expect('{:#.7n}'.format([-n2]), '؜-١٢٣٤٥٦٨٫');
+        expect('{:#.7n}'.format([-n2]), '\u061C-١٢٣٤٥٦٨٫');
         expect('{:013n}'.format([n2]), '٠٠٠١٫٢٣٤٥٧أس٦');
-        expect('{:013n}'.format([-n2]), '؜-٠١٫٢٣٤٥٧أس٦');
+        expect('{:013n}'.format([-n2]), '\u061C-٠١٫٢٣٤٥٧أس٦');
         expect('{:018,n}'.format([n2]), '٠٬٠٠٠٬٠٠١٫٢٣٤٥٧أس٦');
-        expect('{:018,n}'.format([-n2]), '؜-٠٠٠٬٠٠١٫٢٣٤٥٧أس٦');
+        expect('{:018,n}'.format([-n2]), '\u061C-٠٠٠٬٠٠١٫٢٣٤٥٧أس٦');
 
-        expect('{:n}'.format([nan]), 'ليس رقم');
-        expect('{:n}'.format([-nan]), 'ليس رقم');
+        expect('{:n}'.format([nan]), 'ليس\xA0رقمًا');
+        expect('{:n}'.format([-nan]), 'ليس\xA0رقمًا');
         expect('{:n}'.format([inf]), '∞');
-        expect('{:n}'.format([-inf]), '؜-∞');
-        expect('{:+n}'.format([inf]), '؜+∞');
+        expect('{:n}'.format([-inf]), '\u061C-∞');
+        expect('{:+n}'.format([inf]), '\u061C+∞');
       });
 
       test('bn', () {
