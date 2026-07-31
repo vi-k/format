@@ -1731,6 +1731,18 @@ void main() {
       );
     });
 
+    test('n rejects precision that intl cannot represent safely', () {
+      expect(format('{:.18n}', [0.1]), '0.1');
+      expect(
+        () => format('{:.19n}', [0.1]),
+        throwsA(
+          isA<InvalidFormatException>()
+              .having((error) => error.fragment, 'fragment', '{:.19n}')
+              .having((error) => error.reason, 'reason', contains('<= 18')),
+        ),
+      );
+    });
+
     test('general precision uses typed validation', () {
       for (final specifier in ['g', 'G']) {
         expect(

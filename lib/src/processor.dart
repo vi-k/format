@@ -405,10 +405,10 @@ final class _Processor {
           reason: 'Precision must be >= 1. Passed $precision.',
         );
       }
-      if (precision > 21) {
+      if (precision > 18) {
         throw InvalidFormatException(
           fragment: options.all ?? '',
-          reason: 'Precision must be <= 21. Passed $precision.',
+          reason: 'Precision must be <= 18. Passed $precision.',
         );
       }
     }
