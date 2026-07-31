@@ -1,15 +1,15 @@
-# Format 2.0 Design
+# Дизайн Format 2.0
 
-## Goal
+## Цель
 
-Replace the legacy formatter and the experimental `format2` implementation
-with one extensible formatting engine that preserves supported output behavior,
-provides a type-safe public API, and does not regress multi-placeholder
-performance.
+Заменить старый форматтер и экспериментальную реализацию `format2` единым
+расширяемым движком форматирования, который сохраняет поддерживаемое поведение,
+предоставляет типобезопасный публичный API и не ухудшает производительность на
+шаблонах с несколькими placeholder.
 
-## Public API
+## Публичный API
 
-Version 2.0 exposes only top-level formatting functions:
+Версия 2.0 предоставляет только верхнеуровневые функции форматирования:
 
 ```dart
 String format(String template, List<Object?> values);
@@ -20,51 +20,53 @@ String formatNamed(
 );
 ```
 
-The following APIs are removed:
+Удаляются следующие API:
 
-- `format2` and `format2m`;
-- `String.format` and `String.print` extensions;
-- the legacy `format` overload with positional arguments `v2` through `v10`;
-- `Map<Symbol, Object?>` named arguments;
-- dynamic width and precision read from positional or named arguments.
+- `format2` и `format2m`;
+- extension-методы `String.format` и `String.print`;
+- старая перегрузка `format` с позиционными аргументами от `v2` до `v10`;
+- именованные аргументы типа `Map<Symbol, Object?>`;
+- получение width и precision из позиционных или именованных аргументов.
 
-Literal width and precision remain part of the template syntax.
+Литеральные width и precision остаются частью синтаксиса шаблона.
 
-## Template Syntax
+## Синтаксис шаблона
 
-Built-in specifiers keep their existing one-character names. Custom
-specifiers use ASCII identifiers matching:
+Встроенные specifier сохраняют существующие однобуквенные имена.
+Пользовательские specifier являются ASCII-идентификаторами, соответствующими
+выражению:
 
 ```text
 [A-Za-z][A-Za-z0-9_]*
 ```
 
-Both opening and closing braces are escaped by doubling them:
+Открывающая и закрывающая фигурные скобки экранируются удвоением:
 
 ```text
 {{ -> {
 }} -> }
 ```
 
-Width and precision accept decimal integer literals only. Forms such as
-`{:{}}`, `{:.{}}`, `{:{width}}`, and `{:.{precision}}` are invalid in 2.0.
+Width и precision принимают только десятичные целочисленные литералы. Формы
+`{:{}}`, `{:.{}}`, `{:{width}}` и `{:.{precision}}` недопустимы в версии 2.0.
 
-## Engine Architecture
+## Архитектура движка
 
-There is one processor implementation behind both public functions. The
-processor parses the template, resolves each value, selects a formatter,
-formats the value, and finally applies common padding.
+Обе публичные функции используют одну реализацию processor. Processor разбирает
+шаблон, получает значение, выбирает formatter, форматирует значение и в конце
+применяет общее выравнивание.
 
-Built-in specifiers use a direct dispatch path rather than the custom formatter
-registry. This avoids a map lookup and formatter-list iteration for every
-placeholder. Custom specifiers use a global registry owned by `Format.instance`.
+Встроенные specifier используют прямой dispatch вместо реестра пользовательских
+formatter. Это исключает поиск в map и перебор списка formatter для каждого
+placeholder. Пользовательские specifier используют глобальный реестр,
+принадлежащий `Format.instance`.
 
-The implementation must not maintain separate legacy and experimental
-formatting paths.
+В реализации не должно быть отдельных старого и экспериментального путей
+форматирования.
 
-## Formatter API
+## API formatter
 
-The public extension point is generic:
+Публичная точка расширения является generic:
 
 ```dart
 abstract base class Formatter<T> {
@@ -76,136 +78,144 @@ abstract base class Formatter<T> {
 }
 ```
 
-`FormatOptions` is immutable. It exposes the parsed options needed by a value
-formatter:
+`FormatOptions` является immutable и предоставляет разобранные параметры,
+необходимые formatter значения:
 
 - sign;
 - alternate form;
 - zero flag;
 - grouping option;
 - precision;
-- additional template.
+- дополнительный template.
 
-Width, fill, and alignment are handled by the processor after the formatter
-returns its unpadded string. This guarantees consistent Unicode-aware padding
-for built-in and custom formatters.
+Width, fill и alignment обрабатываются processor после того, как formatter
+вернул строку без внешнего выравнивания. Это гарантирует одинаковое
+Unicode-aware выравнивание для встроенных и пользовательских formatter.
 
-One formatter owns one specifier. The specifier is read from the formatter
-object, so registration cannot receive a mismatched name and formatter.
+Один formatter владеет одним specifier. Имя specifier берётся из самого
+formatter, поэтому при регистрации невозможно передать несовместимую пару имени
+и объекта.
 
-## Global Formatter Registry
+## Глобальный реестр formatter
 
-Custom formatters are registered globally within the current Dart isolate:
+Пользовательские formatter регистрируются глобально в текущем Dart isolate:
 
 ```dart
 Format.instance.registerFormatter(formatter);
 final removed = Format.instance.unregisterFormatter('json');
 ```
 
-Built-in specifier names are reserved. Registering or unregistering a built-in
-specifier is an error. Registering an already registered custom specifier is
-also an error.
+Имена встроенных specifier зарезервированы. Попытка зарегистрировать или удалить
+встроенный specifier является ошибкой. Повторная регистрация пользовательского
+specifier также является ошибкой.
 
-`unregisterFormatter` returns `true` when it removes a custom formatter and
-`false` when no custom formatter has that name. Removing a formatter also
-removes it from automatic selection.
+`unregisterFormatter` возвращает `true`, если пользовательский formatter был
+удалён, и `false`, если пользовательского formatter с таким именем нет.
+Удаление formatter также исключает его из автоматического выбора.
 
-## Automatic Formatter Selection
+## Автоматический выбор formatter
 
-For a placeholder without an explicit specifier, formatter selection follows
-this order:
+Для placeholder без явно указанного specifier formatter выбирается в следующем
+порядке:
 
-1. Built-in types have unconditional priority:
-   - `String` uses `s`;
-   - `int` and `BigInt` use `d`;
-   - `double` uses `g`.
-2. Every registered custom formatter is queried through `canFormat`.
-3. One custom match is selected.
-4. Multiple custom matches throw `AmbiguousFormatterException`.
-5. No match falls back to `value.toString()`.
+1. Встроенные типы имеют безусловный приоритет:
+   - `String` использует `s`;
+   - `int` и `BigInt` используют `d`;
+   - `double` использует `g`.
+2. У каждого зарегистрированного пользовательского formatter вызывается
+   `canFormat`.
+3. Если найден один пользовательский formatter, выбирается он.
+4. Если найдено несколько formatter, выбрасывается
+   `AmbiguousFormatterException`.
+5. Если formatter не найден, используется `value.toString()`.
 
-An explicitly named custom specifier selects its registered formatter without
-running automatic selection.
+Явно указанный пользовательский specifier выбирает зарегистрированный formatter
+без автоматического поиска.
 
-## Errors
+## Ошибки
 
-Formatting errors use a typed hierarchy rooted at `FormattingException`:
+Ошибки форматирования представлены типизированной иерархией с корнем
+`FormattingException`:
 
-- `InvalidFormatException` for invalid template syntax or options;
-- `InvalidSpecifierException` for a custom specifier that is not a valid ASCII
-  identifier;
-- `FormatterAlreadyRegisteredException` for duplicate registration;
-- `BuiltInSpecifierException` for attempts to register or unregister a
-  built-in specifier;
-- `AmbiguousFormatterException` when automatic selection finds multiple custom
-  formatters;
-- `UnsupportedFormatValueException` when an explicitly selected formatter
-  cannot accept the supplied value.
+- `InvalidFormatException` — некорректный синтаксис шаблона или параметры;
+- `InvalidSpecifierException` — пользовательский specifier не является
+  допустимым ASCII-идентификатором;
+- `FormatterAlreadyRegisteredException` — повторная регистрация;
+- `BuiltInSpecifierException` — попытка зарегистрировать или удалить встроенный
+  specifier;
+- `AmbiguousFormatterException` — автоматический выбор нашёл несколько
+  пользовательских formatter;
+- `UnsupportedFormatValueException` — явно выбранный formatter не принимает
+  переданное значение.
 
-Exceptions expose structured context such as the specifier, template fragment,
-and offending value when applicable. Tests assert exception types and fields,
-not complete human-readable messages.
+Исключения предоставляют структурированный контекст: specifier, фрагмент
+шаблона и некорректное значение, когда они применимы. Тесты проверяют типы и
+поля исключений, а не полный текст сообщения для пользователя.
 
-## Correctness Requirements
+## Требования к корректности
 
-The new engine preserves all supported output behavior from the legacy
-formatter except the explicitly removed APIs and dynamic width/precision.
+Новый движок сохраняет всё поддерживаемое поведение старого formatter, кроме
+явно удалённых API и динамических width/precision.
 
-The implementation must correct the known defects found during review:
+Реализация должна исправить известные дефекты, найденные во время review:
 
-- closing-brace escaping must handle `}}`;
-- invalid literal width and precision must produce typed formatting errors;
-- `n` precision must be validated before calling Dart number APIs;
-- zero padding combined with grouping must not access strings out of range;
-- custom formatter registration must be usable through
-  `package:format/format.dart` without importing `src` files.
+- экранирование закрывающей скобки должно обрабатывать `}}`;
+- некорректные литеральные width и precision должны приводить к типизированным
+  ошибкам форматирования;
+- precision для `n` должна проверяться до вызова числовых API Dart;
+- сочетание zero padding с grouping не должно обращаться за границы строки;
+- регистрация пользовательского formatter должна быть доступна через
+  `package:format/format.dart` без импорта файлов из `src`.
 
-## Performance Requirements
+## Требования к производительности
 
-The performance baseline covers both JIT and AOT execution. The benchmark suite
-must include:
+Baseline производительности включает JIT- и AOT-выполнение. Набор benchmark
+должен включать:
 
-- integer and floating-point formatting;
-- strings and Unicode grapheme clusters;
-- named arguments;
-- locale-aware `n` formatting;
-- custom formatters;
-- templates containing 1, 5, 10, and 50 placeholders.
+- форматирование целых чисел и чисел с плавающей точкой;
+- строки и Unicode grapheme cluster;
+- именованные аргументы;
+- locale-aware форматирование `n`;
+- пользовательские formatter;
+- шаблоны с 1, 5, 10 и 50 placeholder.
 
-Each reported comparison uses equivalent input and output, performs warmup,
-runs long enough to reduce timer noise, and reports the ratio between the old
-and new engines. The new engine must not show a repeatable slowdown on
-multi-placeholder templates beyond measurement noise. The existing simple-case
-performance improvement should be retained where practical.
+В каждом сравнении используются одинаковые входные данные и результат,
+выполняется прогрев, измерение длится достаточно долго для снижения шума таймера
+и выводится отношение скорости старого и нового движков. Новый движок не должен
+показывать воспроизводимое замедление на шаблонах с несколькими placeholder,
+выходящее за пределы шума измерений. По возможности следует сохранить
+существующий выигрыш на простых сценариях.
 
-Template precompilation and caching are outside this implementation. They can
-be designed as a separate feature after the 2.0 engine is complete.
+Предварительная компиляция и кеширование шаблонов не входят в эту реализацию.
+Их можно спроектировать как отдельную возможность после завершения движка 2.0.
 
-## Testing Strategy
+## Стратегия тестирования
 
-Development follows red-green-refactor. Tests are added before each behavior
-change and observed failing for the expected reason.
+Разработка следует циклу red-green-refactor. Тест добавляется до каждого
+изменения поведения и должен завершиться ожидаемым падением до реализации.
 
-The test suite includes:
+Набор тестов включает:
 
-- migrated legacy output-contract tests using `format` and `formatNamed`;
-- syntax and brace-escaping tests;
-- fixed literal width and precision tests;
-- tests proving dynamic width and precision are rejected;
-- zero-padding and grouping edge cases for positive, negative, prefixed, `int`,
-  and `BigInt` values;
-- registration, duplicate registration, removal, reserved built-in names, and
-  invalid custom names;
-- explicit custom formatting;
-- automatic matching, built-in priority, fallback to `toString`, and ambiguity;
-- public-import tests that implement a custom `Formatter` without importing
-  internal source files;
-- JIT and AOT performance comparisons.
+- перенесённые тесты контракта старого formatter с использованием `format` и
+  `formatNamed`;
+- тесты синтаксиса и экранирования фигурных скобок;
+- тесты фиксированных литеральных width и precision;
+- тесты, доказывающие отклонение динамических width и precision;
+- граничные случаи zero padding и grouping для положительных и отрицательных
+  значений, префиксов, `int` и `BigInt`;
+- регистрацию, повторную регистрацию, удаление, зарезервированные встроенные
+  имена и некорректные пользовательские имена;
+- явное пользовательское форматирование;
+- автоматический выбор, приоритет встроенных типов, fallback на `toString` и
+  неоднозначность;
+- тесты публичного импорта, которые реализуют пользовательский `Formatter` без
+  импорта внутренних файлов;
+- сравнение производительности в JIT и AOT.
 
-## Migration
+## Миграция
 
-Because this is a major release, removed APIs do not require deprecated aliases
-inside the 2.0 implementation. The changelog and README must show the new
-`format` and `formatNamed` calls and list the removed extension methods,
-`Map<Symbol, Object?>`, positional convenience arguments, and dynamic
+Поскольку это major release, удалённые API не требуют deprecated alias внутри
+реализации 2.0. В changelog и README должны быть показаны новые вызовы `format`
+и `formatNamed`, а также перечислены удалённые extension-методы,
+`Map<Symbol, Object?>`, позиционные вспомогательные аргументы и динамические
 width/precision.
