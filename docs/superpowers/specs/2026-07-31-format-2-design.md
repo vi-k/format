@@ -59,7 +59,7 @@ Width и precision принимают только десятичные цело
 Встроенные specifier используют прямой dispatch вместо реестра пользовательских
 formatter. Это исключает поиск в map и перебор списка formatter для каждого
 placeholder. Пользовательские specifier используют глобальный реестр,
-принадлежащий `Format.instance`.
+принадлежащий приватному singleton внутри `Format`.
 
 В реализации не должно быть отдельных старого и экспериментального путей
 форматирования.
@@ -98,12 +98,16 @@ formatter, поэтому при регистрации невозможно п�
 
 ## Глобальный реестр formatter
 
-Пользовательские formatter регистрируются глобально в текущем Dart isolate:
+Пользовательские formatter регистрируются глобально в текущем Dart isolate
+через статические методы `Format`:
 
 ```dart
-Format.instance.registerFormatter(formatter);
-final removed = Format.instance.unregisterFormatter('json');
+Format.registerFormatter(formatter);
+final removed = Format.unregisterFormatter('json');
 ```
+
+Статические методы делегируют операции приватному singleton. Сам singleton и
+его instance getter не входят в публичный API.
 
 Имена встроенных specifier зарезервированы. Попытка зарегистрировать или удалить
 встроенный specifier является ошибкой. Повторная регистрация пользовательского
