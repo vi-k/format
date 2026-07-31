@@ -25,4 +25,15 @@ void main() {
       );
     });
   }
+
+  test('rejects overflowing literal options with a typed error', () {
+    const overflow = '9999999999999999999999999999999999999999';
+
+    for (final template in ['{:${overflow}d}', '{:.${overflow}f}']) {
+      expect(
+        () => format(template, const [1]),
+        throwsA(isA<InvalidFormatException>()),
+      );
+    }
+  });
 }

@@ -98,50 +98,54 @@ final class BuiltInFormatters {
   ];
   static final List<BuiltInFormatter> fixed = [
     NumFormatter<double>(
+      maxPrecision: 20,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsFixed(precision ?? 6),
+      convertValue: (value, precision) => value.toStringAsFixed(precision ?? 6),
     ),
   ];
   static final List<BuiltInFormatter> upperFixed = [
     NumFormatter<double>(
+      maxPrecision: 20,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsFixed(precision ?? 6),
+      convertValue: (value, precision) => value.toStringAsFixed(precision ?? 6),
       convertResult: (result) => result.toUpperCase(),
     ),
   ];
   static final List<BuiltInFormatter> exponential = [
     NumFormatter<double>(
+      maxPrecision: 20,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsExponential(precision ?? 6),
+      convertValue:
+          (value, precision) => value.toStringAsExponential(precision ?? 6),
     ),
   ];
   static final List<BuiltInFormatter> upperExponential = [
     NumFormatter<double>(
+      maxPrecision: 20,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsExponential(precision ?? 6),
+      convertValue:
+          (value, precision) => value.toStringAsExponential(precision ?? 6),
       convertResult: (result) => result.toUpperCase(),
     ),
   ];
   static final List<BuiltInFormatter> general = [
     NumFormatter<double>(
       minPrecision: 1,
+      maxPrecision: 21,
       removeTrailingZeros: (options) => !options.alt,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsPrecision(precision ?? 6),
+      convertValue:
+          (value, precision) => value.toStringAsPrecision(precision ?? 6),
     ),
   ];
   static final List<BuiltInFormatter> upperGeneral = [
     NumFormatter<double>(
       minPrecision: 1,
+      maxPrecision: 21,
       removeTrailingZeros: (options) => !options.alt,
       needPoint: (options) => options.alt,
-      convertValue: (value, precision) =>
-          value.toStringAsPrecision(precision ?? 6),
+      convertValue:
+          (value, precision) => value.toStringAsPrecision(precision ?? 6),
       convertResult: (result) => result.toUpperCase(),
     ),
   ];
@@ -167,10 +171,10 @@ final class TextFormatter extends BuiltInFormatter {
     return precision == null
         ? value
         : options.alt
-            ? cut(value, precision)
-            : precision > value.characters.length
-                ? value
-                : value.characters.take(precision).toString();
+        ? cut(value, precision)
+        : precision > value.characters.length
+        ? value
+        : value.characters.take(precision).toString();
   }
 }
 
@@ -194,8 +198,9 @@ final class CharFormatter extends TextFormatter {
 
 abstract base class NumberFormatter<T> extends BuiltInFormatter {
   static final RegExp _triplesRe = RegExp(r'(\d)((?:\d{3})+)$');
-  static final RegExp _quadruplesRe =
-      RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
+  static final RegExp _quadruplesRe = RegExp(
+    r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$',
+  );
   static final RegExp _tripleRe = RegExp(r'\d{3}');
   static final RegExp _quadrupleRe = RegExp('[0-9a-fA-F]{4}');
   static final RegExp _trailingZerosRe = RegExp(r'\.?0+(?=e|$)');
@@ -203,6 +208,7 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
 
   final bool precisionSupported;
   final int minPrecision;
+  final int? maxPrecision;
   final bool altSupported;
   final bool standartGroupOptionSupported;
   final bool Function(Options options)? removeTrailingZeros;
@@ -216,6 +222,7 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
     required this.convertValue,
     this.precisionSupported = true,
     int? minPrecision,
+    this.maxPrecision,
     this.altSupported = true,
     this.standartGroupOptionSupported = true,
     this.removeTrailingZeros,
@@ -241,10 +248,11 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
     final precision = options.precision;
     if (precision != null) {
       if (!precisionSupported) {
-        throw ArgumentError(
-          '${options.all}'
-          ' Precision is not supported by specifier'
-          ' ${options.specifier}',
+        throw InvalidFormatException(
+          fragment: options.all ?? '',
+          reason:
+              'Precision is not supported by specifier '
+              '${options.specifier}.',
         );
       }
 
@@ -254,21 +262,31 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
           reason: 'Precision must be >= $minPrecision. Passed $precision.',
         );
       }
+
+      final maxPrecision = this.maxPrecision;
+      if (maxPrecision != null && precision > maxPrecision) {
+        throw InvalidFormatException(
+          fragment: options.all ?? '',
+          reason: 'Precision must be <= $maxPrecision. Passed $precision.',
+        );
+      }
     }
 
     if (options.alt && !altSupported) {
-      throw ArgumentError(
-        '${options.all}'
-        ' Alternate form (#) is not supported by specifier'
-        ' ${options.specifier}',
+      throw InvalidFormatException(
+        fragment: options.all ?? '',
+        reason:
+            'Alternate form (#) is not supported by specifier '
+            '${options.specifier}.',
       );
     }
 
     if (options.groupOption == ',' && !standartGroupOptionSupported) {
-      throw ArgumentError(
-        '${options.all}'
-        " Group option ',' is not supported by specifier"
-        ' ${options.specifier}',
+      throw InvalidFormatException(
+        fragment: options.all ?? '',
+        reason:
+            "Group option ',' is not supported by specifier "
+            '${options.specifier}.',
       );
     }
 
@@ -334,7 +352,10 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
       if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
       if (pointIndex == -1) pointIndex = result.length;
 
-      result = result.substring(0, pointIndex).replaceFirstMapped(
+      result =
+          result
+              .substring(0, pointIndex)
+              .replaceFirstMapped(
                 searchRe,
                 (m) =>
                     m[1]! +
@@ -346,7 +367,8 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
       if (zeroPaddingAdded) {
         final extraWidth = result.length - minWidth;
         final extra = result.substring(0, extraWidth);
-        result = extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
+        result =
+            extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
             result.substring(extraWidth);
         if (result[0] == grpo) result = '0$result';
       }
@@ -363,6 +385,7 @@ final class IntFormatter extends NumberFormatter<int> {
   IntFormatter({
     required super.convertValue,
     super.precisionSupported = true,
+    super.maxPrecision,
     super.altSupported = true,
     super.standartGroupOptionSupported = true,
     super.removeTrailingZeros,
@@ -390,6 +413,7 @@ final class NumFormatter<T extends num> extends NumberFormatter<T> {
     required super.convertValue,
     super.precisionSupported = true,
     super.minPrecision,
+    super.maxPrecision,
     super.altSupported = true,
     super.standartGroupOptionSupported = true,
     super.removeTrailingZeros,
@@ -417,6 +441,7 @@ final class BigIntFormatter extends NumberFormatter<BigInt> {
     required super.convertValue,
     super.precisionSupported = true,
     super.minPrecision,
+    super.maxPrecision,
     super.altSupported = true,
     super.standartGroupOptionSupported = true,
     super.removeTrailingZeros,

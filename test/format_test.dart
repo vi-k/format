@@ -10,10 +10,7 @@ void main() {
     });
 
     test('auto and manual numeration of arguments', () {
-      expect(
-        format('{0} {} {} {5} {}', [0, 1, 2, 3, 4, 5, 6]),
-        '0 1 2 5 6',
-      );
+      expect(format('{0} {} {} {5} {}', [0, 1, 2, 3, 4, 5, 6]), '0 1 2 5 6');
     });
 
     test('positional arguments', () {
@@ -24,13 +21,7 @@ void main() {
       expect(format('{} {} {} {0} {} {}', positionalArgs), '1 2 3 1 2 3');
       expect(
         () => format('{2} {}', positionalArgs),
-        throwsA(
-          predicate(
-            (e) =>
-                e is ArgumentError &&
-                e.message == '{} Index #3 out of range of positional args.',
-          ),
-        ),
+        throwsA(isA<FormattingException>()),
       );
       // expect(
       //   () => formatNamed('{}', <String, Object?>{}),
@@ -82,7 +73,8 @@ void main() {
       );
       expect(
         formatNamed(
-          '{"""key in double quotes"""} ' "{'''key in single quotes'''}",
+          '{"""key in double quotes"""} '
+          "{'''key in single quotes'''}",
           namedArgs,
         ),
         '9 10',
@@ -90,22 +82,11 @@ void main() {
 
       expect(
         () => format('{a}', <Object?>[]),
-        throwsA(
-          predicate(
-            (e) =>
-                e is ArgumentError && e.message == '{a} Named args is missing.',
-          ),
-        ),
+        throwsA(isA<FormattingException>()),
       );
       expect(
         () => formatNamed('{a}', namedArgs),
-        throwsA(
-          predicate(
-            (e) =>
-                e is ArgumentError &&
-                e.message == '{a} Key [a] is missing in named args.',
-          ),
-        ),
+        throwsA(isA<FormattingException>()),
       );
     });
 
@@ -163,7 +144,6 @@ void main() {
       expect(format('{:<^>>9}', [s]), '<^><^><^><^>hello');
       expect(format('{:<^>^9}', [s]), '<^><^>hello<^><^>');
     });
-
   });
 
   group('Format specifier', () {
@@ -171,15 +151,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:c}', ['a']),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:c} Formatter for type String'
-                          ' and specifier c is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
         expect(format('{:c}', [65]), 'A');
       });
@@ -207,15 +179,7 @@ void main() {
             0x1F469,
             0x1F467,
             0x1F466,
-            [
-              0x1F468,
-              0x200D,
-              0x1F469,
-              0x200D,
-              0x1F467,
-              0x200D,
-              0x1F466,
-            ],
+            [0x1F468, 0x200D, 0x1F469, 0x200D, 0x1F467, 0x200D, 0x1F466],
           ]),
           '👨+👩+👧+👦=👨‍👩‍👧‍👦',
         );
@@ -283,15 +247,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:s}', [123]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:s} Formatter for type int'
-                          ' and specifier s is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{}', [s]), 'Hello world');
@@ -384,15 +340,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:b}', [123.0]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:b} Formatter for type double'
-                          ' and specifier b is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:b}', [n]), '10101010');
@@ -452,45 +400,17 @@ void main() {
         expect(format('{:@>016_b}', [n]), '@@@@@@@1010_1010');
         expect(format('{:@>016_b}', [-n]), '@@@@@@-1010_1010');
 
-        expect(
-          () => format('{:,b}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      "{:,b} Group option ',' is not supported by specifier b",
-            ),
-          ),
-        );
+        expect(() => format('{:,b}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('alt', () {
-        expect(
-          () => format('{:#b}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:#b} Alternate form (#)'
-                          ' is not supported by specifier b',
-            ),
-          ),
-        );
+        expect(() => format('{:#b}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('precision', () {
         expect(
           () => format('{:.2b}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:.2b} Precision is not supported by specifier b',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
       });
     });
@@ -501,15 +421,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:o}', [123.0]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:o} Formatter for type double'
-                          ' and specifier o is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:o}', [n]), '12345670');
@@ -566,45 +478,17 @@ void main() {
         expect(format('{:@>016_o}', [n]), '@@@@@@@1234_5670');
         expect(format('{:@>016_o}', [-n]), '@@@@@@-1234_5670');
 
-        expect(
-          () => format('{:,o}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      "{:,o} Group option ',' is not supported by specifier o",
-            ),
-          ),
-        );
+        expect(() => format('{:,o}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('alt', () {
-        expect(
-          () => format('{:#o}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:#o} Alternate form (#)'
-                          ' is not supported by specifier o',
-            ),
-          ),
-        );
+        expect(() => format('{:#o}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('precision', () {
         expect(
           () => format('{:.2o}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:.2o} Precision is not supported by specifier o',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
       });
     });
@@ -615,15 +499,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:x}', [123.0]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:x} Formatter for type double'
-                          ' and specifier x is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:x}', [n]), '12abcdef');
@@ -673,17 +549,7 @@ void main() {
         expect(format('{:@>016_x}', [n]), '@@@@@@@12ab_cdef');
         expect(format('{:@>016_x}', [-n]), '@@@@@@-12ab_cdef');
 
-        expect(
-          () => format('{:,x}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      "{:,x} Group option ',' is not supported by specifier x",
-            ),
-          ),
-        );
+        expect(() => format('{:,x}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('alt', () {
@@ -707,14 +573,7 @@ void main() {
       test('precision', () {
         expect(
           () => format('{:.2x}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:.2x} Precision is not supported by specifier x',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
       });
     });
@@ -725,15 +584,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:X}', [123.0]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:X} Formatter for type double'
-                          ' and specifier X is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:X}', [n]), '12ABCDEF');
@@ -773,17 +624,7 @@ void main() {
         // zero flag is ignored
         expect(format('{:@>016_X}', [n]), '@@@@@@@12AB_CDEF');
 
-        expect(
-          () => format('{:,X}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      "{:,X} Group option ',' is not supported by specifier X",
-            ),
-          ),
-        );
+        expect(() => format('{:,X}', [n]), throwsA(isA<FormattingException>()));
       });
 
       test('alt', () {
@@ -794,14 +635,7 @@ void main() {
       test('precision', () {
         expect(
           () => format('{:.2X}', [n]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:.2X} Precision is not supported by specifier X',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
       });
     });
@@ -813,15 +647,7 @@ void main() {
         test('basic use', () {
           expect(
             () => format('{:d}', [123.0]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:d} Formatter for type double'
-                            ' and specifier d is not registered',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
 
           expect(format('{}', [n]), '123456789');
@@ -869,41 +695,19 @@ void main() {
         test('alt', () {
           expect(
             () => format('{:#d}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:#d} Alternate form (#)'
-                            ' is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
         });
 
         test('precision', () {
           expect(
             () => format('{:.2}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:.2} Precision is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
 
           expect(
             () => format('{:.2d}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:.2d} Precision is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
         });
       });
@@ -966,41 +770,19 @@ void main() {
         test('alt', () {
           expect(
             () => format('{:#d}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:#d} Alternate form (#)'
-                            ' is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
         });
 
         test('precision', () {
           expect(
             () => format('{:.2}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:.2} Precision is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
 
           expect(
             () => format('{:.2d}', [n]),
-            throwsA(
-              predicate(
-                (e) =>
-                    e is ArgumentError &&
-                    e.message ==
-                        '{:.2d} Precision is not supported by specifier d',
-              ),
-            ),
+            throwsA(isA<FormattingException>()),
           );
         });
       });
@@ -1012,15 +794,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:f}', [123]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:f} Formatter for type int'
-                          ' and specifier f is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:f}', [n]), '12345.678900');
@@ -1150,15 +924,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:e}', [123]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:e} Formatter for type int'
-                          ' and specifier e is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:e}', [n1]), '1.234568e-4');
@@ -1330,15 +1096,7 @@ void main() {
       test('basic use', () {
         expect(
           () => format('{:g}', [123]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:g} Formatter for type int'
-                          ' and specifier g is not registered',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:g}', [0.0]), '0');
@@ -1365,10 +1123,7 @@ void main() {
         expect(format('{:.15g}', [123456.0]), '123456');
         expect(format('{:.1g}', [123456789012345.0]), '1e+14');
         expect(format('{:.15g}', [123456789012345.0]), '123456789012345');
-        expect(
-          format('{:.15g}', [1234567890123456.0]),
-          '1.23456789012346e+15',
-        );
+        expect(format('{:.15g}', [1234567890123456.0]), '1.23456789012346e+15');
       });
 
       test('alt', () {
@@ -1418,10 +1173,7 @@ void main() {
         expect(format('{:020,.9g}', [1234567890.0]), '0,000,001.23456789e+9');
         expect(format('{:021,.9g}', [1234567890.0]), '0,000,001.23456789e+9');
         // zero flag is ignored
-        expect(
-          format('{:@>021,.9g}', [1234567890.0]),
-          '@@@@@@@@1.23456789e+9',
-        );
+        expect(format('{:@>021,.9g}', [1234567890.0]), '@@@@@@@@1.23456789e+9');
       });
     });
 
@@ -1435,29 +1187,14 @@ void main() {
       test('common use', () {
         expect(
           () => format('{:n}', ['123']),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message == '{:n} Expected num. Passed String.',
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
-
       });
 
       test('integers', () {
         expect(
           () => format('{:.1n}', [0]),
-          throwsA(
-            predicate(
-              (e) =>
-                  e is ArgumentError &&
-                  e.message ==
-                      '{:.1n} Precision not allowed'
-                          " for int with format specifier 'n'.",
-            ),
-          ),
+          throwsA(isA<FormattingException>()),
         );
 
         expect(format('{:n}', [0]), '0');
@@ -1947,6 +1684,46 @@ void main() {
   });
 
   group('bugs:', () {
+    test('built-in formatter rejects unsupported values with context', () {
+      expect(
+        () => format('{:d}', const ['42']),
+        throwsA(
+          isA<UnsupportedFormatValueException>()
+              .having((error) => error.specifier, 'specifier', 'd')
+              .having((error) => error.value, 'value', '42'),
+        ),
+      );
+    });
+
+    test('argument resolution failures are typed', () {
+      expect(
+        () => format('{1}', const [0]),
+        throwsA(isA<InvalidFormatException>()),
+      );
+      expect(
+        () => formatNamed('{missing}', const {}),
+        throwsA(isA<InvalidFormatException>()),
+      );
+    });
+
+    test('unsupported built-in options are typed', () {
+      for (final template in ['{:.1d}', '{:#d}', '{:,b}']) {
+        expect(
+          () => format(template, const [1]),
+          throwsA(isA<InvalidFormatException>()),
+        );
+      }
+    });
+
+    test('precision upper bounds are typed', () {
+      for (final template in ['{:.21f}', '{:.21e}', '{:.22g}', '{:.22n}']) {
+        expect(
+          () => format(template, const [1.0]),
+          throwsA(isA<InvalidFormatException>()),
+        );
+      }
+    });
+
     test('n precision is validated before dart number api', () {
       expect(
         () => format('{:.0n}', [0.0]),

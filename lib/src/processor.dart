@@ -46,15 +46,11 @@ final class _Processor {
 
   final String template;
   final List<Object?>? positionalArgs;
-  final Map<Object, Object?>? namedArgs;
+  final Map<String, Object?>? namedArgs;
 
   int positionalArgsIndex = 0;
 
-  _Processor(
-    this.template, {
-    this.positionalArgs,
-    this.namedArgs,
-  });
+  _Processor(this.template, {this.positionalArgs, this.namedArgs});
 
   String format(Format settings) {
     final options = Options();
@@ -103,9 +99,9 @@ final class _Processor {
       ..sign = match.group(4)
       ..alt = match.group(5) != null
       ..zero = match.group(6) != null
-      ..width = _getWidth(options, match.group(7), 'Width')
+      ..width = _parseIntOption(match.group(7), all)
       ..groupOption = match.group(8)
-      ..precision = _getWidth(options, match.group(9), 'Precision')
+      ..precision = _parseIntOption(match.group(9), all)
       ..specifier = match.group(10)
       ..template = match.group(11);
 
@@ -126,9 +122,10 @@ final class _Processor {
 
     if (specifier == null) {
       final formatter = settings._automaticFormatterFor(value);
-      result = formatter == null
-          ? value.toString()
-          : _formatCustom(formatter, value, options);
+      result =
+          formatter == null
+              ? value.toString()
+              : _formatCustom(formatter, value, options);
     } else {
       switch (specifier) {
         case 'c':
@@ -140,8 +137,11 @@ final class _Processor {
         case 'o':
           result = _formatBuiltIn(BuiltInFormatters.octal, value, options);
         case 'x':
-          result =
-              _formatBuiltIn(BuiltInFormatters.hexadecimal, value, options);
+          result = _formatBuiltIn(
+            BuiltInFormatters.hexadecimal,
+            value,
+            options,
+          );
         case 'X':
           result = _formatBuiltIn(
             BuiltInFormatters.upperHexadecimal,
@@ -155,8 +155,11 @@ final class _Processor {
         case 'F':
           result = _formatBuiltIn(BuiltInFormatters.upperFixed, value, options);
         case 'e':
-          result =
-              _formatBuiltIn(BuiltInFormatters.exponential, value, options);
+          result = _formatBuiltIn(
+            BuiltInFormatters.exponential,
+            value,
+            options,
+          );
         case 'E':
           result = _formatBuiltIn(
             BuiltInFormatters.upperExponential,
@@ -166,8 +169,11 @@ final class _Processor {
         case 'g':
           result = _formatBuiltIn(BuiltInFormatters.general, value, options);
         case 'G':
-          result =
-              _formatBuiltIn(BuiltInFormatters.upperGeneral, value, options);
+          result = _formatBuiltIn(
+            BuiltInFormatters.upperGeneral,
+            value,
+            options,
+          );
         case 'n':
           result = _intlNumberFormat<num>(
             options,
@@ -220,11 +226,7 @@ final class _Processor {
         return result;
       }
     }
-    throw ArgumentError(
-      '${options.all}'
-      ' Formatter for type ${value.runtimeType}'
-      ' and specifier ${options.specifier} is not registered',
-    );
+    throw UnsupportedFormatValueException(options.specifier!, value);
   }
 
   String _formatCustom(
@@ -288,12 +290,16 @@ final class _Processor {
     final positionalArgs = this.positionalArgs;
 
     if (positionalArgs == null) {
-      throw ArgumentError('${options.all} Positional args is missing.');
+      throw InvalidFormatException(
+        fragment: options.all ?? '',
+        reason: 'Positional values are missing.',
+      );
     }
 
     if (index >= positionalArgs.length) {
-      throw ArgumentError(
-        '${options.all} Index #$index out of range of positional args.',
+      throw InvalidFormatException(
+        fragment: options.all ?? '',
+        reason: 'Positional index $index is out of range.',
       );
     }
 
@@ -329,15 +335,18 @@ final class _Processor {
 
         final namedArgs = this.namedArgs;
         if (namedArgs == null) {
-          throw ArgumentError('${options.all} Named args is missing.');
+          throw InvalidFormatException(
+            fragment: options.all ?? '',
+            reason: 'Named values are missing.',
+          );
         }
 
-        final id =
-            namedArgs is Map<Symbol, Object?> ? Symbol(stringId) : stringId;
+        final id = stringId;
 
         if (!namedArgs.containsKey(id)) {
-          throw ArgumentError(
-            '${options.all} Key [$id] is missing in named args.',
+          throw InvalidFormatException(
+            fragment: options.all ?? '',
+            reason: 'Named value "$id" is missing.',
           );
         }
 
@@ -348,32 +357,17 @@ final class _Processor {
     return value;
   }
 
-  /// Вычисляет width и precision.
-  ///
-  /// Варианты:
-  /// `n` - значение задано напрямую;
-  /// `{}` - перебираем параметры в positionalArgs по порядку;
-  /// `{index}` - индекс параметра в positionalArgs;
-  /// `{id}` или `{[id]}` - название параметра в namedArgs.
-  int? _getWidth(Options options, String? str, String name) {
-    int? value;
+  int? _parseIntOption(String? value, String fragment) {
+    if (value == null) return null;
 
-    if (str != null) {
-      value = int.tryParse(str);
-      if (value == null) {
-        // Значение передано в виде параметра.
-        final v = _getValue(options, _getValueInQuotes(str, '{', '}'));
-        if (v is! int) {
-          throw ArgumentError(
-            '${options.all} $name must be int, passed ${v.runtimeType}.',
-          );
-        }
-
-        value = v;
-      }
+    final result = int.tryParse(value);
+    if (result == null) {
+      throw InvalidFormatException(
+        fragment: fragment,
+        reason: 'Integer literal is outside the supported range.',
+      );
     }
-
-    return value;
+    return result;
   }
 
   // ignore: long-method
@@ -385,9 +379,7 @@ final class _Processor {
   }) {
     // Проверки.
     if (dyn is! T) {
-      throw ArgumentError(
-        '${options.all} Expected $T. Passed ${dyn.runtimeType}.',
-      );
+      throw UnsupportedFormatValueException(options.specifier!, dyn);
     }
 
     final num value = dyn;
@@ -406,11 +398,19 @@ final class _Processor {
     final precision = options.precision;
     final width = options.width;
 
-    if (precision != null && precision < 1) {
-      throw InvalidFormatException(
-        fragment: options.all ?? '',
-        reason: 'Precision must be >= 1. Passed $precision.',
-      );
+    if (precision != null) {
+      if (precision < 1) {
+        throw InvalidFormatException(
+          fragment: options.all ?? '',
+          reason: 'Precision must be >= 1. Passed $precision.',
+        );
+      }
+      if (precision > 21) {
+        throw InvalidFormatException(
+          fragment: options.all ?? '',
+          reason: 'Precision must be <= 21. Passed $precision.',
+        );
+      }
     }
 
     if (value.isNaN || value.isInfinite) {
@@ -418,10 +418,11 @@ final class _Processor {
     } else {
       if (value is int) {
         if (precision != null) {
-          throw ArgumentError(
-            '${options.all} '
-            'Precision not allowed for int with format specifier '
-            "'${options.specifier}'.",
+          throw InvalidFormatException(
+            fragment: options.all ?? '',
+            reason:
+                'Precision is not supported for integer values with '
+                'specifier ${options.specifier}.',
           );
         }
 
@@ -459,8 +460,8 @@ final class _Processor {
       // подбираем, исходя из того, чтобы вся дробная часть и точка могут
       // быть откинуты.
       if (options.zero && width != null) {
-        final zeroFmt = NumberFormat.decimalPattern()
-          ..minimumIntegerDigits = width;
+        final zeroFmt =
+            NumberFormat.decimalPattern()..minimumIntegerDigits = width;
         if (options.groupOption != ',') {
           zeroFmt.turnOffGrouping();
         }
@@ -490,10 +491,14 @@ final class _Processor {
         RegExp(r'(?:(\d)|(.))'),
         (m) => m[1] == null ? '\\${m[2]}' : m[1]!,
       );
-      final expSymbolForRe = fmt.symbols.EXP_SYMBOL
-          .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
-      final decimalSepForRe = fmt.symbols.DECIMAL_SEP
-          .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+      final expSymbolForRe = fmt.symbols.EXP_SYMBOL.replaceFirstMapped(
+        RegExp('.'),
+        (m) => '\\${m[0]}',
+      );
+      final decimalSepForRe = fmt.symbols.DECIMAL_SEP.replaceFirstMapped(
+        RegExp('.'),
+        (m) => '\\${m[0]}',
+      );
 
       // Удаляем лишние нули в конце.
       if (removeTrailingZeros) {
@@ -514,7 +519,8 @@ final class _Processor {
         if (hasExp) {
           final index = result.indexOf(fmt.symbols.EXP_SYMBOL);
           assert(index != -1);
-          result = '${result.substring(0, index)}'
+          result =
+              '${result.substring(0, index)}'
               '${fmt.symbols.DECIMAL_SEP}'
               '${result.substring(index)}';
         } else {
@@ -544,7 +550,8 @@ final class _Processor {
     return '$sign$result';
   }
 
-  String debugToString() => '$_Processor('
+  String debugToString() =>
+      '$_Processor('
       'template: $template'
       ', positionalArgs: $positionalArgs'
       ', namedArgs: $namedArgs'
