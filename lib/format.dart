@@ -9,5 +9,5 @@ export 'src/errors.dart'
         UnsupportedFormatValueException;
 export 'src/format_base.dart';
 export 'src/formatter.dart' show Formatter;
-export 'src/processor.dart' show FormatOptions, format2, format2m;
+export 'src/processor.dart' show Format, FormatOptions, format2, format2m;
 export 'src/utils/utils.dart';

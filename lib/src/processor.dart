@@ -4,6 +4,7 @@ import 'dart:core' as core show print;
 import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 
+import 'errors.dart';
 import 'formatter.dart';
 
 part 'options.dart';
@@ -11,11 +12,15 @@ part 'format.dart';
 
 /// String formatting function like in Python with positional arguments.
 String format2(String template, List<Object?> values) =>
-    _Processor(template, positionalArgs: values).format(Format.instance);
+    _Processor(template, positionalArgs: values).format(Format._instance);
 
 /// String formatting function like in Python with named arguments.
 String format2m(String template, Map<String, Object?> values) =>
-    _Processor(template, namedArgs: values).format(Format.instance);
+    _Processor(template, namedArgs: values).format(Format._instance);
+
+/// Temporary bridge for the legacy engine during the Format 2.0 migration.
+void checkForAmbiguousCustomFormatter(Object? value) =>
+    Format._instance._automaticFormatterFor(value);
 
 final class _Processor {
   static final RegExp _formatSpecRe = RegExp(
@@ -83,7 +88,7 @@ final class _Processor {
       String? result;
 
       // Типы форматирования по умолчанию.
-      final specifier = options.specifier ??= settings.autoSpecifierFor(value);
+      final specifier = options.specifier ??= settings._autoSpecifierFor(value);
 
       if (specifier == null) {
         result = value.toString();

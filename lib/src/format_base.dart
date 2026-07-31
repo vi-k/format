@@ -5,6 +5,8 @@ import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 import 'package:meta/meta.dart';
 
+import 'processor.dart' show checkForAmbiguousCustomFormatter;
+
 /// String formatting function like in Python.
 String format(
   String fmt,
@@ -649,6 +651,7 @@ String _format(
     );
 
     if (spec == null) {
+      checkForAmbiguousCustomFormatter(value);
       result = value.toString();
     } else {
       switch (spec) {
