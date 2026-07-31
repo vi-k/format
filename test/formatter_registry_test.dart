@@ -55,12 +55,12 @@ final class OptionsFormatter extends Formatter<String> {
 
   @override
   String format(String value, FormatOptions options) => [
-        options.sign,
-        options.alternate,
-        options.zero,
-        options.grouping,
-        options.precision,
-      ].join('|');
+    options.sign,
+    options.alternate,
+    options.zero,
+    options.grouping,
+    options.precision,
+  ].join('|');
 }
 
 void main() {

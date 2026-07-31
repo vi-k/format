@@ -5,12 +5,7 @@ import 'package:characters/characters.dart';
 ///
 /// Пробелы после обрезки в конце полученной строки можно убрать, установив
 /// флаг [trim].
-String cut(
-  String src,
-  int width, {
-  String ellipsis = '…',
-  bool trim = true,
-}) {
+String cut(String src, int width, {String ellipsis = '…', bool trim = true}) {
   if (src.characters.length <= width) return src;
 
   // В заданный размер должно поместиться троеточие

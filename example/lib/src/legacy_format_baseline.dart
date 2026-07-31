@@ -397,7 +397,10 @@ String _numberFormat<T extends num>(
     if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
     if (pointIndex == -1) pointIndex = result.length;
 
-    result = result.substring(0, pointIndex).replaceFirstMapped(
+    result =
+        result
+            .substring(0, pointIndex)
+            .replaceFirstMapped(
               searchRe,
               (m) =>
                   m[1]! +
@@ -409,7 +412,8 @@ String _numberFormat<T extends num>(
     if (options.zero) {
       final extraWidth = result.length - minWidth;
       final extra = result.substring(0, extraWidth);
-      result = extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
+      result =
+          extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
           result.substring(extraWidth);
       if (result[0] == grpo) result = '0$result';
     }
@@ -495,8 +499,8 @@ String _intlNumberFormat<T extends num>(
     // подбираем, исходя из того, чтобы вся дробная часть и точка могут
     // быть откинуты.
     if (options.zero && width != null) {
-      final zeroFmt = NumberFormat.decimalPattern()
-        ..minimumIntegerDigits = width;
+      final zeroFmt =
+          NumberFormat.decimalPattern()..minimumIntegerDigits = width;
       if (options.groupOption != ',') {
         zeroFmt.turnOffGrouping();
       }
@@ -526,10 +530,14 @@ String _intlNumberFormat<T extends num>(
       RegExp(r'(?:(\d)|(.))'),
       (m) => m[1] == null ? '\\${m[2]}' : m[1]!,
     );
-    final expSymbolForRe = fmt.symbols.EXP_SYMBOL
-        .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
-    final decimalSepForRe = fmt.symbols.DECIMAL_SEP
-        .replaceFirstMapped(RegExp('.'), (m) => '\\${m[0]}');
+    final expSymbolForRe = fmt.symbols.EXP_SYMBOL.replaceFirstMapped(
+      RegExp('.'),
+      (m) => '\\${m[0]}',
+    );
+    final decimalSepForRe = fmt.symbols.DECIMAL_SEP.replaceFirstMapped(
+      RegExp('.'),
+      (m) => '\\${m[0]}',
+    );
 
     // Удаляем лишние нули в конце.
     if (removeTrailingZeros) {
@@ -548,7 +556,8 @@ String _intlNumberFormat<T extends num>(
       if (hasExp) {
         final index = result.indexOf(fmt.symbols.EXP_SYMBOL);
         assert(index != -1);
-        result = '${result.substring(0, index)}'
+        result =
+            '${result.substring(0, index)}'
             '${fmt.symbols.DECIMAL_SEP}'
             '${result.substring(index)}';
       } else {
@@ -581,13 +590,12 @@ String testFormat(
   String template, {
   List<Object?>? positionalArgs,
   Map<Object, Object?>? namedArgs,
-}) =>
-    _format(
-      template,
-      positionalArgs: positionalArgs,
-      namedArgs: namedArgs,
-      debug: true,
-    );
+}) => _format(
+  template,
+  positionalArgs: positionalArgs,
+  namedArgs: namedArgs,
+  debug: true,
+);
 
 String _format(
   String template, {
@@ -679,13 +687,14 @@ String _format(
           }
 
           final precision = options.precision;
-          result = precision == null
-              ? value
-              : options.alt
+          result =
+              precision == null
+                  ? value
+                  : options.alt
                   ? _cut(value, precision)
                   : precision > value.characters.length
-                      ? value
-                      : value.characters.take(precision).toString();
+                  ? value
+                  : value.characters.take(precision).toString();
 
         // Число
         case 'b':
@@ -756,8 +765,9 @@ String _format(
           result = _numberFormat<double>(
             options,
             value,
-            toStr: (value, precision) =>
-                value.toStringAsExponential(precision ?? 6),
+            toStr:
+                (value, precision) =>
+                    value.toStringAsExponential(precision ?? 6),
             needPoint: options.alt,
           );
           if (spec == 'E') result = result.toUpperCase();
@@ -767,8 +777,8 @@ String _format(
           result = _numberFormat<double>(
             options,
             value,
-            toStr: (value, precision) =>
-                value.toStringAsPrecision(precision ?? 6),
+            toStr:
+                (value, precision) => value.toStringAsPrecision(precision ?? 6),
             removeTrailingZeros: !options.alt,
             needPoint: options.alt,
           );

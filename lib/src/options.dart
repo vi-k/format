@@ -33,7 +33,8 @@ final class Options {
 
   Options();
 
-  String debugToString() => '$Options('
+  String debugToString() =>
+      '$Options('
       'all: $all'
       ', fill: $fill'
       ', align: $align'

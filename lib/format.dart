@@ -8,5 +8,4 @@ export 'src/errors.dart'
         InvalidSpecifierException,
         UnsupportedFormatValueException;
 export 'src/formatter.dart' show Formatter;
-export 'src/processor.dart'
-    show Format, FormatOptions, format, formatNamed;
+export 'src/processor.dart' show Format, FormatOptions, format, formatNamed;

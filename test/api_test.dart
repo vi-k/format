@@ -23,10 +23,7 @@ void main() {
     final formatter = JsonFormatter();
     expect(formatter.specifier, 'json');
     expect(
-      formatter.format(
-        const {'answer': 42},
-        const FormatOptions(),
-      ),
+      formatter.format(const {'answer': 42}, const FormatOptions()),
       '{answer: 42}',
     );
   });

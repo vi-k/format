@@ -24,9 +24,7 @@ void _run() {
     final legacySamples = <double>[];
     final currentSamples = <double>[];
 
-    for (var measurement = 0;
-        measurement < _measurementCount;
-        measurement++) {
+    for (var measurement = 0; measurement < _measurementCount; measurement++) {
       final legacy = LegacyFormatBenchmark(scenario)..verifyOutput();
       final current = FormatBenchmark(scenario)..verifyOutput();
       legacySamples.add(legacy.measureMicrosecondsPerCall());
@@ -61,7 +59,9 @@ void _run() {
 
   print('Placeholder summary:');
   for (final entry in placeholderResults.entries) {
-    print('${entry.key.toString().padLeft(2)}: ${entry.value.toStringAsFixed(3)}');
+    print(
+      '${entry.key.toString().padLeft(2)}: ${entry.value.toStringAsFixed(3)}',
+    );
   }
   print('Multi-placeholder gate: ${gatePassed ? 'PASS' : 'FAIL'}');
 }

@@ -14,17 +14,17 @@ final class BenchmarkScenario {
     required List<Object?> values,
     required this.expected,
     this.placeholderCount,
-  })  : positionalValues = values,
-        namedValues = null;
+  }) : positionalValues = values,
+       namedValues = null;
 
   const BenchmarkScenario.named({
     required this.name,
     required this.template,
     required Map<String, Object?> values,
     required this.expected,
-  })  : positionalValues = null,
-        namedValues = values,
-        placeholderCount = null;
+  }) : positionalValues = null,
+       namedValues = values,
+       placeholderCount = null;
 
   Object get values => positionalValues ?? namedValues!;
 }

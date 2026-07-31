@@ -5,7 +5,7 @@ import 'tests/tests.dart';
 
 final class FormatBenchmark extends MyBenchmarkBase {
   FormatBenchmark(BenchmarkScenario scenario)
-      : super(name: 'format::format', scenario: scenario);
+    : super(name: 'format::format', scenario: scenario);
 
   @override
   String execute() {

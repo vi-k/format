@@ -14,14 +14,13 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
 
 void main() {
   print(format('{} {}', const ['hello', 'world']));
-  print(
-    formatNamed(
-      '{name}: {value}',
-      const {'name': 'answer', 'value': 42},
-    ),
-  );
+  print(formatNamed('{name}: {value}', const {'name': 'answer', 'value': 42}));
 
   Format.registerFormatter(JsonFormatter());
-  print(format('{:json}', const [<String, Object?>{'answer': 42}]));
+  print(
+    format('{:json}', const [
+      <String, Object?>{'answer': 42},
+    ]),
+  );
   Format.unregisterFormatter('json');
 }
