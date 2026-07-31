@@ -1,24 +1,17 @@
 import 'package:format/format.dart';
 
 import 'my_benchmark_base.dart';
+import 'tests/tests.dart';
 
 final class FormatBenchmark extends MyBenchmarkBase {
-  FormatBenchmark() : super(name: 'format::format');
+  FormatBenchmark(BenchmarkScenario scenario)
+      : super(name: 'format::format', scenario: scenario);
 
   @override
-  bool get isSprintf => false;
-
-  @override
-  void run() {
-    format(template, values); // 1
-    format(template, values); // 2
-    format(template, values); // 3
-    format(template, values); // 4
-    format(template, values); // 5
-    format(template, values); // 6
-    format(template, values); // 7
-    format(template, values); // 8
-    format(template, values); // 9
-    output = format(template, values); // 10
+  String execute() {
+    final namedValues = scenario.namedValues;
+    return namedValues == null
+        ? format(scenario.template, scenario.positionalValues!)
+        : formatNamed(scenario.template, namedValues);
   }
 }

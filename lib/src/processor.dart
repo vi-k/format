@@ -57,41 +57,42 @@ final class _Processor {
   });
 
   String format(Format settings) {
-    final result = StringBuffer();
-    var index = 0;
-    while (index < template.length) {
-      final codeUnit = template.codeUnitAt(index);
-      if (codeUnit != 0x7b && codeUnit != 0x7d) {
-        result.writeCharCode(codeUnit);
-        index++;
-        continue;
-      }
+    final options = Options();
+    var previousEnd = 0;
+    final result = template.replaceAllMapped(_formatSpecRe, (match) {
+      _validateLiteral(previousEnd, match.start);
+      previousEnd = match.end;
+      return _formatMatch(settings, match, options);
+    });
+    _validateLiteral(previousEnd, template.length);
 
-      final match = _formatSpecRe.matchAsPrefix(template, index);
-      if (match == null) {
-        final closingBrace = template.indexOf('}', index + 1);
-        final end = closingBrace == -1 ? template.length : closingBrace + 1;
+    return result;
+  }
+
+  void _validateLiteral(int start, int end) {
+    for (var index = start; index < end; index++) {
+      final codeUnit = template.codeUnitAt(index);
+      if (codeUnit == 0x7b || codeUnit == 0x7d) {
+        final fragmentEnd = template.indexOf('}', index + 1);
         throw InvalidFormatException(
-          fragment: template.substring(index, end),
+          fragment: template.substring(
+            index,
+            fragmentEnd == -1 ? end : fragmentEnd + 1,
+          ),
           reason: 'Expected an escaped brace or a valid placeholder.',
         );
       }
-
-      result.write(_formatMatch(settings, match));
-      index = match.end;
     }
-
-    return result.toString();
   }
 
-  String _formatMatch(Format settings, Match match) {
+  String _formatMatch(Format settings, Match match, Options options) {
     final all = match.group(0)!;
 
     if (all == '{{' || all == '}}') {
       return all[0];
     }
 
-    final options = Options()..all = all;
+    options.all = all;
 
     final argId = match.group(1);
     final value = _getValue(options, argId);

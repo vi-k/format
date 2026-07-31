@@ -1,18 +1,28 @@
 import 'package:benchmark_harness/benchmark_harness.dart';
 
+import 'tests/tests.dart';
+
 abstract base class MyBenchmarkBase extends BenchmarkBase {
-  late String template;
-  late List<Object?> values;
+  final BenchmarkScenario scenario;
   late String output;
 
-  MyBenchmarkBase({required String name}) : super(name);
+  MyBenchmarkBase({required String name, required this.scenario}) : super(name);
 
-  bool get isSprintf;
+  String execute();
 
-  double go(String template, List<Object?> values) {
-    this.template = template;
-    this.values = values;
+  void verifyOutput() {
+    output = execute();
+    if (output != scenario.expected) {
+      throw StateError(
+        '${scenario.name}: expected ${scenario.expected}, got $output',
+      );
+    }
+  }
 
-    return measure() / 100;
+  double measureMicrosecondsPerCall() => measure() / 10;
+
+  @override
+  void run() {
+    output = execute();
   }
 }
