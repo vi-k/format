@@ -1,8 +1,16 @@
 # CHANGELOG
 
-## 2.0.0 - not ready
+## 2.0.0
 
-* Improve performance.
+* Replaced the legacy and experimental engines with one `format`/`formatNamed`
+  implementation.
+* Added the public generic `Formatter<T>` API, immutable `FormatOptions`, and
+  global `Format.registerFormatter`/`Format.unregisterFormatter` registry.
+* Added typed formatting exceptions and Unicode-aware post-format alignment.
+* Fixed closing-brace escaping, invalid precision handling, and zero padding
+  combined with grouping.
+* Removed `format2`, `format2m`, String extensions, positional convenience
+  arguments, `Map<Symbol, Object?>`, and dynamic width/precision.
 
 ## 1.6.0
 
