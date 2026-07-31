@@ -405,6 +405,13 @@ final class _Processor {
     final precision = options.precision;
     final width = options.width;
 
+    if (precision != null && precision < 1) {
+      throw InvalidFormatException(
+        fragment: options.all ?? '',
+        reason: 'Precision must be >= 1. Passed $precision.',
+      );
+    }
+
     if (value.isNaN || value.isInfinite) {
       fmt = NumberFormat.decimalPattern();
     } else {

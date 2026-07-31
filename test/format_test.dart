@@ -1947,6 +1947,28 @@ void main() {
   });
 
   group('bugs:', () {
+    test('n precision is validated before dart number api', () {
+      expect(
+        () => format('{:.0n}', [0.0]),
+        throwsA(isA<InvalidFormatException>()),
+      );
+    });
+
+    test('general precision uses typed validation', () {
+      for (final specifier in ['g', 'G']) {
+        expect(
+          () => format('{:.0$specifier}', [0.0]),
+          throwsA(isA<InvalidFormatException>()),
+        );
+      }
+    });
+
+    test('zero with grouping and no width does not crash', () {
+      expect(format('{:0_d}', [-1234]), '-1_234');
+      expect(format('{:#0_x}', [0x1234]), '0x1234');
+      expect(format('{:0_d}', [BigInt.from(-1234)]), '-1_234');
+    });
+
     test('fixed bugs', () {
       expect(format('{:!>5} {:!>3}', ['1', '3']), '!!!!1 !!3');
     });

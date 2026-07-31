@@ -1,5 +1,6 @@
 import 'package:characters/characters.dart';
 
+import 'errors.dart';
 import 'processor.dart';
 import 'utils/utils.dart';
 
@@ -248,9 +249,9 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
       }
 
       if (precision < minPrecision) {
-        throw ArgumentError(
-          '${options.all} Precision must be >= $minPrecision.'
-          ' Passed $precision',
+        throw InvalidFormatException(
+          fragment: options.all ?? '',
+          reason: 'Precision must be >= $minPrecision. Passed $precision.',
         );
       }
     }
@@ -319,7 +320,8 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
     // Дополняем нулями (align и fill в этом случае игнорируются).
     final prefix = this.prefix?.call(options) ?? '';
     final minWidth = (options.width ?? 0) - sign.length - prefix.length;
-    if (options.zero && result.length < minWidth) {
+    final zeroPaddingAdded = options.zero && result.length < minWidth;
+    if (zeroPaddingAdded) {
       result = '0' * (minWidth - result.length) + result;
     }
 
@@ -341,7 +343,7 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
           result.substring(pointIndex);
 
       // Если добавляли нули, надо обрезать лишние.
-      if (options.zero) {
+      if (zeroPaddingAdded) {
         final extraWidth = result.length - minWidth;
         final extra = result.substring(0, extraWidth);
         result = extra.replaceFirst(RegExp('^[0$grpo]*'), '') +
