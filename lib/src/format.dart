@@ -7,7 +7,7 @@ final class Format {
 
   final List<FormatAutoSpecifier> _autoSpecifiers = [];
 
-  final Map<String, List<Formatter>> _formatters = {};
+  final Map<String, List<BuiltInFormatter>> _formatters = {};
 
   Format() {
     _autoSpecifiers
@@ -151,7 +151,7 @@ final class Format {
     _autoSpecifiers.add(autoSpecifier);
   }
 
-  void registerFormater(String specifier, Formatter formatter) {
+  void registerFormater(String specifier, BuiltInFormatter formatter) {
     final list = _formatters[specifier];
     if (list == null) {
       _formatters[specifier] = [formatter];

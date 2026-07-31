@@ -3,13 +3,20 @@ import 'package:characters/characters.dart';
 import 'processor.dart';
 import 'utils/utils.dart';
 
-// ignore: one_member_abstracts
-abstract base class Formatter {
+abstract base class Formatter<T> {
+  const Formatter();
+
+  String get specifier;
+  bool canFormat(Object? value);
+  String format(T value, FormatOptions options);
+}
+
+abstract base class BuiltInFormatter {
   String get name;
   String? format(Options options, Object? value);
 }
 
-final class StringFormatter extends Formatter {
+final class StringFormatter extends BuiltInFormatter {
   @override
   String get name => 'Standart String formatter';
 
@@ -52,7 +59,7 @@ final class CharFormatter extends StringFormatter {
   }
 }
 
-abstract base class NumberFormatter<T> extends Formatter {
+abstract base class NumberFormatter<T> extends BuiltInFormatter {
   static final RegExp _triplesRe = RegExp(r'(\d)((?:\d{3})+)$');
   static final RegExp _quadruplesRe =
       RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
