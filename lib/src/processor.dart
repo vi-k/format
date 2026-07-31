@@ -10,13 +10,21 @@ import 'formatter.dart';
 part 'options.dart';
 part 'format.dart';
 
-/// String formatting function like in Python with positional arguments.
-String format2(String template, List<Object?> values) =>
+/// Formats [values] referenced by positional placeholders in [template].
+String format(String template, List<Object?> values) =>
     _Processor(template, positionalArgs: values).format(Format._instance);
 
-/// String formatting function like in Python with named arguments.
-String format2m(String template, Map<String, Object?> values) =>
+/// Formats [values] referenced by named placeholders in [template].
+String formatNamed(String template, Map<String, Object?> values) =>
     _Processor(template, namedArgs: values).format(Format._instance);
+
+/// Temporary compatibility alias during the Format 2.0 migration.
+String format2(String template, List<Object?> values) =>
+    format(template, values);
+
+/// Temporary compatibility alias during the Format 2.0 migration.
+String format2m(String template, Map<String, Object?> values) =>
+    formatNamed(template, values);
 
 /// Temporary bridge for the legacy engine during the Format 2.0 migration.
 void checkForAmbiguousCustomFormatter(Object? value) =>
@@ -25,21 +33,21 @@ void checkForAmbiguousCustomFormatter(Object? value) =>
 final class _Processor {
   static final RegExp _formatSpecRe = RegExp(
     // begin
-    r'(?:\{\{|\{\s*'
+    r'(?:\{\{|\}\}|\{\s*'
     // argId
     r'(\d*|[_\p{L}][_.\p{L}\d]*|'
     "'(?:''|[^'])*'"
     '|"(?:""|[^"])*")'
     //  :[  [fill ] align   ] [sign ] [#] [0]
     '(?::(?:([^}]+)?([<>^|]))?([-+ ])?(#)?(0)?'
-    // width (number or {widthId})
-    r'(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\})?'
+    // literal width
+    r'(\d+)?'
     // group option
     '([_,])?'
-    // .precision (number or {precissionId})
-    r'(?:\.(\d+|\{(?:\d*|[_\w][_\w\d]*|\[[^\]]*\])\}))?'
+    // literal precision
+    r'(?:\.(\d+))?'
     // specifier
-    '([csbodxXfFeEgGn])?'
+    '([A-Za-z][A-Za-z0-9_]*)?'
     // additional template
     "('(?:''|[^'])*'"
     '|"(?:""|[^"])*")?)?'
@@ -61,99 +69,123 @@ final class _Processor {
   });
 
   String format(Format settings) {
-    final result = template.replaceAllMapped(_formatSpecRe, (match) {
-      final all = match.group(0)!;
-
-      if (all == '{{') {
-        return '{';
+    final result = StringBuffer();
+    var index = 0;
+    while (index < template.length) {
+      final codeUnit = template.codeUnitAt(index);
+      if (codeUnit != 0x7b && codeUnit != 0x7d) {
+        result.writeCharCode(codeUnit);
+        index++;
+        continue;
       }
 
-      final options = Options()..all = all;
+      final match = _formatSpecRe.matchAsPrefix(template, index);
+      if (match == null) {
+        final closingBrace = template.indexOf('}', index + 1);
+        final end = closingBrace == -1 ? template.length : closingBrace + 1;
+        throw InvalidFormatException(
+          fragment: template.substring(index, end),
+          reason: 'Expected an escaped brace or a valid placeholder.',
+        );
+      }
 
-      final argId = match.group(1);
-      final value = _getValue(options, argId);
+      result.write(_formatMatch(settings, match));
+      index = match.end;
+    }
 
-      options
-        ..fill = match.group(2)
-        ..align = match.group(3)
-        ..sign = match.group(4)
-        ..alt = match.group(5) != null
-        ..zero = match.group(6) != null
-        ..width = _getWidth(options, match.group(7), 'Width')
-        ..groupOption = match.group(8)
-        ..precision = _getWidth(options, match.group(9), 'Precision')
-        ..specifier = match.group(10)
-        ..template = match.group(11);
+    return result.toString();
+  }
 
-      String? result;
+  String _formatMatch(Format settings, Match match) {
+    final all = match.group(0)!;
 
-      // Типы форматирования по умолчанию.
-      final specifier = options.specifier ??= settings._autoSpecifierFor(value);
+    if (all == '{{' || all == '}}') {
+      return all[0];
+    }
 
-      if (specifier == null) {
-        result = value.toString();
-      } else {
-        final formatters = settings._formatters[specifier];
-        if (formatters != null) {
-          for (final formatter in formatters) {
-            final r = formatter.format(options, value);
-            if (r != null) {
-              result = r;
-              break;
-            }
-          }
+    final options = Options()..all = all;
 
-          if (result == null) {
-            throw ArgumentError(
-              '${options.all}'
-              ' Formatter for type ${value.runtimeType}'
-              ' and specifier $specifier is not registered',
-            );
+    final argId = match.group(1);
+    final value = _getValue(options, argId);
+
+    options
+      ..fill = match.group(2)
+      ..align = match.group(3)
+      ..sign = match.group(4)
+      ..alt = match.group(5) != null
+      ..zero = match.group(6) != null
+      ..width = _getWidth(options, match.group(7), 'Width')
+      ..groupOption = match.group(8)
+      ..precision = _getWidth(options, match.group(9), 'Precision')
+      ..specifier = match.group(10)
+      ..template = match.group(11);
+
+    String? result;
+
+    // Типы форматирования по умолчанию.
+    final specifier = options.specifier ??= settings._autoSpecifierFor(value);
+
+    if (specifier == null) {
+      result = value.toString();
+    } else {
+      final formatters = settings._formatters[specifier];
+      if (formatters != null) {
+        for (final formatter in formatters) {
+          final r = formatter.format(options, value);
+          if (r != null) {
+            result = r;
+            break;
           }
         }
 
-        /// TODO(vi.k): intl вынести в отдельный пакет
         if (result == null) {
-          switch (specifier) {
-            case 'n':
-              result = _intlNumberFormat<num>(
-                options,
-                value,
-                removeTrailingZeros: !options.alt,
-                needPoint: options.alt && value is! int,
-              );
-          }
+          throw ArgumentError(
+            '${options.all}'
+            ' Formatter for type ${value.runtimeType}'
+            ' and specifier $specifier is not registered',
+          );
         }
       }
 
-      final width = options.width;
-      if (result != null && width != null) {
-        final resultWidth = result.characters.length;
-        if (resultWidth < width) {
-          // Выравниваем относительно заданной ширины
-          final fill = options.fill ?? ' ';
-          final n = width - resultWidth;
-
-          switch (options.align ?? '<') {
-            case '<':
-              result += fill * n;
-
-            case '>':
-              result = fill * n + result;
-
-            case '^':
-              final half = n ~/ 2;
-              result = fill * half + result + fill * (n - half);
-          }
+      /// TODO(vi.k): intl вынести в отдельный пакет
+      if (result == null) {
+        switch (specifier) {
+          case 'n':
+            result = _intlNumberFormat<num>(
+              options,
+              value,
+              removeTrailingZeros: !options.alt,
+              needPoint: options.alt && value is! int,
+            );
         }
       }
+    }
 
-      if (result != null) return result;
+    final width = options.width;
+    if (result != null && width != null) {
+      final resultWidth = result.characters.length;
+      if (resultWidth < width) {
+        // Выравниваем относительно заданной ширины
+        final fill = options.fill ?? ' ';
+        final n = width - resultWidth;
 
-      return options.toString();
-    });
+        switch (options.align ?? '<') {
+          case '<':
+            result += fill * n;
 
-    return result;
+          case '>':
+            result = fill * n + result;
+
+          case '^':
+            final half = n ~/ 2;
+            result = fill * half + result + fill * (n - half);
+        }
+      }
+    }
+
+    if (result != null) return result;
+
+    return options.toString();
   }
 
   /// Берёт значение в строке [str] внутри кавычек [left] и [right].

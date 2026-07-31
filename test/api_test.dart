@@ -14,6 +14,11 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
 }
 
 void main() {
+  test('public formatting functions have the 2.0 signatures', () {
+    expect(format('{}', const ['value']), 'value');
+    expect(formatNamed('{key}', const {'key': 'value'}), 'value');
+  });
+
   test('public import exposes formatter extension types', () {
     final formatter = JsonFormatter();
     expect(formatter.specifier, 'json');
