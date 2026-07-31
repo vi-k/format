@@ -18,18 +18,6 @@ String format(String template, List<Object?> values) =>
 String formatNamed(String template, Map<String, Object?> values) =>
     _Processor(template, namedArgs: values).format(Format._instance);
 
-/// Temporary compatibility alias during the Format 2.0 migration.
-String format2(String template, List<Object?> values) =>
-    format(template, values);
-
-/// Temporary compatibility alias during the Format 2.0 migration.
-String format2m(String template, Map<String, Object?> values) =>
-    formatNamed(template, values);
-
-/// Temporary bridge for the legacy engine during the Format 2.0 migration.
-void checkForAmbiguousCustomFormatter(Object? value) =>
-    Format._instance._automaticFormatterFor(value);
-
 final class _Processor {
   static final RegExp _formatSpecRe = RegExp(
     // begin
@@ -122,47 +110,81 @@ final class _Processor {
 
     String? result;
 
-    // Типы форматирования по умолчанию.
-    final specifier = options.specifier ??= settings._autoSpecifierFor(value);
+    // Типы форматирования по умолчанию используют прямой built-in dispatch.
+    var specifier = options.specifier;
+    if (specifier == null) {
+      if (value is String) {
+        specifier = 's';
+      } else if (value is int || value is BigInt) {
+        specifier = 'd';
+      } else if (value is double) {
+        specifier = 'g';
+      }
+      options.specifier = specifier;
+    }
 
     if (specifier == null) {
-      result = value.toString();
+      final formatter = settings._automaticFormatterFor(value);
+      result = formatter == null
+          ? value.toString()
+          : _formatCustom(formatter, value, options);
     } else {
-      final formatters = settings._formatters[specifier];
-      if (formatters != null) {
-        for (final formatter in formatters) {
-          final r = formatter.format(options, value);
-          if (r != null) {
-            result = r;
-            break;
-          }
-        }
-
-        if (result == null) {
-          throw ArgumentError(
-            '${options.all}'
-            ' Formatter for type ${value.runtimeType}'
-            ' and specifier $specifier is not registered',
+      switch (specifier) {
+        case 'c':
+          result = _formatBuiltIn(BuiltInFormatters.character, value, options);
+        case 's':
+          result = _formatBuiltIn(BuiltInFormatters.string, value, options);
+        case 'b':
+          result = _formatBuiltIn(BuiltInFormatters.binary, value, options);
+        case 'o':
+          result = _formatBuiltIn(BuiltInFormatters.octal, value, options);
+        case 'x':
+          result =
+              _formatBuiltIn(BuiltInFormatters.hexadecimal, value, options);
+        case 'X':
+          result = _formatBuiltIn(
+            BuiltInFormatters.upperHexadecimal,
+            value,
+            options,
           );
-        }
-      }
-
-      /// TODO(vi.k): intl вынести в отдельный пакет
-      if (result == null) {
-        switch (specifier) {
-          case 'n':
-            result = _intlNumberFormat<num>(
-              options,
-              value,
-              removeTrailingZeros: !options.alt,
-              needPoint: options.alt && value is! int,
-            );
-        }
+        case 'd':
+          result = _formatBuiltIn(BuiltInFormatters.decimal, value, options);
+        case 'f':
+          result = _formatBuiltIn(BuiltInFormatters.fixed, value, options);
+        case 'F':
+          result = _formatBuiltIn(BuiltInFormatters.upperFixed, value, options);
+        case 'e':
+          result =
+              _formatBuiltIn(BuiltInFormatters.exponential, value, options);
+        case 'E':
+          result = _formatBuiltIn(
+            BuiltInFormatters.upperExponential,
+            value,
+            options,
+          );
+        case 'g':
+          result = _formatBuiltIn(BuiltInFormatters.general, value, options);
+        case 'G':
+          result =
+              _formatBuiltIn(BuiltInFormatters.upperGeneral, value, options);
+        case 'n':
+          result = _intlNumberFormat<num>(
+            options,
+            value,
+            removeTrailingZeros: !options.alt,
+            needPoint: options.alt && value is! int,
+          );
+        default:
+          final formatter = settings._formatterFor(specifier);
+          if (formatter == null) {
+            throw InvalidSpecifierException(specifier);
+          }
+          result = _formatCustom(formatter, value, options);
       }
     }
 
     final width = options.width;
-    if (result != null && width != null) {
+    if (width != null) {
       final resultWidth = result.characters.length;
       if (resultWidth < width) {
         // Выравниваем относительно заданной ширины
@@ -183,9 +205,46 @@ final class _Processor {
       }
     }
 
-    if (result != null) return result;
+    return result;
+  }
 
-    return options.toString();
+  String _formatBuiltIn(
+    List<BuiltInFormatter> formatters,
+    Object? value,
+    Options options,
+  ) {
+    for (final formatter in formatters) {
+      final result = formatter.format(options, value);
+      if (result != null) {
+        return result;
+      }
+    }
+    throw ArgumentError(
+      '${options.all}'
+      ' Formatter for type ${value.runtimeType}'
+      ' and specifier ${options.specifier} is not registered',
+    );
+  }
+
+  String _formatCustom(
+    Formatter<dynamic> formatter,
+    Object? value,
+    Options options,
+  ) {
+    if (!formatter.canFormat(value)) {
+      throw UnsupportedFormatValueException(formatter.specifier, value);
+    }
+    return formatter.format(
+      value,
+      FormatOptions(
+        sign: options.sign,
+        alternate: options.alt,
+        zero: options.zero,
+        grouping: options.groupOption,
+        precision: options.precision,
+        template: options.template,
+      ),
+    );
   }
 
   /// Берёт значение в строке [str] внутри кавычек [left] и [right].

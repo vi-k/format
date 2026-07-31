@@ -16,7 +16,139 @@ abstract base class BuiltInFormatter {
   String? format(Options options, Object? value);
 }
 
-final class StringFormatter extends BuiltInFormatter {
+final class BuiltInFormatters {
+  static final List<BuiltInFormatter> string = [TextFormatter()];
+  static final List<BuiltInFormatter> character = [CharFormatter()];
+  static final List<BuiltInFormatter> binary = [
+    IntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      convertValue: (value, _) => value.toRadixString(2),
+    ),
+    BigIntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      convertValue: (value, _) => value.toRadixString(2),
+    ),
+  ];
+  static final List<BuiltInFormatter> octal = [
+    IntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      convertValue: (value, _) => value.toRadixString(8),
+    ),
+    BigIntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      convertValue: (value, _) => value.toRadixString(8),
+    ),
+  ];
+  static final List<BuiltInFormatter> hexadecimal = [
+    IntFormatter(
+      precisionSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      prefix: (options) => options.alt ? '0x' : '',
+      convertValue: (value, _) => value.toRadixString(16),
+    ),
+    BigIntFormatter(
+      precisionSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      prefix: (options) => options.alt ? '0x' : '',
+      convertValue: (value, _) => value.toRadixString(16),
+    ),
+  ];
+  static final List<BuiltInFormatter> upperHexadecimal = [
+    IntFormatter(
+      precisionSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      prefix: (options) => options.alt ? '0x' : '',
+      convertValue: (value, _) => value.toRadixString(16).toUpperCase(),
+    ),
+    BigIntFormatter(
+      precisionSupported: false,
+      standartGroupOptionSupported: false,
+      groupSize: 4,
+      prefix: (options) => options.alt ? '0x' : '',
+      convertValue: (value, _) => value.toRadixString(16).toUpperCase(),
+    ),
+  ];
+  static final List<BuiltInFormatter> decimal = [
+    IntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      convertValue: (value, _) => value.toString(),
+    ),
+    BigIntFormatter(
+      precisionSupported: false,
+      altSupported: false,
+      convertValue: (value, _) => value.toString(),
+    ),
+  ];
+  static final List<BuiltInFormatter> fixed = [
+    NumFormatter<double>(
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsFixed(precision ?? 6),
+    ),
+  ];
+  static final List<BuiltInFormatter> upperFixed = [
+    NumFormatter<double>(
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsFixed(precision ?? 6),
+      convertResult: (result) => result.toUpperCase(),
+    ),
+  ];
+  static final List<BuiltInFormatter> exponential = [
+    NumFormatter<double>(
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsExponential(precision ?? 6),
+    ),
+  ];
+  static final List<BuiltInFormatter> upperExponential = [
+    NumFormatter<double>(
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsExponential(precision ?? 6),
+      convertResult: (result) => result.toUpperCase(),
+    ),
+  ];
+  static final List<BuiltInFormatter> general = [
+    NumFormatter<double>(
+      minPrecision: 1,
+      removeTrailingZeros: (options) => !options.alt,
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsPrecision(precision ?? 6),
+    ),
+  ];
+  static final List<BuiltInFormatter> upperGeneral = [
+    NumFormatter<double>(
+      minPrecision: 1,
+      removeTrailingZeros: (options) => !options.alt,
+      needPoint: (options) => options.alt,
+      convertValue: (value, precision) =>
+          value.toStringAsPrecision(precision ?? 6),
+      convertResult: (result) => result.toUpperCase(),
+    ),
+  ];
+
+  const BuiltInFormatters._();
+}
+
+final class TextFormatter extends BuiltInFormatter {
   @override
   String get name => 'Standart String formatter';
 
@@ -41,7 +173,7 @@ final class StringFormatter extends BuiltInFormatter {
   }
 }
 
-final class CharFormatter extends StringFormatter {
+final class CharFormatter extends TextFormatter {
   @override
   String get name => 'Standart char formatter';
 

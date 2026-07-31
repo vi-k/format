@@ -3,6 +3,11 @@ import 'package:test/test.dart';
 
 final class CustomValue {}
 
+final class FallbackValue {
+  @override
+  String toString() => 'fallback';
+}
+
 final class JsonFormatter extends Formatter<Map<String, Object?>> {
   @override
   String get specifier => 'json';
@@ -25,7 +30,7 @@ final class IntAliasFormatter extends Formatter<int> {
   bool canFormat(Object? value) => value is int;
 
   @override
-  String format(int value, FormatOptions options) => value.toString();
+  String format(int value, FormatOptions options) => '$specifier:$value';
 }
 
 final class MatchingFormatter extends Formatter<CustomValue> {
@@ -39,6 +44,23 @@ final class MatchingFormatter extends Formatter<CustomValue> {
 
   @override
   String format(CustomValue value, FormatOptions options) => specifier;
+}
+
+final class OptionsFormatter extends Formatter<String> {
+  @override
+  String get specifier => 'probe';
+
+  @override
+  bool canFormat(Object? value) => value is String;
+
+  @override
+  String format(String value, FormatOptions options) => [
+        options.sign,
+        options.alternate,
+        options.zero,
+        options.grouping,
+        options.precision,
+      ].join('|');
 }
 
 void main() {
@@ -89,6 +111,47 @@ void main() {
     expect(
       () => format('{}', [CustomValue()]),
       throwsA(isA<AmbiguousFormatterException>()),
+    );
+  });
+
+  test('explicit custom formatter receives options before core alignment', () {
+    Format.registerFormatter(OptionsFormatter());
+    addTearDown(() => Format.unregisterFormatter('probe'));
+
+    expect(
+      format('{:*^+#020_.3probe}', const ['value']),
+      '**+|true|true|_|3***',
+    );
+  });
+
+  test('automatic matching uses one custom formatter', () {
+    Format.registerFormatter(MatchingFormatter('custom'));
+    addTearDown(() => Format.unregisterFormatter('custom'));
+
+    expect(format('{}', [CustomValue()]), 'custom');
+  });
+
+  test('built-in automatic matching has priority over custom formatters', () {
+    Format.registerFormatter(IntAliasFormatter('integer'));
+    addTearDown(() => Format.unregisterFormatter('integer'));
+
+    expect(format('{}', const [42]), '42');
+  });
+
+  test('automatic matching falls back to toString', () {
+    expect(format('{}', [FallbackValue()]), 'fallback');
+  });
+
+  test('explicit formatter rejects unsupported values with context', () {
+    Format.registerFormatter(JsonFormatter());
+
+    expect(
+      () => format('{:json}', const [42]),
+      throwsA(
+        isA<UnsupportedFormatValueException>()
+            .having((error) => error.specifier, 'specifier', 'json')
+            .having((error) => error.value, 'value', 42),
+      ),
     );
   });
 }

@@ -26,148 +26,9 @@ final class Format {
   static bool unregisterFormatter(String specifier) =>
       _instance._unregisterFormatter(specifier);
 
-  final List<FormatAutoSpecifier> _autoSpecifiers = [];
-
-  final Map<String, List<BuiltInFormatter>> _formatters = {};
   final Map<String, Formatter<dynamic>> _customFormatters = {};
 
-  Format._() {
-    _autoSpecifiers
-      ..add(FormatAutoSpecifier((value) => value is String, specifier: 's'))
-      ..add(FormatAutoSpecifier((value) => value is int, specifier: 'd'))
-      ..add(FormatAutoSpecifier((value) => value is BigInt, specifier: 'd'))
-      ..add(FormatAutoSpecifier((value) => value is double, specifier: 'g'));
-
-    _formatters.addAll({
-      's': [StringFormatter()],
-      'c': [CharFormatter()],
-      'b': [
-        IntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          convertValue: (value, _) => value.toRadixString(2),
-        ),
-        BigIntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          convertValue: (value, _) => value.toRadixString(2),
-        ),
-      ],
-      'o': [
-        IntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          convertValue: (value, _) => value.toRadixString(8),
-        ),
-        BigIntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          convertValue: (value, _) => value.toRadixString(8),
-        ),
-      ],
-      'x': [
-        IntFormatter(
-          precisionSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          prefix: (options) => options.alt ? '0x' : '',
-          convertValue: (value, _) => value.toRadixString(16),
-        ),
-        BigIntFormatter(
-          precisionSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          prefix: (options) => options.alt ? '0x' : '',
-          convertValue: (value, _) => value.toRadixString(16),
-        ),
-      ],
-      'X': [
-        IntFormatter(
-          precisionSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          prefix: (options) => options.alt ? '0x' : '',
-          convertValue: (value, _) => value.toRadixString(16).toUpperCase(),
-        ),
-        BigIntFormatter(
-          precisionSupported: false,
-          standartGroupOptionSupported: false,
-          groupSize: 4,
-          prefix: (options) => options.alt ? '0x' : '',
-          convertValue: (value, _) => value.toRadixString(16).toUpperCase(),
-        ),
-      ],
-      'd': [
-        IntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          convertValue: (value, _) => value.toString(),
-        ),
-        BigIntFormatter(
-          precisionSupported: false,
-          altSupported: false,
-          convertValue: (value, _) => value.toString(),
-        ),
-      ],
-      'f': [
-        NumFormatter<double>(
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsFixed(precision ?? 6),
-        ),
-      ],
-      'F': [
-        NumFormatter<double>(
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsFixed(precision ?? 6),
-          convertResult: (result) => result.toUpperCase(),
-        ),
-      ],
-      'e': [
-        NumFormatter<double>(
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsExponential(precision ?? 6),
-        ),
-      ],
-      'E': [
-        NumFormatter<double>(
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsExponential(precision ?? 6),
-          convertResult: (result) => result.toUpperCase(),
-        ),
-      ],
-      'g': [
-        NumFormatter<double>(
-          minPrecision: 1,
-          removeTrailingZeros: (options) => !options.alt,
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsPrecision(precision ?? 6),
-        ),
-      ],
-      'G': [
-        NumFormatter<double>(
-          minPrecision: 1,
-          removeTrailingZeros: (options) => !options.alt,
-          needPoint: (options) => options.alt,
-          convertValue: (value, precision) =>
-              value.toStringAsPrecision(precision ?? 6),
-          convertResult: (result) => result.toUpperCase(),
-        ),
-      ],
-    });
-  }
+  Format._();
 
   void _registerFormatter<T>(Formatter<T> formatter) {
     final specifier = formatter.specifier;
@@ -190,6 +51,9 @@ final class Format {
     return _customFormatters.remove(specifier) != null;
   }
 
+  Formatter<dynamic>? _formatterFor(String specifier) =>
+      _customFormatters[specifier];
+
   Formatter<dynamic>? _automaticFormatterFor(Object? value) {
     Formatter<dynamic>? selected;
     List<String>? matches;
@@ -210,36 +74,4 @@ final class Format {
     return selected;
   }
 
-  void registerAutoSpecifier(FormatAutoSpecifier autoSpecifier) {
-    _autoSpecifiers.add(autoSpecifier);
-  }
-
-  void registerFormater(String specifier, BuiltInFormatter formatter) {
-    final list = _formatters[specifier];
-    if (list == null) {
-      _formatters[specifier] = [formatter];
-    } else {
-      list.add(formatter);
-    }
-  }
-
-  String? _autoSpecifierFor(Object? value) {
-    for (final autoSpecifier in _autoSpecifiers) {
-      if (autoSpecifier.test(value)) {
-        return autoSpecifier.specifier;
-      }
-    }
-
-    return null;
-  }
-}
-
-final class FormatAutoSpecifier {
-  final String specifier;
-  bool Function(Object? value) test;
-
-  FormatAutoSpecifier(
-    this.test, {
-    required this.specifier,
-  });
 }
