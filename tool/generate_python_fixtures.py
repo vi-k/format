@@ -53,6 +53,7 @@ CASES = [
     case("error-missing-positional", "{}"),
     case("error-mixed-numbering", "{0} {}", [value("string", "x")]),
     case("error-unmatched-brace", "value {"),
+    case("error-unknown-conversion", "{!q}", [value("int", 1)]),
     case("float-E", "{:.3E}", [value("double", 12.5)]),
     case("float-F", "{:F}", [value("double", 12.5)]),
     case("float-G", "{:.4G}", [value("double", 12345.0)]),
@@ -145,6 +146,19 @@ CASES = [
     case("special-nan", "{:F}", [value("double", "nan")]),
     case("special-positive-infinity", "{:+f}", [value("double", "inf")]),
     case("text-alignment", "{:*^9s}", [value("string", "hello")]),
+    case("text-conversion-a-nonascii", "{!a}", [value("string", "é😀")]),
+    case("text-conversion-r-double-large", "{!r}", [value("double", 1e20)]),
+    case("text-conversion-r-double-small", "{!r}", [value("double", 1e-7)]),
+    case(
+        "text-conversion-r-nonprintable",
+        "{!r}",
+        [value("string", "\u2028\u200b\u00ad")],
+    ),
+    case(
+        "text-conversion-r-quotes",
+        "{!r}",
+        [value("string", "a'''b\"c")],
+    ),
     case("text-conversion-s", "{!s:.3s}", [value("string", "hello")]),
     case("text-precision-unicode", "{:.2s}", [value("string", "A😀B")]),
 ]

@@ -10,7 +10,7 @@ Object? applyConversion(
     case null:
       return value;
     case 's':
-      return value.toString();
+      return _fallbackToString(value, context);
     case 'r':
       return _RepresentationWriter(engine, context).represent(value);
     case 'a':
@@ -18,7 +18,7 @@ Object? applyConversion(
         _RepresentationWriter(engine, context).represent(value),
       );
     default:
-      throw StateError('Unknown conversion: $conversion');
+      throw UnsupportedConversionException(context, value);
   }
 }
 
@@ -51,7 +51,7 @@ final class _RepresentationWriter {
         _writeMap(value, output);
       case Set<Object?>():
         _writeSet(value, output);
-      case Iterable<Object?>():
+      case List<Object?>():
         _writeIterable(value, output);
       default:
         output.write(_representExtension(value));
@@ -60,16 +60,13 @@ final class _RepresentationWriter {
 
   String _number(num value) {
     if (value is double) {
-      if (value.isNaN) return 'nan';
-      if (value.isInfinite) return value.isNegative ? '-inf' : 'inf';
+      return _pythonShortestDouble(value);
     }
     return value.toString();
   }
 
   String _quoteString(String value) {
-    final singleQuoteEscapes = "'".allMatches(value).length;
-    final doubleQuoteEscapes = '"'.allMatches(value).length;
-    final quote = singleQuoteEscapes <= doubleQuoteEscapes ? "'" : '"';
+    final quote = value.contains("'") && !value.contains('"') ? '"' : "'";
     final output = StringBuffer(quote);
     for (final scalar in value.runes) {
       if (scalar == 0x5c) {
@@ -82,7 +79,7 @@ final class _RepresentationWriter {
         output.write(r'\n');
       } else if (scalar == 0x0d) {
         output.write(r'\r');
-      } else if (_isControlScalar(scalar)) {
+      } else if (!isPythonPrintable(scalar)) {
         output.write(_scalarEscape(scalar));
       } else {
         output.writeCharCode(scalar);
@@ -207,9 +204,6 @@ final class _RepresentationWriter {
   String _extensionName(Representation<dynamic> representation) =>
       representation.runtimeType.toString();
 }
-
-bool _isControlScalar(int scalar) =>
-    scalar < 0x20 || (scalar >= 0x7f && scalar <= 0x9f);
 
 String _asciiEscape(String value) {
   final output = StringBuffer();

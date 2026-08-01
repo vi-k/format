@@ -146,7 +146,7 @@ String _invokeFormatter(
   }
 }
 
-String _fallbackToString(Object value, FormatExceptionContext context) {
+String _fallbackToString(Object? value, FormatExceptionContext context) {
   try {
     return value.toString();
   } on FormattingException {

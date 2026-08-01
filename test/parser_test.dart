@@ -13,6 +13,12 @@ void main() {
     expect(debug, contains('nested=width'));
   });
 
+  test('preserves an unknown conversion for typed processing errors', () {
+    final debug = debugParseBraceTemplate('{value!q}');
+
+    expect(debug, contains('conversion=q'));
+  });
+
   test('parses escaped braces and Unicode names', () {
     final debug = debugParseBraceTemplate(
       '{{{\u0438\u043c\u044f.\u03b4[\u043a\u043b\u044e\u0447]}}}',
@@ -89,7 +95,8 @@ void main() {
     '{0:{{}',
     '{0:}}x}',
     '{user[missing}',
-    '{user!q}',
+    '{user!}',
+    '{user!qq}',
     '{user',
     'user}',
   ]) {

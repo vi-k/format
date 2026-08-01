@@ -139,13 +139,6 @@ final class _BraceParser {
         );
       }
       final candidate = template[_index];
-      if (candidate != 's' && candidate != 'r' && candidate != 'a') {
-        throw _invalid(
-          conversionOffset,
-          _index + 1,
-          'Conversion must be one of !s, !r, or !a.',
-        );
-      }
       conversion = candidate;
       _index++;
     }

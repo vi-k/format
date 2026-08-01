@@ -359,6 +359,14 @@ final class _ShortestDecimal {
   const _ShortestDecimal(this.digits, this.exponent);
 }
 
+String _pythonShortestDouble(double value) {
+  final binary = Binary64.fromDouble(value);
+  if (binary.isNaN) return 'nan';
+  if (binary.isInfinite) return binary.signBit ? '-inf' : 'inf';
+  final sign = binary.signBit ? '-' : '';
+  return sign + _formatShortest(value, false).body;
+}
+
 _ShortestDecimal _parseShortest(String source) {
   final exponentIndex = source.indexOf(RegExp('[eE]'));
   final mantissa =

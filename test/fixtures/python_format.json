@@ -181,6 +181,20 @@
       "expected": {
         "error": "ValueError"
       },
+      "id": "error-unknown-conversion",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 1
+        }
+      ],
+      "template": "{!q}"
+    },
+    {
+      "expected": {
+        "error": "ValueError"
+      },
       "id": "error-unmatched-brace",
       "named": {},
       "positional": [],
@@ -729,6 +743,76 @@
         }
       ],
       "template": "{:*^9s}"
+    },
+    {
+      "expected": {
+        "output": "'\\xe9\\U0001f600'"
+      },
+      "id": "text-conversion-a-nonascii",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "é😀"
+        }
+      ],
+      "template": "{!a}"
+    },
+    {
+      "expected": {
+        "output": "1e+20"
+      },
+      "id": "text-conversion-r-double-large",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1e+20
+        }
+      ],
+      "template": "{!r}"
+    },
+    {
+      "expected": {
+        "output": "1e-07"
+      },
+      "id": "text-conversion-r-double-small",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1e-07
+        }
+      ],
+      "template": "{!r}"
+    },
+    {
+      "expected": {
+        "output": "'\\u2028\\u200b\\xad'"
+      },
+      "id": "text-conversion-r-nonprintable",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": " ​­"
+        }
+      ],
+      "template": "{!r}"
+    },
+    {
+      "expected": {
+        "output": "'a\\'\\'\\'b\"c'"
+      },
+      "id": "text-conversion-r-quotes",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "a'''b\"c"
+        }
+      ],
+      "template": "{!r}"
     },
     {
       "expected": {

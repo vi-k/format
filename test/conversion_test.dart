@@ -43,23 +43,40 @@ final class _ThrowingRepresent extends Representation<_Token> {
   String represent(_Token value) => throw StateError('represent failed');
 }
 
+final class _ThrowingToString {
+  @override
+  String toString() => throw StateError('to string failed');
+}
+
+final class _FormattingToString {
+  static const error = InvalidSpecifierException(
+    FormatExceptionContext(specifier: 'inner'),
+    'inner failure',
+  );
+
+  @override
+  String toString() => throw error;
+}
+
 void main() {
   test('s conversion uses Dart toString and preserves null', () {
     expect(format('{!s}', 42), '42');
     expect(format('{!s}', null), 'null');
   });
 
-  test('r conversion quotes strings with the fewest quote escapes', () {
+  test('r conversion follows Python quote selection', () {
     expect(format('{!r}', "a\n'b"), r'''"a\n'b"''');
     expect(format('{!r}', 'a"b'), "'a\"b'");
+    expect(format('{!r}', 'a\'\'\'b"c'), "'a\\'\\'\\'b\"c'");
     expect(format('{!r}', 'plain'), "'plain'");
   });
 
-  test('r conversion escapes slash control characters and scalars', () {
+  test('r conversion escapes Python non-printable scalars exactly', () {
     expect(
       format('{!r}', '\\\t\n\r\u0000\u001f\u007f'),
       r"'\\\t\n\r\x00\x1f\x7f'",
     );
+    expect(format('{!r}', '\u2028\u200b\u00ad'), r"'\u2028\u200b\xad'");
   });
 
   test('r conversion represents built-in scalars deterministically', () {
@@ -70,6 +87,13 @@ void main() {
     expect(format('{!r}', double.infinity), 'inf');
     expect(format('{!r}', double.negativeInfinity), '-inf');
     expect(format('{!r}', -0.0), '-0.0');
+  });
+
+  test('r and a conversions use Python shortest double spelling', () {
+    expect(format('{!r}', 1e20), '1e+20');
+    expect(format('{!r}', 1e-7), '1e-07');
+    expect(format('{!a}', 1e20), '1e+20');
+    expect(format('{!a}', 1e-7), '1e-07');
   });
 
   test('r conversion represents positive and negative BigInt values', () {
@@ -87,7 +111,7 @@ void main() {
     );
   });
 
-  test('r conversion preserves container iteration order', () {
+  test('r conversion preserves built-in container iteration order', () {
     expect(format('{!r}', [true, null, 'x']), "[true, null, 'x']");
     expect(
       format('{!r}', <String, Object?>{'second': 2, 'first': 1}),
@@ -95,7 +119,26 @@ void main() {
     );
     expect(format('{!r}', <Object?>{'x', 2}), "{'x', 2}");
     expect(format('{!r}', <Object?>{}), 'set()');
-    expect(format('{!r}', _OrderedValues([1, 'x'])), "[1, 'x']");
+  });
+
+  test('r conversion dispatches custom Iterable values as extensions', () {
+    final value = _OrderedValues([1, 'x']);
+    final configured = Format(
+      representations: [_OrderedValuesRepresentation()],
+    );
+
+    expect(
+      () => format('{!r}', value),
+      throwsA(isA<UnsupportedConversionException>()),
+    );
+    expect(configured.format('{!r}', value), '<ordered>');
+  });
+
+  test('r conversion does not iterate unsupported recursive Iterables', () {
+    expect(
+      () => format('{!r}', _RecursiveIterable()),
+      throwsA(isA<UnsupportedConversionException>()),
+    );
   });
 
   test('r conversion marks recursive list map set and mutual containers', () {
@@ -119,6 +162,48 @@ void main() {
     expect(format('{!a}', 'Привет'), r"'\u041f\u0440\u0438\u0432\u0435\u0442'");
     expect(format('{!a}', 'é😀'), r"'\xe9\U0001f600'");
   });
+
+  test('s conversion wraps toString failures with full field context', () {
+    try {
+      formatWith('prefix {item!s}', named: {'item': _ThrowingToString()});
+      fail('expected extension failure');
+    } on FormatExtensionException catch (error) {
+      expect(error.extension, '_ThrowingToString');
+      expect(error.error, isA<StateError>());
+      expect(error.stackTrace, isNot(StackTrace.empty));
+      expect(error.context.template, 'prefix {item!s}');
+      expect(error.context.offset, 7);
+      expect(error.context.fragment, '{item!s}');
+      expect(error.context.conversion, 's');
+    }
+  });
+
+  test('s conversion does not double-wrap FormattingException', () {
+    expect(
+      () => format('{!s}', _FormattingToString()),
+      throwsA(same(_FormattingToString.error)),
+    );
+  });
+
+  test('unknown conversion is a typed unsupported conversion error', () {
+    expect(
+      () => format('{!q}', 1),
+      throwsA(
+        isA<UnsupportedConversionException>()
+            .having((error) => error.value, 'value', 1)
+            .having((error) => error.context.template, 'template', '{!q}')
+            .having((error) => error.context.offset, 'offset', 0)
+            .having((error) => error.context.fragment, 'fragment', '{!q}')
+            .having((error) => error.context.conversion, 'conversion', 'q'),
+      ),
+    );
+  });
+
+  for (final template in ['{!}', '{!qq}']) {
+    test('missing or malformed conversion remains invalid: $template', () {
+      expect(() => format(template, 1), throwsA(isA<InvalidFormatException>()));
+    });
+  }
 
   test('r conversion uses exactly one matching custom representation', () {
     final configured = Format(representations: [_TokenRepresentation()]);
@@ -207,6 +292,20 @@ final class _OrderedValues extends Iterable<Object?> {
 
   @override
   Iterator<Object?> get iterator => values.iterator;
+}
+
+final class _RecursiveIterable extends Iterable<Object?> {
+  @override
+  Iterator<Object?> get iterator => throw StateError('must not iterate');
+}
+
+final class _OrderedValuesRepresentation
+    extends Representation<_OrderedValues> {
+  @override
+  bool canRepresent(Object? value) => value is _OrderedValues;
+
+  @override
+  String represent(_OrderedValues value) => '<ordered>';
 }
 
 final class _MapRepresentation extends Representation<Map<Object?, Object?>> {

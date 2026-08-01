@@ -67,6 +67,7 @@ def main() -> None:
     start = []
     continue_ = []
     decimals = []
+    printable = []
     for scalar in range(MAX_SCALAR + 1):
         character = chr(scalar)
         if character.isidentifier():
@@ -76,6 +77,8 @@ def main() -> None:
         decimal = unicodedata.decimal(character, None)
         if decimal is not None:
             decimals.append((scalar, decimal))
+        if character.isprintable():
+            printable.append(scalar)
 
     header = (
         "// GENERATED CODE - DO NOT MODIFY BY HAND.\n"
@@ -90,6 +93,9 @@ bool isPythonIdentifierStart(int scalar) =>
 
 bool isPythonIdentifierContinue(int scalar) =>
     _containsPythonRange(_pythonIdentifierContinueRanges, scalar);
+
+bool isPythonPrintable(int scalar) =>
+    _containsPythonRange(_pythonPrintableRanges, scalar);
 
 int? pythonDecimalDigitValue(int scalar) {
   var lower = 0;
@@ -135,6 +141,7 @@ bool _containsPythonRange(List<int> ranges, int scalar) {
             "// dart format off",
             render_ranges("_pythonIdentifierStartRanges", scalar_ranges(start)),
             render_ranges("_pythonIdentifierContinueRanges", scalar_ranges(continue_)),
+            render_ranges("_pythonPrintableRanges", scalar_ranges(printable)),
             render_decimal_ranges(decimal_ranges(decimals)),
             "// dart format on",
             helpers.rstrip(),

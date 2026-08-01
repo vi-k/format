@@ -287,6 +287,7 @@ final class _ThrowsPythonCategory extends Matcher {
         'ValueError' =>
           error is InvalidFormatException ||
               error is InvalidSpecifierException ||
+              error is UnsupportedConversionException ||
               error is UnsupportedFormatValueException,
         'IndexError' =>
           error is MissingFormatArgumentException && error.key is int ||
