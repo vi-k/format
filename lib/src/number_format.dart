@@ -28,7 +28,7 @@ String formatBraceInteger(
       'This integer presentation type is not supported yet.',
     ),
   };
-  var digits = formatMagnitude(magnitude, radix, uppercase: type == 'X');
+  final digits = formatMagnitude(magnitude, radix, uppercase: type == 'X');
   final prefix = _integerPrefix(type, spec.alternate);
 
   if (isLocaleDecimal) {
@@ -40,9 +40,7 @@ String formatBraceInteger(
       grouping = List<int>.from(_readLocale(context, () => locale.grouping));
       _validateGrouping(grouping, context);
       separator = _readLocale(context, () => locale.groupSeparator);
-      digits = groupDigits(digits, separator: separator!, grouping: grouping);
     }
-    digits = _localizeDigits(digits, separator, locale, context);
     final sign = _localizedSign(negative, spec.sign, locale, context);
     return applyNumericWidth(
       sign: sign,
@@ -50,6 +48,16 @@ String formatBraceInteger(
       digits: digits,
       spec: spec,
       textUnit: settings.textUnit,
+      formatDigits: (asciiDigits) {
+        final grouped = grouping == null
+            ? asciiDigits
+            : groupDigits(
+                asciiDigits,
+                separator: separator!,
+                grouping: grouping,
+              );
+        return _localizeDigits(grouped, separator, locale, context);
+      },
     );
   }
 
@@ -68,7 +76,7 @@ String formatBraceInteger(
     digits: digits,
     spec: spec,
     textUnit: settings.textUnit,
-    group: grouping,
+    formatDigits: grouping,
   );
 }
 
@@ -105,24 +113,24 @@ String applyNumericWidth({
   // ignore: library_private_types_in_public_api
   required _FormatSpec spec,
   required TextUnit textUnit,
-  String Function(String digits)? group,
+  String Function(String digits)? formatDigits,
 }) {
-  final groupedDigits = group?.call(digits) ?? digits;
-  final value = sign + prefix + groupedDigits;
+  final displayedDigits = formatDigits?.call(digits) ?? digits;
+  final value = sign + prefix + displayedDigits;
   final width = spec.width;
   if (width == null) return value;
 
   final fill = spec.fill ?? (spec.zero ? '0' : ' ');
   final align = spec.align ?? (spec.zero ? '=' : '>');
-  if (align == '=' && fill == '0' && group != null) {
+  if (align == '=' && fill == '0' && formatDigits != null) {
     final padding = width - textUnit.length(value);
     if (padding <= 0) return value;
-    return sign + prefix + group(fill * padding + digits);
+    return sign + prefix + formatDigits(fill * padding + digits);
   }
 
   final padding = width - textUnit.length(value);
   if (padding <= 0) return value;
-  if (align == '=') return sign + prefix + fill * padding + groupedDigits;
+  if (align == '=') return sign + prefix + fill * padding + displayedDigits;
 
   switch (align) {
     case '<':

@@ -135,6 +135,17 @@ void main() {
     expect(localized.format('{: n}', -42), '−٤٢');
   });
 
+  test('regroups and localizes n sign-aware zero padding', () {
+    final localized = Format(numberLocale: _LocalizedNumberLocale());
+    final positive = localized.format('{:08n}', 1234);
+    final negative = localized.format('{:08n}', -1234);
+
+    expect(positive, '٠٠.٠١.٢٣٤');
+    expect(negative, '−٠.٠١.٢٣٤');
+    expect(positive.runes.length, 9);
+    expect(negative.runes.length, 9);
+  });
+
   test('wraps locale failures with the original error and format context', () {
     final configured = Format(numberLocale: _ThrowingNumberLocale());
 
