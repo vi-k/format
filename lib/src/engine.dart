@@ -6,6 +6,7 @@ import 'text_unit.dart';
 part 'api.dart';
 part 'format.dart';
 part 'brace_processor.dart';
+part 'representation.dart';
 part 'brace_ast.dart';
 part 'field_resolver.dart';
 part 'python_identifier.dart';

@@ -25,7 +25,21 @@ final class _BraceProcessor {
       if (node case _LiteralNode(:final text)) {
         output.write(text);
       } else {
-        output.write(resolver.resolveField(node as _FieldNode));
+        final field = node as _FieldNode;
+        final value = resolver.resolveField(field);
+        output.write(
+          applyConversion(
+            field.conversion,
+            value,
+            engine,
+            FormatExceptionContext(
+              template: template,
+              offset: field.offset,
+              fragment: field.fragment,
+              conversion: field.conversion,
+            ),
+          ),
+        );
       }
     }
     return output.toString();
