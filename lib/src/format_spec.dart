@@ -96,28 +96,39 @@ _FormatSpec parseFormatSpec(
   }
 
   if (index < units.length) {
-    final candidate = take();
-    if (_builtInTypes.contains(candidate)) {
-      type = candidate;
+    if (at('%')) {
+      type = take();
       if (index != units.length) {
         throw _invalidSpecifier(
           context,
           'A built-in type must terminate the format specification.',
         );
       }
-    } else if (_isCustomNameStart(candidate)) {
-      final name = StringBuffer(candidate);
-      while (index < units.length && _isCustomNameContinue(units[index])) {
+    } else if (_isCustomNameStart(units[index])) {
+      final name = StringBuffer();
+      do {
         name.write(take());
-      }
-      customName = name.toString();
-      if (index < units.length) {
-        if (!at(':')) {
-          throw _invalidSpecifier(context, 'Invalid custom format name.');
+      } while (index < units.length && _isCustomNameContinue(units[index]));
+
+      final parsedName = name.toString();
+      if (_builtInTypes.contains(parsedName)) {
+        type = parsedName;
+        if (index != units.length) {
+          throw _invalidSpecifier(
+            context,
+            'A built-in type must terminate the format specification.',
+          );
         }
-        take();
-        payload = units.skip(index).join();
-        index = units.length;
+      } else {
+        customName = parsedName;
+        if (index < units.length) {
+          if (!at(':')) {
+            throw _invalidSpecifier(context, 'Invalid custom format name.');
+          }
+          take();
+          payload = units.skip(index).join();
+          index = units.length;
+        }
       }
     } else {
       throw _invalidSpecifier(context, 'Invalid format type.');

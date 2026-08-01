@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:format/format.dart';
 import 'package:test/test.dart';
 
@@ -28,6 +30,20 @@ final class EmptyRepresentation extends Representation<Object?> {
 
   @override
   String represent(Object? value) => '';
+}
+
+final class SingleUseFormatters extends IterableBase<Formatter<dynamic>> {
+  final Formatter<dynamic> formatter;
+  var _hasIterated = false;
+
+  SingleUseFormatters(this.formatter);
+
+  @override
+  Iterator<Formatter<dynamic>> get iterator {
+    if (_hasIterated) return const <Formatter<dynamic>>[].iterator;
+    _hasIterated = true;
+    return <Formatter<dynamic>>[formatter].iterator;
+  }
 }
 
 void main() {
@@ -85,5 +101,12 @@ void main() {
       () => Format(formatters: [formatter, formatter]),
       throwsA(isA<FormatConfigurationException>()),
     );
+  });
+
+  test('Format derives its immutable formatter index from its copied list', () {
+    final formatter = NamedFormatter('singleUse');
+    final configured = Format(formatters: SingleUseFormatters(formatter));
+
+    expect(configured.format('{:singleUse}', 42), 'singleUse:42');
   });
 }

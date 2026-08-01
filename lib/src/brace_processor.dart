@@ -27,43 +27,47 @@ final class _BraceProcessor {
       } else {
         final field = node as _FieldNode;
         final value = resolver.resolveField(field);
-        final specification = _literalSpecification(field);
-        final context = FormatExceptionContext(
-          template: template,
-          offset: field.offset,
-          fragment: field.fragment,
-          specifier: specification,
-          conversion: field.conversion,
-        );
-        output.write(
-          formatValue(
-            applyConversion(field.conversion, value, engine, context),
-            specification,
-            engine,
-            context,
-          ),
-        );
+        output.write(_formatField(resolver, field, value));
       }
     }
     return output.toString();
   }
 
-  String _literalSpecification(_FieldNode field) {
+  String _formatField(
+    _FieldResolver resolver,
+    _FieldNode field,
+    Object? value,
+  ) {
+    final specification = _resolveSpecification(resolver, field);
+    final context = _context(field, specification);
+    return formatValue(
+      applyConversion(field.conversion, value, engine, context),
+      specification,
+      engine,
+      context,
+    );
+  }
+
+  String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {
     final output = StringBuffer();
     for (final node in field.specification) {
       if (node case _LiteralNode(:final text)) {
         output.write(text);
       } else {
-        throw InvalidSpecifierException(
-          FormatExceptionContext(
-            template: template,
-            offset: field.offset,
-            fragment: field.fragment,
-          ),
-          'Nested format specifications are not supported yet.',
-        );
+        final nested = node as _FieldNode;
+        final value = resolver.resolveField(nested);
+        output.write(_formatField(resolver, nested, value));
       }
     }
     return output.toString();
   }
+
+  FormatExceptionContext _context(_FieldNode field, String specification) =>
+      FormatExceptionContext(
+        template: template,
+        offset: field.offset,
+        fragment: field.fragment,
+        specifier: specification,
+        conversion: field.conversion,
+      );
 }

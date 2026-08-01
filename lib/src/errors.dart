@@ -116,23 +116,3 @@ final class FormatExtensionException extends FormattingException {
     this.stackTrace,
   ) : super('A formatting extension failed.', context);
 }
-
-final class FormatterAlreadyRegisteredException extends FormattingException {
-  final String specifier;
-
-  const FormatterAlreadyRegisteredException(this.specifier)
-    : super(
-        'A formatter is already registered for this specifier.',
-        const FormatExceptionContext(),
-      );
-}
-
-final class BuiltInSpecifierException extends FormattingException {
-  final String specifier;
-
-  const BuiltInSpecifierException(this.specifier)
-    : super(
-        'Built-in formatter specifiers cannot be changed.',
-        const FormatExceptionContext(),
-      );
-}

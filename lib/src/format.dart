@@ -23,6 +23,7 @@ final class Format {
   };
 
   final List<Formatter<dynamic>> formatters;
+  late final Map<String, Formatter<dynamic>> _formattersBySpecifier;
   final List<AttributeLookup<dynamic>> lookups;
   final List<Representation<dynamic>> representations;
   final NumberLocale numberLocale;
@@ -38,7 +39,13 @@ final class Format {
        lookups = List.unmodifiable(lookups),
        representations = List.unmodifiable(representations) {
     _validateConfiguration();
+    _formattersBySpecifier = Map.unmodifiable({
+      for (final formatter in this.formatters) formatter.specifier: formatter,
+    });
   }
+
+  Formatter<dynamic>? formatterFor(String specifier) =>
+      _formattersBySpecifier[specifier];
 
   String format(
     String template, [

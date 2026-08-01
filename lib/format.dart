@@ -2,12 +2,10 @@ export 'src/engine.dart' show Format, defaultFormat, format, formatWith;
 export 'src/errors.dart'
     show
         AmbiguousFormatterException,
-        BuiltInSpecifierException,
         FormatConfigurationException,
         FormatExceptionContext,
         FormatExtensionException,
         FormatLookupException,
-        FormatterAlreadyRegisteredException,
         FormattingException,
         InvalidFormatException,
         InvalidSpecifierException,
