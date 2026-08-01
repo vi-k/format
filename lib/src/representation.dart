@@ -10,7 +10,7 @@ Object? applyConversion(
     case null:
       return value;
     case 's':
-      return value?.toString();
+      return value.toString();
     case 'r':
       return _RepresentationWriter(engine, context).represent(value);
     case 'a':
