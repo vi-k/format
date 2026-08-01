@@ -4,13 +4,8 @@ import 'errors.dart';
 import 'processor.dart';
 import 'utils/utils.dart';
 
-abstract base class Formatter<T> {
-  const Formatter();
-
-  String get specifier;
-  bool canFormat(Object? value);
-  String format(T value, FormatOptions options);
-}
+FormatExceptionContext _formatContext(Options options) =>
+    FormatExceptionContext(fragment: options.all, specifier: options.specifier);
 
 abstract base class BuiltInFormatter {
   String get name;
@@ -249,44 +244,40 @@ abstract base class NumberFormatter<T> extends BuiltInFormatter {
     if (precision != null) {
       if (!precisionSupported) {
         throw InvalidFormatException(
-          fragment: options.all ?? '',
-          reason:
-              'Precision is not supported by specifier '
-              '${options.specifier}.',
+          _formatContext(options),
+          'Precision is not supported by specifier ${options.specifier}.',
         );
       }
 
       if (precision < minPrecision) {
         throw InvalidFormatException(
-          fragment: options.all ?? '',
-          reason: 'Precision must be >= $minPrecision. Passed $precision.',
+          _formatContext(options),
+          'Precision must be >= $minPrecision. Passed $precision.',
         );
       }
 
       final maxPrecision = this.maxPrecision;
       if (maxPrecision != null && precision > maxPrecision) {
         throw InvalidFormatException(
-          fragment: options.all ?? '',
-          reason: 'Precision must be <= $maxPrecision. Passed $precision.',
+          _formatContext(options),
+          'Precision must be <= $maxPrecision. Passed $precision.',
         );
       }
     }
 
     if (options.alt && !altSupported) {
       throw InvalidFormatException(
-        fragment: options.all ?? '',
-        reason:
-            'Alternate form (#) is not supported by specifier '
-            '${options.specifier}.',
+        _formatContext(options),
+        'Alternate form (#) is not supported by specifier '
+        '${options.specifier}.',
       );
     }
 
     if (options.groupOption == ',' && !standartGroupOptionSupported) {
       throw InvalidFormatException(
-        fragment: options.all ?? '',
-        reason:
-            "Group option ',' is not supported by specifier "
-            '${options.specifier}.',
+        _formatContext(options),
+        "Group option ',' is not supported by specifier "
+        '${options.specifier}.',
       );
     }
 

@@ -33,7 +33,10 @@ final class Format {
   void _registerFormatter<T>(Formatter<T> formatter) {
     final specifier = formatter.specifier;
     if (!_specifierPattern.hasMatch(specifier)) {
-      throw InvalidSpecifierException(specifier);
+      throw InvalidSpecifierException(
+        FormatExceptionContext(specifier: specifier),
+        'A formatter specifier must be an ASCII identifier.',
+      );
     }
     if (_builtInSpecifiers.contains(specifier)) {
       throw BuiltInSpecifierException(specifier);
@@ -69,7 +72,11 @@ final class Format {
       }
     }
     if (matches != null) {
-      throw AmbiguousFormatterException(value, List.unmodifiable(matches));
+      throw AmbiguousFormatterException(
+        const FormatExceptionContext(),
+        value,
+        matches,
+      );
     }
     return selected;
   }

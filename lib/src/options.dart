@@ -1,23 +1,5 @@
 part of 'processor.dart';
 
-final class FormatOptions {
-  final String? sign;
-  final bool alternate;
-  final bool zero;
-  final String? grouping;
-  final int? precision;
-  final String? template;
-
-  const FormatOptions({
-    this.sign,
-    this.alternate = false,
-    this.zero = false,
-    this.grouping,
-    this.precision,
-    this.template,
-  });
-}
-
 final class Options {
   String? all;
   String? fill;

@@ -5,6 +5,7 @@ import 'package:characters/characters.dart';
 import 'package:intl/intl.dart';
 
 import 'errors.dart';
+import 'extensions.dart';
 import 'formatter.dart';
 
 part 'options.dart';
@@ -71,11 +72,14 @@ final class _Processor {
       if (codeUnit == 0x7b || codeUnit == 0x7d) {
         final fragmentEnd = template.indexOf('}', index + 1);
         throw InvalidFormatException(
-          fragment: template.substring(
-            index,
-            fragmentEnd == -1 ? end : fragmentEnd + 1,
+          FormatExceptionContext(
+            template: template,
+            fragment: template.substring(
+              index,
+              fragmentEnd == -1 ? end : fragmentEnd + 1,
+            ),
           ),
-          reason: 'Expected an escaped brace or a valid placeholder.',
+          'Expected an escaped brace or a valid placeholder.',
         );
       }
     }
@@ -184,7 +188,10 @@ final class _Processor {
         default:
           final formatter = settings._formatterFor(specifier);
           if (formatter == null) {
-            throw InvalidSpecifierException(specifier);
+            throw InvalidSpecifierException(
+              FormatExceptionContext(template: template, specifier: specifier),
+              'No formatter is registered for this specifier.',
+            );
           }
           result = _formatCustom(formatter, value, options);
       }
@@ -226,7 +233,7 @@ final class _Processor {
         return result;
       }
     }
-    throw UnsupportedFormatValueException(options.specifier!, value);
+    throw UnsupportedFormatValueException(_context(options), value);
   }
 
   String _formatCustom(
@@ -235,7 +242,10 @@ final class _Processor {
     Options options,
   ) {
     if (!formatter.canFormat(value)) {
-      throw UnsupportedFormatValueException(formatter.specifier, value);
+      throw UnsupportedFormatValueException(
+        _context(options, specifier: formatter.specifier),
+        value,
+      );
     }
     return formatter.format(
       value,
@@ -245,10 +255,21 @@ final class _Processor {
         zero: options.zero,
         grouping: options.groupOption,
         precision: options.precision,
-        template: options.template,
+        payload: options.template,
       ),
     );
   }
+
+  FormatExceptionContext _context(
+    Options options, {
+    String? specifier,
+    int? argumentIndex,
+  }) => FormatExceptionContext(
+    template: template,
+    fragment: options.all,
+    specifier: specifier ?? options.specifier,
+    argumentIndex: argumentIndex,
+  );
 
   /// Берёт значение в строке [str] внутри кавычек [left] и [right].
   ///
@@ -291,15 +312,15 @@ final class _Processor {
 
     if (positionalArgs == null) {
       throw InvalidFormatException(
-        fragment: options.all ?? '',
-        reason: 'Positional values are missing.',
+        _context(options),
+        'Positional values are missing.',
       );
     }
 
     if (index >= positionalArgs.length) {
       throw InvalidFormatException(
-        fragment: options.all ?? '',
-        reason: 'Positional index $index is out of range.',
+        _context(options, argumentIndex: index),
+        'Positional index $index is out of range.',
       );
     }
 
@@ -336,8 +357,8 @@ final class _Processor {
         final namedArgs = this.namedArgs;
         if (namedArgs == null) {
           throw InvalidFormatException(
-            fragment: options.all ?? '',
-            reason: 'Named values are missing.',
+            _context(options),
+            'Named values are missing.',
           );
         }
 
@@ -345,8 +366,8 @@ final class _Processor {
 
         if (!namedArgs.containsKey(id)) {
           throw InvalidFormatException(
-            fragment: options.all ?? '',
-            reason: 'Named value "$id" is missing.',
+            _context(options),
+            'Named value "$id" is missing.',
           );
         }
 
@@ -363,8 +384,8 @@ final class _Processor {
     final result = int.tryParse(value);
     if (result == null) {
       throw InvalidFormatException(
-        fragment: fragment,
-        reason: 'Integer literal is outside the supported range.',
+        FormatExceptionContext(template: template, fragment: fragment),
+        'Integer literal is outside the supported range.',
       );
     }
     return result;
@@ -379,7 +400,7 @@ final class _Processor {
   }) {
     // Проверки.
     if (dyn is! T) {
-      throw UnsupportedFormatValueException(options.specifier!, dyn);
+      throw UnsupportedFormatValueException(_context(options), dyn);
     }
 
     final num value = dyn;
@@ -401,14 +422,14 @@ final class _Processor {
     if (precision != null) {
       if (precision < 1) {
         throw InvalidFormatException(
-          fragment: options.all ?? '',
-          reason: 'Precision must be >= 1. Passed $precision.',
+          _context(options),
+          'Precision must be >= 1. Passed $precision.',
         );
       }
       if (precision > 18) {
         throw InvalidFormatException(
-          fragment: options.all ?? '',
-          reason: 'Precision must be <= 18. Passed $precision.',
+          _context(options),
+          'Precision must be <= 18. Passed $precision.',
         );
       }
     }
@@ -419,10 +440,9 @@ final class _Processor {
       if (value is int) {
         if (precision != null) {
           throw InvalidFormatException(
-            fragment: options.all ?? '',
-            reason:
-                'Precision is not supported for integer values with '
-                'specifier ${options.specifier}.',
+            _context(options),
+            'Precision is not supported for integer values with '
+            'specifier ${options.specifier}.',
           );
         }
 
