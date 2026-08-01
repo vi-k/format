@@ -9,6 +9,7 @@ String formatValue(
   final spec = parseFormatSpec(specification, engine.textUnit, context);
 
   if (spec.customName case final name?) {
+    _validateCustomLayout(spec, context);
     return _formatExplicitCustom(value, name, spec, engine, context);
   }
   if (spec.type == 'c') {
@@ -95,12 +96,6 @@ String _formatCustom(
   Format engine,
   FormatExceptionContext context,
 ) {
-  if (spec.align == '=') {
-    throw _invalidSpecifier(
-      context,
-      'Custom formatter output cannot use numeric alignment.',
-    );
-  }
   final output = _invokeFormatter(formatter, value, spec, context);
   return applyFieldWidth(
     output,
@@ -109,6 +104,15 @@ String _formatCustom(
     align: spec.align ?? '<',
     textUnit: engine.textUnit,
   );
+}
+
+void _validateCustomLayout(_FormatSpec spec, FormatExceptionContext context) {
+  if (spec.align == '=') {
+    throw _invalidSpecifier(
+      context,
+      'Custom formatter output cannot use numeric alignment.',
+    );
+  }
 }
 
 String _invokeFormatter(

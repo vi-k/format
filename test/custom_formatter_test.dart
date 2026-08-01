@@ -262,6 +262,15 @@ void main() {
     },
   );
 
+  test('custom numeric alignment is rejected before calling canFormat', () {
+    final engine = Format(formatters: [_ThrowingCanFormat()]);
+
+    expect(
+      () => engine.format('{:=4throwsCan}', const _Value('x')),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
   test('custom formatter preserves typed formatting errors', () {
     final engine = Format(formatters: [_FormattingErrorFormatter()]);
 
