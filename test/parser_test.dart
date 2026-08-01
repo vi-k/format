@@ -50,6 +50,21 @@ void main() {
     expect(debug, contains('nested=1'));
   });
 
+  test('parses escaped braces in a specification', () {
+    final debug = debugParseBraceTemplate('{0:{{}}}');
+
+    expect(debug, contains('root=0'));
+    expect(debug, contains('literal={}'));
+  });
+
+  test('parses escaped braces beside a nested specification', () {
+    final debug = debugParseBraceTemplate('{0:{{{width}}}}');
+
+    expect(debug, contains('literal={'));
+    expect(debug, contains('nested=width'));
+    expect(debug, contains('literal=}'));
+  });
+
   test('reports each parser failure with template offset and fragment', () {
     try {
       debugParseBraceTemplate('{ name }');
@@ -72,6 +87,7 @@ void main() {
     '{user..name}',
     '{0[]}',
     '{0:{{}',
+    '{0:}}x}',
     '{user[missing}',
     '{user!q}',
     '{user',

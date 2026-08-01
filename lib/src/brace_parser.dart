@@ -22,6 +22,7 @@ final class _BraceParser {
 
   List<_BraceNode> _parseNodes({required int depth}) {
     final nodes = <_BraceNode>[];
+    final escapedOpeningOffsets = <int>[];
     var literalStart = _index;
     final literal = StringBuffer();
 
@@ -42,13 +43,7 @@ final class _BraceParser {
       final codeUnit = template.codeUnitAt(_index);
       if (codeUnit == 0x7b) {
         if (_hasNextCodeUnit(0x7b)) {
-          if (depth > 0) {
-            throw _invalid(
-              _index,
-              _index + 2,
-              'Opening braces in format specifications must start a field.',
-            );
-          }
+          if (depth > 0) escapedOpeningOffsets.add(_index);
           literal.write('{');
           _index += 2;
           continue;
@@ -65,6 +60,19 @@ final class _BraceParser {
         literalStart = _index;
       } else if (codeUnit == 0x7d) {
         if (depth > 0) {
+          if (_hasNextCodeUnit(0x7d) && escapedOpeningOffsets.isNotEmpty) {
+            escapedOpeningOffsets.removeLast();
+            literal.write('}');
+            _index += 2;
+            continue;
+          }
+          if (escapedOpeningOffsets.isNotEmpty) {
+            throw _invalid(
+              escapedOpeningOffsets.last,
+              _index + 1,
+              'Escaped opening braces in a specification require }}.',
+            );
+          }
           flushLiteral();
           return nodes;
         }
@@ -85,6 +93,13 @@ final class _BraceParser {
     }
 
     if (depth > 0) {
+      if (escapedOpeningOffsets.isNotEmpty) {
+        throw _invalid(
+          escapedOpeningOffsets.last,
+          template.length,
+          'Escaped opening braces in a specification require }}.',
+        );
+      }
       throw _invalid(
         template.length,
         template.length,
