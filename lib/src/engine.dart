@@ -7,5 +7,6 @@ part 'api.dart';
 part 'format.dart';
 part 'brace_processor.dart';
 part 'brace_ast.dart';
+part 'field_resolver.dart';
 part 'python_identifier.dart';
 part 'brace_parser.dart';

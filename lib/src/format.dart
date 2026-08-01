@@ -77,7 +77,12 @@ final class Format {
     List<Object?> positional = const [],
     Map<String, Object?> named = const {},
   }) =>
-      _BraceProcessor(template, positional: positional, named: named).format();
+      _BraceProcessor(
+        template,
+        positional: positional,
+        named: named,
+        engine: this,
+      ).format();
 
   void _validateConfiguration() {
     final names = <String>{};

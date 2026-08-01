@@ -4,62 +4,30 @@ final class _BraceProcessor {
   final String template;
   final List<Object?> positional;
   final Map<String, Object?> named;
+  final Format engine;
 
   _BraceProcessor(
     this.template, {
     required this.positional,
     required this.named,
+    required this.engine,
   });
 
   String format() {
+    final resolver = _FieldResolver(
+      template: template,
+      positional: positional,
+      named: named,
+      engine: engine,
+    );
     final output = StringBuffer();
-    var automaticIndex = 0;
-    var index = 0;
-
-    while (index < template.length) {
-      final character = template[index];
-      if (character == '{') {
-        final closeIndex = template.indexOf('}', index + 1);
-        if (closeIndex == -1) throw _invalidFormat(index);
-
-        final field = template.substring(index + 1, closeIndex);
-        final value = _valueFor(field, automaticIndex);
-        if (field.isEmpty) automaticIndex++;
-        output.write(value);
-        index = closeIndex + 1;
+    for (final node in _parseBraceTemplate(template).nodes) {
+      if (node case _LiteralNode(:final text)) {
+        output.write(text);
       } else {
-        output.write(character);
-        index++;
+        output.write(resolver.resolveField(node as _FieldNode));
       }
     }
-
     return output.toString();
   }
-
-  Object? _valueFor(String field, int automaticIndex) {
-    if (field.isEmpty) return _positionalValue(automaticIndex);
-
-    final positionalIndex = int.tryParse(field);
-    if (positionalIndex != null) return _positionalValue(positionalIndex);
-
-    if (!named.containsKey(field)) {
-      throw MissingFormatArgumentException(_context(index: null), field);
-    }
-    return named[field];
-  }
-
-  Object? _positionalValue(int index) {
-    if (index >= positional.length) {
-      throw MissingFormatArgumentException(_context(index: index), index);
-    }
-    return positional[index];
-  }
-
-  InvalidFormatException _invalidFormat(int offset) => InvalidFormatException(
-    _context(index: offset),
-    'Expected a closing brace for a simple placeholder.',
-  );
-
-  FormatExceptionContext _context({required int? index}) =>
-      FormatExceptionContext(template: template, offset: index);
 }
