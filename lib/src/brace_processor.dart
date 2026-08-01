@@ -38,14 +38,15 @@ final class _BraceProcessor {
     _FieldNode field,
     Object? value,
   ) {
+    final converted = applyConversion(
+      field.conversion,
+      value,
+      engine,
+      _context(field, ''),
+    );
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);
-    return formatValue(
-      applyConversion(field.conversion, value, engine, context),
-      specification,
-      engine,
-      context,
-    );
+    return formatValue(converted, specification, engine, context);
   }
 
   String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {

@@ -3,6 +3,8 @@
 
 part of 'engine.dart';
 
+// dart format off
+
 const List<int> _pythonIdentifierStartRanges = <int>[
   0x41, 0x5a, 0x5f, 0x5f, 0x61, 0x7a, 0xaa, 0xaa,
   0xb5, 0xb5, 0xba, 0xba, 0xc0, 0xd6, 0xd8, 0xf6,
@@ -409,6 +411,8 @@ const List<int> _pythonDecimalRanges = <int>[
   0x1e4f0, 0x1e4f9, 0, 0x1e5f1, 0x1e5fa, 0, 0x1e950, 0x1e959, 0,
   0x1fbf0, 0x1fbf9, 0,
 ];
+
+// dart format on
 
 bool isPythonIdentifierStart(int scalar) =>
     _containsPythonRange(_pythonIdentifierStartRanges, scalar);

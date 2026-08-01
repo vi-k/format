@@ -1,0 +1,77 @@
+{
+  "divergences": [
+    {
+      "dart": {"result": "true false null"},
+      "id": "dart-bool-null-tokens",
+      "input": {"template": "{} {} {}", "values": [true, false, null]},
+      "python": {"result": "True False None"},
+      "readme_anchor": "#dart-value-tokens",
+      "reason": "Dart использует собственные стабильные токены bool и null."
+    },
+    {
+      "dart": {"result": "порядок итерации входного Dart-контейнера"},
+      "id": "dart-container-representation-order",
+      "input": {"template": "{!r}", "value": "map or set"},
+      "python": {"result": "порядок представления Python-контейнера"},
+      "readme_anchor": "#container-representation-order",
+      "reason": "Representation контейнеров сохраняет порядок итерации соответствующей Dart-коллекции."
+    },
+    {
+      "dart": {"result": "вывод Formatter с переданным payload"},
+      "id": "dart-custom-formatter-payload",
+      "input": {"template": "{:json:pretty}", "value": 42},
+      "python": {"error": "ValueError"},
+      "readme_anchor": "#custom-formatters",
+      "reason": "Синтаксис name:payload является явным расширением пользовательских formatter-ов."
+    },
+    {
+      "dart": {"result": "результат зарегистрированного AttributeLookup"},
+      "id": "dart-custom-lookup-hooks",
+      "input": {"template": "{value.name}", "value": "custom object"},
+      "python": {"result": "результат getattr(value, 'name')"},
+      "readme_anchor": "#attribute-lookup-extensions",
+      "reason": "Dart не использует reflection и разрешает атрибуты только через явные lookup hooks."
+    },
+    {
+      "dart": {"result": "locale-aware вывод подключённого format_intl"},
+      "id": "dart-format-intl-locale-extensions",
+      "input": {"template": "{:n}", "value": 1234},
+      "python": {"result": "вывод активной Python locale"},
+      "readme_anchor": "#format-intl",
+      "reason": "format_intl предоставляет дополнительные locale-возможности вне нормативного C locale core."
+    },
+    {
+      "dart": {"result": "значение строкового ключа name"},
+      "id": "dart-map-dot-key",
+      "input": {"template": "{value.name}", "value": {"name": "Ada"}},
+      "python": {"error": "AttributeError"},
+      "readme_anchor": "#map-attribute-shortcut",
+      "reason": "Для Map запись .name является сокращением строкового ключа."
+    },
+    {
+      "dart": {"result": "библиотечное детерминированное представление"},
+      "id": "dart-repr-ascii-policy",
+      "input": {"template": "{0!r} {0!a}", "value": "строка"},
+      "python": {"result": "CPython repr/ascii"},
+      "readme_anchor": "#representation-conversions",
+      "reason": "!r и !a реализованы библиотекой и не вызывают Python object protocol."
+    },
+    {
+      "dart": {"error": "InvalidSpecifierException"},
+      "id": "dart-strict-text-zero-padding",
+      "input": {"template": "{:05s}", "value": "x"},
+      "python": {"result": "x0000"},
+      "readme_anchor": "#text-formatting",
+      "reason": "Core-спецификация запрещает числовой zero-padding для строк."
+    },
+    {
+      "dart": {"result": "precision считает явно выбранные grapheme clusters"},
+      "id": "dart-text-grapheme-mode",
+      "input": {"template": "{:.1s}", "value": "é"},
+      "python": {"result": "e"},
+      "readme_anchor": "#unicode-text-units",
+      "reason": "TextUnit.graphemeClusters является opt-in режимом поверх Python scalar semantics."
+    }
+  ],
+  "schema": 1
+}

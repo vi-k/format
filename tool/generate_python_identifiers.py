@@ -132,9 +132,11 @@ bool _containsPythonRange(List<int> ranges, int scalar) {
     content = "\n\n".join(
         [
             header.rstrip(),
+            "// dart format off",
             render_ranges("_pythonIdentifierStartRanges", scalar_ranges(start)),
             render_ranges("_pythonIdentifierContinueRanges", scalar_ranges(continue_)),
             render_decimal_ranges(decimal_ranges(decimals)),
+            "// dart format on",
             helpers.rstrip(),
         ]
     ) + "\n"

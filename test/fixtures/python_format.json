@@ -1,0 +1,766 @@
+{
+  "cases": [
+    {
+      "expected": {
+        "output": "123456789012345678901234567890"
+      },
+      "id": "default-bigint",
+      "named": {},
+      "positional": [
+        {
+          "type": "bigint",
+          "value": "123456789012345678901234567890"
+        }
+      ],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "output": "1234.5"
+      },
+      "id": "default-double",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1234.5
+        }
+      ],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "output": "-0.0"
+      },
+      "id": "default-double-negative-zero",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": "-0"
+        }
+      ],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "output": "-42"
+      },
+      "id": "default-int",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": -42
+        }
+      ],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "output": "hello"
+      },
+      "id": "default-string",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "hello"
+        }
+      ],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "error": "ValueError"
+      },
+      "id": "error-invalid-float-spec",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1.5
+        }
+      ],
+      "template": "{:d}"
+    },
+    {
+      "expected": {
+        "error": "ValueError"
+      },
+      "id": "error-invalid-integer-spec",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 42
+        }
+      ],
+      "template": "{:.2d}"
+    },
+    {
+      "expected": {
+        "error": "IndexError"
+      },
+      "id": "error-missing-list-item",
+      "named": {},
+      "positional": [
+        {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "x"
+            }
+          ]
+        }
+      ],
+      "template": "{0[2]}"
+    },
+    {
+      "expected": {
+        "error": "KeyError"
+      },
+      "id": "error-missing-map-integer-key",
+      "named": {},
+      "positional": [
+        {
+          "type": "map",
+          "value": []
+        }
+      ],
+      "template": "{0[1]}"
+    },
+    {
+      "expected": {
+        "error": "KeyError"
+      },
+      "id": "error-missing-map-item",
+      "named": {},
+      "positional": [
+        {
+          "type": "map",
+          "value": []
+        }
+      ],
+      "template": "{0[missing]}"
+    },
+    {
+      "expected": {
+        "error": "KeyError"
+      },
+      "id": "error-missing-named",
+      "named": {},
+      "positional": [],
+      "template": "{missing}"
+    },
+    {
+      "expected": {
+        "error": "IndexError"
+      },
+      "id": "error-missing-positional",
+      "named": {},
+      "positional": [],
+      "template": "{}"
+    },
+    {
+      "expected": {
+        "error": "ValueError"
+      },
+      "id": "error-mixed-numbering",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "x"
+        }
+      ],
+      "template": "{0} {}"
+    },
+    {
+      "expected": {
+        "error": "ValueError"
+      },
+      "id": "error-unmatched-brace",
+      "named": {},
+      "positional": [],
+      "template": "value {"
+    },
+    {
+      "expected": {
+        "output": "1.250E+01"
+      },
+      "id": "float-E",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12.5
+        }
+      ],
+      "template": "{:.3E}"
+    },
+    {
+      "expected": {
+        "output": "12.500000"
+      },
+      "id": "float-F",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12.5
+        }
+      ],
+      "template": "{:F}"
+    },
+    {
+      "expected": {
+        "output": "1.234E+04"
+      },
+      "id": "float-G",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12345.0
+        }
+      ],
+      "template": "{:.4G}"
+    },
+    {
+      "expected": {
+        "output": "1.250e+01"
+      },
+      "id": "float-e",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12.5
+        }
+      ],
+      "template": "{:.3e}"
+    },
+    {
+      "expected": {
+        "output": "12.35"
+      },
+      "id": "float-f",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12.345
+        }
+      ],
+      "template": "{:.2f}"
+    },
+    {
+      "expected": {
+        "output": "1.234e+04"
+      },
+      "id": "float-g",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12345.0
+        }
+      ],
+      "template": "{:.4g}"
+    },
+    {
+      "expected": {
+        "output": "1234"
+      },
+      "id": "float-n",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1234.5
+        }
+      ],
+      "template": "{:.4n}"
+    },
+    {
+      "expected": {
+        "output": "12.5%"
+      },
+      "id": "float-percent",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 0.125
+        }
+      ],
+      "template": "{:.1%}"
+    },
+    {
+      "expected": {
+        "output": "a b"
+      },
+      "id": "grammar-automatic",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "a"
+        },
+        {
+          "type": "string",
+          "value": "b"
+        }
+      ],
+      "template": "{} {}"
+    },
+    {
+      "expected": {
+        "output": "{value}"
+      },
+      "id": "grammar-escaped-braces",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "value"
+        }
+      ],
+      "template": "{{{0}}}"
+    },
+    {
+      "expected": {
+        "output": "answer: 42"
+      },
+      "id": "grammar-named-and-positional",
+      "named": {
+        "name": {
+          "type": "int",
+          "value": 42
+        }
+      },
+      "positional": [
+        {
+          "type": "string",
+          "value": "answer"
+        }
+      ],
+      "template": "{0}: {name}"
+    },
+    {
+      "expected": {
+        "output": "1,234.567_890"
+      },
+      "id": "grouping-float-both",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 1234.56789
+        }
+      ],
+      "template": "{:,.6_f}"
+    },
+    {
+      "expected": {
+        "output": "12,345.50"
+      },
+      "id": "grouping-float-comma",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12345.5
+        }
+      ],
+      "template": "{:,.2f}"
+    },
+    {
+      "expected": {
+        "output": "12_345.50"
+      },
+      "id": "grouping-float-underscore",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": 12345.5
+        }
+      ],
+      "template": "{:_.2f}"
+    },
+    {
+      "expected": {
+        "output": "123,456,789"
+      },
+      "id": "grouping-int-comma",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 123456789
+        }
+      ],
+      "template": "{:,d}"
+    },
+    {
+      "expected": {
+        "output": "123_456_789"
+      },
+      "id": "grouping-int-underscore",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 123456789
+        }
+      ],
+      "template": "{:_d}"
+    },
+    {
+      "expected": {
+        "output": "0XBEEF"
+      },
+      "id": "integer-X",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 48879
+        }
+      ],
+      "template": "{:#X}"
+    },
+    {
+      "expected": {
+        "output": "0b101010"
+      },
+      "id": "integer-b",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 42
+        }
+      ],
+      "template": "{:#b}"
+    },
+    {
+      "expected": {
+        "output": "😀"
+      },
+      "id": "integer-c",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 128512
+        }
+      ],
+      "template": "{:c}"
+    },
+    {
+      "expected": {
+        "output": "+0000042"
+      },
+      "id": "integer-d",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 42
+        }
+      ],
+      "template": "{:+08d}"
+    },
+    {
+      "expected": {
+        "output": "1234"
+      },
+      "id": "integer-n",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 1234
+        }
+      ],
+      "template": "{:n}"
+    },
+    {
+      "expected": {
+        "output": "0o777"
+      },
+      "id": "integer-o",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 511
+        }
+      ],
+      "template": "{:#o}"
+    },
+    {
+      "expected": {
+        "output": "0xbeef"
+      },
+      "id": "integer-x",
+      "named": {},
+      "positional": [
+        {
+          "type": "int",
+          "value": 48879
+        }
+      ],
+      "template": "{:#x}"
+    },
+    {
+      "expected": {
+        "output": "one"
+      },
+      "id": "lookup-list-index",
+      "named": {},
+      "positional": [
+        {
+          "type": "list",
+          "value": [
+            {
+              "type": "string",
+              "value": "zero"
+            },
+            {
+              "type": "string",
+              "value": "one"
+            }
+          ]
+        }
+      ],
+      "template": "{0[1]}"
+    },
+    {
+      "expected": {
+        "output": "one"
+      },
+      "id": "lookup-map-integer-key",
+      "named": {},
+      "positional": [
+        {
+          "type": "map",
+          "value": [
+            {
+              "key": {
+                "type": "int",
+                "value": 1
+              },
+              "value": {
+                "type": "string",
+                "value": "one"
+              }
+            }
+          ]
+        }
+      ],
+      "template": "{0[1]}"
+    },
+    {
+      "expected": {
+        "output": "Ada"
+      },
+      "id": "lookup-map-string-key",
+      "named": {
+        "record": {
+          "type": "map",
+          "value": [
+            {
+              "key": {
+                "type": "string",
+                "value": "name"
+              },
+              "value": {
+                "type": "string",
+                "value": "Ada"
+              }
+            }
+          ]
+        }
+      },
+      "positional": [],
+      "template": "{record[name]}"
+    },
+    {
+      "expected": {
+        "output": "first"
+      },
+      "id": "lookup-nested-common",
+      "named": {},
+      "positional": [
+        {
+          "type": "map",
+          "value": [
+            {
+              "key": {
+                "type": "string",
+                "value": "items"
+              },
+              "value": {
+                "type": "list",
+                "value": [
+                  {
+                    "type": "string",
+                    "value": "first"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "template": "{0[items][0]}"
+    },
+    {
+      "expected": {
+        "output": "ff"
+      },
+      "id": "nested-dynamic-type",
+      "named": {
+        "type": {
+          "type": "string",
+          "value": "x"
+        },
+        "value": {
+          "type": "int",
+          "value": 255
+        }
+      },
+      "positional": [],
+      "template": "{value:{type}}"
+    },
+    {
+      "expected": {
+        "output": "     12.35"
+      },
+      "id": "nested-width-precision",
+      "named": {
+        "precision": {
+          "type": "int",
+          "value": 2
+        },
+        "value": {
+          "type": "double",
+          "value": 12.3456
+        },
+        "width": {
+          "type": "int",
+          "value": 10
+        }
+      },
+      "positional": [],
+      "template": "{value:{width}.{precision}f}"
+    },
+    {
+      "expected": {
+        "output": "NAN"
+      },
+      "id": "special-nan",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": "nan"
+        }
+      ],
+      "template": "{:F}"
+    },
+    {
+      "expected": {
+        "output": "-INF"
+      },
+      "id": "special-negative-infinity",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": "-inf"
+        }
+      ],
+      "template": "{:F}"
+    },
+    {
+      "expected": {
+        "output": "-0.0"
+      },
+      "id": "special-negative-zero",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": "-0"
+        }
+      ],
+      "template": "{:+.1f}"
+    },
+    {
+      "expected": {
+        "output": "+inf"
+      },
+      "id": "special-positive-infinity",
+      "named": {},
+      "positional": [
+        {
+          "type": "double",
+          "value": "inf"
+        }
+      ],
+      "template": "{:+f}"
+    },
+    {
+      "expected": {
+        "output": "**hello**"
+      },
+      "id": "text-alignment",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "hello"
+        }
+      ],
+      "template": "{:*^9s}"
+    },
+    {
+      "expected": {
+        "output": "hel"
+      },
+      "id": "text-conversion-s",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "hello"
+        }
+      ],
+      "template": "{!s:.3s}"
+    },
+    {
+      "expected": {
+        "output": "A😀"
+      },
+      "id": "text-precision-unicode",
+      "named": {},
+      "positional": [
+        {
+          "type": "string",
+          "value": "A😀B"
+        }
+      ],
+      "template": "{:.2s}"
+    }
+  ],
+  "generator": {
+    "implementation": "CPython",
+    "version": "3.14"
+  }
+}
