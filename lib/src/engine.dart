@@ -1,3 +1,4 @@
+import 'binary64.dart';
 import 'errors.dart';
 import 'extensions.dart';
 import 'number_locale.dart';

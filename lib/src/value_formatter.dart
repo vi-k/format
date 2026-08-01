@@ -14,8 +14,16 @@ String formatValue(
   if (value is String) {
     return _formatText(value, spec, engine.textUnit, context);
   }
-  if ((value is int || value is BigInt) && spec.customName == null) {
-    return formatBraceInteger(value!, spec, engine, context);
+  if (spec.customName == null) {
+    if (value is double) {
+      return formatBraceDouble(value, spec, engine, context);
+    }
+    if (value is int || value is BigInt) {
+      if (_isFloatingFormatType(spec.type)) {
+        return formatBraceDouble(value!, spec, engine, context);
+      }
+      return formatBraceInteger(value!, spec, engine, context);
+    }
   }
   if (_isNumericFormatType(spec.type) || _hasNumericOptions(spec)) {
     throw UnsupportedFormatValueException(context, value);
@@ -23,9 +31,25 @@ String formatValue(
   return value.toString();
 }
 
+bool _isFloatingFormatType(String? type) => switch (type) {
+  'e' || 'E' || 'f' || 'F' || 'g' || 'G' || '%' => true,
+  _ => false,
+};
+
 bool _isNumericFormatType(String? type) => switch (type) {
-  'b' || 'd' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' || 'n' || 'o' ||
-  'x' || 'X' || '%' => true,
+  'b' ||
+  'd' ||
+  'e' ||
+  'E' ||
+  'f' ||
+  'F' ||
+  'g' ||
+  'G' ||
+  'n' ||
+  'o' ||
+  'x' ||
+  'X' ||
+  '%' => true,
   _ => false,
 };
 
