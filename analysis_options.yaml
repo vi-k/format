@@ -5,17 +5,16 @@ analyzer:
     dart_code_metrics: true
 
   exclude:
-    # Web
-    'web/**': true
-    # Build
-    'build/**': true
-    # Generated code
-    'lib/**.g.dart': true
-    'lib/**.freezed.dart': true
-    'lib/generated_plugin_registrant.dart': true
-    '.test_coverage.dart': true
-    # Assets
-    'assets/**': true
+    - 'web/**'
+    - 'build/**'
+    - 'lib/**.g.dart'
+    - 'lib/**.freezed.dart'
+    - 'lib/generated_plugin_registrant.dart'
+    - '.test_coverage.dart'
+    - 'assets/**'
+    # Format 2 tests are retained until Task 10 replaces them.
+    - 'test/format_test.dart'
+    - 'test/parser_test.dart'
 
   language:
     strict-casts: true

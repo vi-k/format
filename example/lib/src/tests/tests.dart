@@ -51,9 +51,7 @@ final class BenchmarkValueFormatter extends Formatter<BenchmarkValue> {
   String format(BenchmarkValue value, FormatOptions options) => value.value;
 }
 
-void registerBenchmarkFormatter() {
-  Format.registerFormatter(const BenchmarkValueFormatter());
-}
+final benchmarkFormat = Format(formatters: const [BenchmarkValueFormatter()]);
 
 final List<BenchmarkScenario> benchmarkScenarios = [
   const BenchmarkScenario.positional(

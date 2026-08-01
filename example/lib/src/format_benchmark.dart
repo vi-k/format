@@ -1,5 +1,3 @@
-import 'package:format/format.dart';
-
 import 'my_benchmark_base.dart';
 import 'tests/tests.dart';
 
@@ -11,7 +9,10 @@ final class FormatBenchmark extends MyBenchmarkBase {
   String execute() {
     final namedValues = scenario.namedValues;
     return namedValues == null
-        ? format(scenario.template, scenario.positionalValues!)
-        : formatNamed(scenario.template, namedValues);
+        ? benchmarkFormat.formatWith(
+          scenario.template,
+          positional: scenario.positionalValues!,
+        )
+        : benchmarkFormat.formatWith(scenario.template, named: namedValues);
   }
 }

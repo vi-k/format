@@ -2,18 +2,6 @@ import 'package:format/format.dart';
 import 'package:format/src/text_unit.dart' show TextUnitOperations;
 import 'package:test/test.dart';
 
-final class JsonFormatter extends Formatter<Map<String, Object?>> {
-  @override
-  String get specifier => 'json';
-
-  @override
-  bool canFormat(Object? value) => value is Map<String, Object?>;
-
-  @override
-  String format(Map<String, Object?> value, FormatOptions options) =>
-      value.toString();
-}
-
 final class MapAttributeLookup extends AttributeLookup<Map<String, Object?>> {
   @override
   bool canLookup(Object? value) => value is Map<String, Object?>;
@@ -32,18 +20,32 @@ final class MapRepresentation extends Representation<Map<String, Object?>> {
 }
 
 void main() {
-  test('public formatting functions have the 2.0 signatures', () {
-    expect(format('{}', const ['value']), 'value');
-    expect(formatNamed('{key}', const {'key': 'value'}), 'value');
+  test(
+    'format accepts separate nullable values and formatWith accepts both maps',
+    () {
+      expect(format('{} {}', 'a', null), 'a null');
+      expect(
+        formatWith(
+          '{0} {name}',
+          positional: const ['hello'],
+          named: const {'name': 'world'},
+        ),
+        'hello world',
+      );
+    },
+  );
+
+  test('format treats a List as one positional value', () {
+    expect(format('{}', const ['value']), '[value]');
   });
 
-  test('public import exposes formatter extension types', () {
-    final formatter = JsonFormatter();
-    expect(formatter.specifier, 'json');
-    expect(
-      formatter.format(const {'answer': 42}, const FormatOptions()),
-      '{answer: 42}',
-    );
+  test('a custom Format exposes reusable method tear-offs', () {
+    final configured = Format(textUnit: TextUnit.graphemeClusters);
+    final appFormat = configured.format;
+    final appFormatWith = configured.formatWith;
+
+    expect(appFormat('{}', 'ok'), 'ok');
+    expect(appFormatWith('{name}', named: const {'name': 'ok'}), 'ok');
   });
 
   test('exports Format 3 extension and locale contracts', () {

@@ -1,157 +1,89 @@
 import 'package:format/format.dart';
 import 'package:test/test.dart';
 
-final class CustomValue {}
-
-final class FallbackValue {
-  @override
-  String toString() => 'fallback';
-}
-
-final class JsonFormatter extends Formatter<Map<String, Object?>> {
-  @override
-  String get specifier => 'json';
-
-  @override
-  bool canFormat(Object? value) => value is Map<String, Object?>;
-
-  @override
-  String format(Map<String, Object?> value, FormatOptions options) =>
-      value.toString();
-}
-
-final class IntAliasFormatter extends Formatter<int> {
+final class NamedFormatter extends Formatter<Object?> {
   @override
   final String specifier;
 
-  IntAliasFormatter(this.specifier);
+  NamedFormatter(this.specifier);
 
   @override
-  bool canFormat(Object? value) => value is int;
+  bool canFormat(Object? value) => true;
 
   @override
-  String format(int value, FormatOptions options) => '$specifier:$value';
+  String format(Object? value, FormatOptions options) => '$specifier:$value';
 }
 
-final class MatchingFormatter extends Formatter<CustomValue> {
+final class EmptyLookup extends AttributeLookup<Object?> {
   @override
-  final String specifier;
-
-  MatchingFormatter(this.specifier);
+  bool canLookup(Object? value) => false;
 
   @override
-  bool canFormat(Object? value) => value is CustomValue;
-
-  @override
-  String format(CustomValue value, FormatOptions options) => specifier;
+  Object? lookup(Object? value, String attribute) => null;
 }
 
-final class OptionsFormatter extends Formatter<String> {
+final class EmptyRepresentation extends Representation<Object?> {
   @override
-  String get specifier => 'probe';
+  bool canRepresent(Object? value) => false;
 
   @override
-  bool canFormat(Object? value) => value is String;
-
-  @override
-  String format(String value, FormatOptions options) => [
-    options.sign,
-    options.alternate,
-    options.zero,
-    options.grouping,
-    options.precision,
-  ].join('|');
+  String represent(Object? value) => '';
 }
 
 void main() {
-  setUp(() => Format.unregisterFormatter('json'));
-  tearDown(() => Format.unregisterFormatter('json'));
+  test('Format defensively copies immutable extension configuration', () {
+    final formatter = NamedFormatter('json');
+    final formatters = [formatter];
+    final lookups = [EmptyLookup()];
+    final representations = [EmptyRepresentation()];
+    final configured = Format(
+      formatters: formatters,
+      lookups: lookups,
+      representations: representations,
+    );
 
-  test('registers and removes a custom formatter', () {
-    Format.registerFormatter(JsonFormatter());
-    expect(Format.unregisterFormatter('json'), isTrue);
-    expect(Format.unregisterFormatter('json'), isFalse);
+    formatters.clear();
+    lookups.clear();
+    representations.clear();
+
+    expect(configured.formatters, [formatter]);
+    expect(configured.lookups, hasLength(1));
+    expect(configured.representations, hasLength(1));
+    expect(
+      () => configured.formatters.add(NamedFormatter('other')),
+      throwsUnsupportedError,
+    );
+    expect(configured.lookups.clear, throwsUnsupportedError);
+    expect(configured.representations.clear, throwsUnsupportedError);
   });
 
-  test('duplicate registration has a dedicated exception', () {
-    Format.registerFormatter(JsonFormatter());
+  test('Format rejects invalid formatter names', () {
+    for (final name in ['дата', '_name', 'has-dash', '']) {
+      expect(
+        () => Format(formatters: [NamedFormatter(name)]),
+        throwsA(isA<FormatConfigurationException>()),
+      );
+    }
+  });
+
+  test('Format rejects reserved and duplicate formatter specifiers', () {
     expect(
-      () => Format.registerFormatter(JsonFormatter()),
-      throwsA(isA<FormatterAlreadyRegisteredException>()),
+      () => Format(formatters: [NamedFormatter('s')]),
+      throwsA(isA<FormatConfigurationException>()),
+    );
+    expect(
+      () =>
+          Format(formatters: [NamedFormatter('same'), NamedFormatter('same')]),
+      throwsA(isA<FormatConfigurationException>()),
     );
   });
 
-  test('built-in specifiers cannot be changed', () {
-    expect(
-      () => Format.registerFormatter(IntAliasFormatter('d')),
-      throwsA(isA<BuiltInSpecifierException>()),
-    );
-    expect(
-      () => Format.unregisterFormatter('d'),
-      throwsA(isA<BuiltInSpecifierException>()),
-    );
-  });
-
-  test('specifier must be an ASCII identifier', () {
-    addTearDown(() => Format.unregisterFormatter('дата'));
-    expect(
-      () => Format.registerFormatter(IntAliasFormatter('дата')),
-      throwsA(isA<InvalidSpecifierException>()),
-    );
-  });
-
-  test('multiple automatic matches are rejected', () {
-    Format.registerFormatter(MatchingFormatter('first'));
-    Format.registerFormatter(MatchingFormatter('second'));
-    addTearDown(() {
-      Format.unregisterFormatter('first');
-      Format.unregisterFormatter('second');
-    });
+  test('Format rejects repeated formatter instances by identity', () {
+    final formatter = NamedFormatter('once');
 
     expect(
-      () => format('{}', [CustomValue()]),
-      throwsA(isA<AmbiguousFormatterException>()),
-    );
-  });
-
-  test('explicit custom formatter receives options before core alignment', () {
-    Format.registerFormatter(OptionsFormatter());
-    addTearDown(() => Format.unregisterFormatter('probe'));
-
-    expect(
-      format('{:*^+#020_.3probe}', const ['value']),
-      '**+|true|true|_|3***',
-    );
-  });
-
-  test('automatic matching uses one custom formatter', () {
-    Format.registerFormatter(MatchingFormatter('custom'));
-    addTearDown(() => Format.unregisterFormatter('custom'));
-
-    expect(format('{}', [CustomValue()]), 'custom');
-  });
-
-  test('built-in automatic matching has priority over custom formatters', () {
-    Format.registerFormatter(IntAliasFormatter('integer'));
-    addTearDown(() => Format.unregisterFormatter('integer'));
-
-    expect(format('{}', const [42]), '42');
-  });
-
-  test('automatic matching falls back to toString', () {
-    expect(format('{}', [FallbackValue()]), 'fallback');
-  });
-
-  test('explicit formatter rejects unsupported values with context', () {
-    Format.registerFormatter(JsonFormatter());
-
-    expect(
-      () => format('{:json}', const [42]),
-      throwsA(
-        isA<UnsupportedFormatValueException>()
-            .having((error) => error.specifier, 'specifier', 'json')
-            .having((error) => error.value, 'value', 42),
-      ),
+      () => Format(formatters: [formatter, formatter]),
+      throwsA(isA<FormatConfigurationException>()),
     );
   });
 }

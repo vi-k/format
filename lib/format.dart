@@ -1,3 +1,4 @@
+export 'src/engine.dart' show Format, defaultFormat, format, formatWith;
 export 'src/errors.dart'
     show
         AmbiguousFormatterException,
@@ -16,5 +17,4 @@ export 'src/errors.dart'
 export 'src/extensions.dart'
     show AttributeLookup, FormatOptions, Formatter, Representation;
 export 'src/number_locale.dart' show CNumberLocale, NumberLocale;
-export 'src/processor.dart' show Format, format, formatNamed;
 export 'src/text_unit.dart' show TextUnit;

@@ -14,7 +14,6 @@ void main() {
 
 void _run() {
   Intl.defaultLocale = 'en_US';
-  registerBenchmarkFormatter();
 
   var gatePassed = true;
   final placeholderResults = <int, double>{};
