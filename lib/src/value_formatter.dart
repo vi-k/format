@@ -14,8 +14,30 @@ String formatValue(
   if (value is String) {
     return _formatText(value, spec, engine.textUnit, context);
   }
+  if ((value is int || value is BigInt) && spec.customName == null) {
+    return formatBraceInteger(value!, spec, engine, context);
+  }
+  if (_isNumericFormatType(spec.type) || _hasNumericOptions(spec)) {
+    throw UnsupportedFormatValueException(context, value);
+  }
   return value.toString();
 }
+
+bool _isNumericFormatType(String? type) => switch (type) {
+  'b' || 'd' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' || 'n' || 'o' ||
+  'x' || 'X' || '%' => true,
+  _ => false,
+};
+
+bool _hasNumericOptions(_FormatSpec spec) =>
+    spec.sign != null ||
+    spec.normalizeNegativeZero ||
+    spec.alternate ||
+    spec.zero ||
+    spec.grouping != null ||
+    spec.precision != null ||
+    spec.fractionalGrouping != null ||
+    spec.align == '=';
 
 String _formatText(
   String value,

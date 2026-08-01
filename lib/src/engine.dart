@@ -12,4 +12,5 @@ part 'field_resolver.dart';
 part 'python_identifier.dart';
 part 'brace_parser.dart';
 part 'format_spec.dart';
+part 'number_format.dart';
 part 'value_formatter.dart';
