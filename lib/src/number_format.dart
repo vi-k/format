@@ -187,11 +187,12 @@ String formatBraceDouble(
   final binary = Binary64.fromDouble(converted);
   final uppercase = type == 'E' || type == 'F' || type == 'G';
   final percent = type == '%';
+  final formattingBinary =
+      percent ? Binary64.fromDouble(converted * 100) : binary;
 
   late final _AsciiFloat formatted;
-  if (!binary.isFinite ||
-      (percent && converted.isFinite && (converted.abs() * 100).isInfinite)) {
-    final nan = binary.isNaN;
+  if (!formattingBinary.isFinite) {
+    final nan = formattingBinary.isNaN;
     final word = nan ? 'nan' : 'inf';
     formatted = _AsciiFloat(
       uppercase ? word.toUpperCase() : word,
@@ -211,7 +212,7 @@ String formatBraceDouble(
         spec.alternate,
         type == 'G' ? 'E' : 'e',
       ),
-      '%' => _formatFixed(binary, precision, spec.alternate, decimalShift: 2),
+      '%' => _formatFixed(formattingBinary, precision, spec.alternate),
       null => _formatGeneral(
         binary,
         precision == 0 ? 1 : precision,
@@ -223,7 +224,7 @@ String formatBraceDouble(
     };
   }
 
-  var negative = !binary.isNaN && binary.signBit;
+  var negative = !formattingBinary.isNaN && formattingBinary.signBit;
   if (spec.normalizeNegativeZero && formatted.roundedZero) negative = false;
   final locale = type == 'n' ? settings.numberLocale : null;
   final sign =
@@ -252,13 +253,8 @@ final class _AsciiFloat {
   const _AsciiFloat(this.body, this.roundedZero, {this.special = false});
 }
 
-_AsciiFloat _formatFixed(
-  Binary64 value,
-  int precision,
-  bool alternate, {
-  int decimalShift = 0,
-}) {
-  final rounded = value.roundDecimal(precision + decimalShift);
+_AsciiFloat _formatFixed(Binary64 value, int precision, bool alternate) {
+  final rounded = value.roundDecimal(precision);
   return _AsciiFloat(
     _fixedFromRounded(rounded, precision, alternate),
     rounded == BigInt.zero,

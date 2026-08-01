@@ -180,7 +180,9 @@ void main() {
   test('formats percent from the binary value and preserves its suffix', () {
     expect(format('{:%}', 2.5), '250.000000%');
     expect(format('{:.2%}', 0.01255), '1.26%');
+    expect(format('{:.16%}', 0.1), '10.0000000000000000%');
     expect(format('{:#.0%}', 0.125), '12.%');
+    expect(format('{:.1%}', -0.0), '-0.0%');
     expect(format('{:z.1%}', -0.0001), '0.0%');
     expect(format('{:%}', 1.7976931348623157e308), 'inf%');
   });
