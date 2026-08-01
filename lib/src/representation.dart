@@ -43,6 +43,8 @@ final class _RepresentationWriter {
         output.write(value ? 'true' : 'false');
       case String():
         output.write(_quoteString(value));
+      case BigInt():
+        output.write(value.toString());
       case num():
         output.write(_number(value));
       case Map<Object?, Object?>():

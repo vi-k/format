@@ -72,6 +72,21 @@ void main() {
     expect(format('{!r}', -0.0), '-0.0');
   });
 
+  test('r conversion represents positive and negative BigInt values', () {
+    expect(
+      format('{!r}', BigInt.parse('123456789012345678901234567890')),
+      '123456789012345678901234567890',
+    );
+    expect(format('{!r}', BigInt.parse('-42')), '-42');
+  });
+
+  test('a conversion keeps BigInt decimal output ASCII', () {
+    expect(
+      format('{!a}', BigInt.parse('-123456789012345678901234567890')),
+      '-123456789012345678901234567890',
+    );
+  });
+
   test('r conversion preserves container iteration order', () {
     expect(format('{!r}', [true, null, 'x']), "[true, null, 'x']");
     expect(
@@ -119,6 +134,12 @@ void main() {
       expect(configured.format('{!r}', <String, int>{'x': 1}), "{'x': 1}");
     },
   );
+
+  test('r conversion gives BigInt precedence over custom representations', () {
+    final configured = Format(representations: [_BigIntRepresentation()]);
+
+    expect(configured.format('{!r}', BigInt.from(42)), '42');
+  });
 
   test('r conversion rejects unsupported objects', () {
     expect(
@@ -194,4 +215,12 @@ final class _MapRepresentation extends Representation<Map<Object?, Object?>> {
 
   @override
   String represent(Map<Object?, Object?> value) => 'custom-map';
+}
+
+final class _BigIntRepresentation extends Representation<BigInt> {
+  @override
+  bool canRepresent(Object? value) => value is BigInt;
+
+  @override
+  String represent(BigInt value) => 'custom-big-int';
 }
