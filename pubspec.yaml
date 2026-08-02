@@ -1,14 +1,11 @@
 name: format
-description: A package for formatting Dart strings like a format method in Python.
-version: 2.0.0
-homepage: https://github.com/vi-k/format
-
+version: 3.0.0
 environment:
   sdk: ^3.7.2
-
+workspace:
+  - packages/format_intl
 dependencies:
   characters: ^1.4.0
-
 dev_dependencies:
   lints: ^4.0.0
   test: ^1.25.14
