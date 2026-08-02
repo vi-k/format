@@ -76,13 +76,12 @@ final class _Format2Processor {
         specifier = 'd';
       } else if (value is double) {
         specifier = 'g';
-      } else {
-        return value.toString();
       }
       options.specifier = specifier;
     }
 
-    var result = _format2Value(options, value);
+    var result =
+        specifier == null ? value.toString() : _format2Value(options, value);
     final width = options.width;
     if (width != null) {
       final resultWidth = result.characters.length;

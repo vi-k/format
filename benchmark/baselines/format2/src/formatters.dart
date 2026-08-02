@@ -241,17 +241,29 @@ String _format2NumberLayout(
 
   final grouping = options.groupOption;
   if (grouping != null) {
-    final chunkSize = groupSize == 3 ? 3 : 4;
-    final boundary = result.indexOf(RegExp(r'[.e]'));
-    final integerEnd = boundary == -1 ? result.length : boundary;
-    final integer = result.substring(0, integerEnd);
-    final firstLength = integer.length % chunkSize;
-    final chunks = <String>[];
-    if (firstLength != 0) chunks.add(integer.substring(0, firstLength));
-    for (var index = firstLength; index < integer.length; index += chunkSize) {
-      chunks.add(integer.substring(index, index + chunkSize));
-    }
-    result = chunks.join(grouping) + result.substring(integerEnd);
+    final searchRe =
+        groupSize == 3
+            ? RegExp(r'(\d)((?:\d{3})+)$')
+            : RegExp(r'([0-9a-fA-F])((?:[0-9a-fA-F]{4})+)$');
+    final changeRe =
+        groupSize == 3 ? RegExp(r'\d{3}') : RegExp('[0-9a-fA-F]{4}');
+    var pointIndex = result.indexOf('.');
+    if (pointIndex == -1) pointIndex = result.indexOf(RegExp('e[+-]'));
+    if (pointIndex == -1) pointIndex = result.length;
+
+    result =
+        result
+            .substring(0, pointIndex)
+            .replaceFirstMapped(
+              searchRe,
+              (match) =>
+                  match[1]! +
+                  match[2]!.replaceAllMapped(
+                    changeRe,
+                    (match) => '$grouping${match[0]}',
+                  ),
+            ) +
+        result.substring(pointIndex);
     if (zeroPaddingAdded) {
       final extraWidth = result.length - minWidth;
       final extra = result.substring(0, extraWidth);

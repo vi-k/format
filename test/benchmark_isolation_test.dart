@@ -16,5 +16,7 @@ void main() {
     expect(legacyFormat('{}', [1.23456789]), '1.23457');
     expect(legacyFormat('{:#X}', [42]), '0x2A');
     expect(legacyFormat('{:e}', [1.0]), '1.000000e+0');
+    expect(legacyFormat('{:>5}', [true]), ' true');
+    expect(legacyFormat('{:_x}', [3735928559]), 'dead_beef');
   });
 }
