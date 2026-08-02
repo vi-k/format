@@ -1,11 +1,10 @@
+import 'dart:math';
+
 import 'package:ansi_escape_codes/ansi_escape_codes.dart' as ansi;
 import 'package:example/benchmark.dart';
-import 'package:intl/intl.dart';
+import 'package:format/format.dart';
 
-const _measurementCount = 3;
-const _multiPlaceholderLimit = 1.02;
-
-void main() {
+void main(List<String> arguments) {
   ansi.runZonedPrinter(
     defaultStyle: const ansi.Style(foreground: defaultFg),
     _run,
@@ -13,59 +12,82 @@ void main() {
 }
 
 void _run() {
-  Intl.defaultLocale = 'en_US';
+  final benchmarks = [
+    SprintfBenchmark(),
+    FormatBenchmark(),
+    Format2Benchmark(),
+  ];
 
-  var gatePassed = true;
-  final placeholderResults = <int, double>{};
+  for (final template in testData) {
+    final formatTemplate = template.$1;
+    final sprintfTemplate = template.$2;
 
-  print('Format 2.0 benchmark ($_measurementCount measurements per engine)');
-  for (final scenario in benchmarkScenarios) {
-    final legacySamples = <double>[];
-    final currentSamples = <double>[];
+    print('');
+    print(h1('----------------------------------------'));
+    print('Format template: ${h1(formatTemplate)}');
+    print('Sprintf template: ${h1(sprintfTemplate)}');
 
-    for (var measurement = 0; measurement < _measurementCount; measurement++) {
-      final legacy = LegacyFormatBenchmark(scenario)..verifyOutput();
-      final current = FormatBenchmark(scenario)..verifyOutput();
-      legacySamples.add(legacy.measureMicrosecondsPerCall());
-      currentSamples.add(current.measureMicrosecondsPerCall());
-    }
+    for (final test in template.$3) {
+      final values = test.$1;
+      final result = test.$2;
 
-    final legacyMedian = _median(legacySamples);
-    final currentMedian = _median(currentSamples);
-    final ratio = currentMedian / legacyMedian;
-    final sampleRatios = [
-      for (var index = 0; index < _measurementCount; index++)
-        currentSamples[index] / legacySamples[index],
-    ];
+      print('');
+      print('Values: ${h2(values.join(', '))}');
 
-    final count = scenario.placeholderCount;
-    if (count != null) {
-      placeholderResults[count] = ratio;
-      if (count >= 5 &&
-          sampleRatios.any((value) => value > _multiPlaceholderLimit)) {
-        gatePassed = false;
+      for (final benchmark in benchmarks) {
+        try {
+          final score = benchmark.go(
+            benchmark.isSprintf ? sprintfTemplate : formatTemplate,
+            values,
+          );
+
+          String message;
+          if (benchmark.output == result) {
+            message = ok('OK');
+          } else {
+            final difference = diff(result, benchmark.output);
+            message =
+                '${accentError('ERROR')}'
+                '\n  expected: ${difference.$1}'
+                '\n  actual:   ${difference.$2}';
+          }
+          print(
+            '${accent(benchmark.name)}:'
+            ' ${format('{:.3f}', score)} µs'
+            ' <- $message',
+          );
+        } on Object catch (errorValue) {
+          print(
+            '${accent(benchmark.name)}:'
+            ' <- ${accentError('ERROR')}'
+            '\n${error(errorValue.toString())}',
+          );
+        }
       }
     }
-
-    print(
-      '${scenario.name.padRight(18)} '
-      'old=${legacyMedian.toStringAsFixed(3)} µs '
-      'new=${currentMedian.toStringAsFixed(3)} µs '
-      'new/old=${ratio.toStringAsFixed(3)} '
-      'runs=${sampleRatios.map((value) => value.toStringAsFixed(3)).join(',')}',
-    );
   }
-
-  print('Placeholder summary:');
-  for (final entry in placeholderResults.entries) {
-    print(
-      '${entry.key.toString().padLeft(2)}: ${entry.value.toStringAsFixed(3)}',
-    );
-  }
-  print('Multi-placeholder gate: ${gatePassed ? 'PASS' : 'FAIL'}');
 }
 
-double _median(List<double> values) {
-  final sorted = [...values]..sort();
-  return sorted[sorted.length ~/ 2];
+(String, String) diff(String expected, String actual) {
+  final minLength = min(expected.length, actual.length);
+  final maxLength = max(expected.length, actual.length);
+  final expectedReturn = expected.padRight(maxLength);
+
+  var end = 0;
+  while (end < minLength && expected[end] == actual[end]) {
+    end++;
+  }
+
+  final absent =
+      actual.length >= expected.length
+          ? ''
+          : '•' * (expected.length - actual.length);
+
+  final rest = actual.substring(end);
+  return (
+    expectedReturn,
+    '${actual.substring(0, end)}'
+        '${error(rest)}'
+        '${error(absent)}',
+  );
 }
