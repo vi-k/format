@@ -49,7 +49,9 @@ The `n` specifier applies the adapter's grouping rule automatically; it does
 not need a grouping flag. The printf dialect uses the locale's decimal
 separator, signs, exponent separator, and digits. `IntlNumberLocale` supplies
 symbols and grouping only: it does not round values. Precision and rounding
-remain the responsibility of `format`.
+remain the responsibility of `format`. `IntlNumberLocale` does not select or
+apply number notation, including compact or scientific notation; notation
+remains the responsibility of `format`.
 
 ## Default-locale snapshot
 
