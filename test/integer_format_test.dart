@@ -77,6 +77,17 @@ void main() {
     expect(format('{:x}', BigInt.zero), '0');
   });
 
+  test('preserves decimal int boundaries and out-of-range BigInt values', () {
+    final aboveInt = BigInt.parse('9223372036854775808');
+    final belowInt = BigInt.parse('-9223372036854775809');
+
+    expect(format('{:d}', 9223372036854775807), '9223372036854775807');
+    expect(format('{:d}', -9223372036854775808), '-9223372036854775808');
+    expect(format('{:d}', aboveInt), '9223372036854775808');
+    expect(format('{:d}', belowInt), '-9223372036854775809');
+    expect(format('{:+,d}', 9223372036854775807), '+9,223,372,036,854,775,807');
+  });
+
   test('formats alternate integer forms and negative prefixes', () {
     expect(format('{:#b}', 42), '0b101010');
     expect(format('{:#o}', 42), '0o52');

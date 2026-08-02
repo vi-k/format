@@ -91,7 +91,8 @@ String formatBraceInteger(
 }
 
 String formatMagnitude(BigInt magnitude, int radix, {bool uppercase = false}) {
-  final digits = magnitude.toRadixString(radix);
+  final digits =
+      radix == 10 ? magnitude.toString() : magnitude.toRadixString(radix);
   return uppercase ? digits.toUpperCase() : digits;
 }
 
