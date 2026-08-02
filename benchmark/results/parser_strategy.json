@@ -1,0 +1,478 @@
+{
+  "schemaVersion": 1,
+  "kind": "parser-strategy-merge",
+  "runtimes": {
+    "jit": {
+      "schemaVersion": 1,
+      "kind": "parser-strategy-runtime",
+      "runtime": "jit",
+      "environment": {
+        "dartVersion": "3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
+        "os": "macos Version 26.5.2 (Build 25F84)",
+        "cpu": "Apple M3 Max"
+      },
+      "config": {
+        "samplesPerScenario": 9,
+        "coldInputs": 60000,
+        "hotParsesPerSample": 60000,
+        "candidateOrder": [
+          "regexp",
+          "scanner",
+          "hybrid"
+        ],
+        "scenarioOrder": "alternates cold/hot by round",
+        "warmup": "one complete cold and hot workload per candidate",
+        "coldBatchPolicy": "disjoint precreated batch per sample",
+        "corpus": [
+          "literal only",
+          "%d",
+          "%+08.3f",
+          "%-*.*s",
+          "%#x %d %s %.17g",
+          "%% %1$d %llx %b %"
+        ],
+        "sink": 211612740
+      },
+      "scenarios": {
+        "cold": {
+          "regexp": {
+            "samplesMicros": [
+              39791,
+              39089,
+              38089,
+              39161,
+              39716,
+              38917,
+              39001,
+              39324,
+              38992
+            ],
+            "medianMicros": 39089.0,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              7009,
+              6802,
+              6803,
+              7178,
+              7082,
+              7314,
+              6998,
+              7103,
+              7113
+            ],
+            "medianMicros": 7082.0,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              38147,
+              38172,
+              38355,
+              39328,
+              38671,
+              38991,
+              38471,
+              38310,
+              38053
+            ],
+            "medianMicros": 38355.0,
+            "checksum": 1006492017
+          }
+        },
+        "hot": {
+          "regexp": {
+            "samplesMicros": [
+              38540,
+              38624,
+              38179,
+              38492,
+              38803,
+              38665,
+              37693,
+              39108,
+              38156
+            ],
+            "medianMicros": 38540.0,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              6806,
+              6523,
+              6545,
+              6491,
+              6691,
+              6536,
+              6691,
+              6657,
+              6514
+            ],
+            "medianMicros": 6545.0,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              38300,
+              38350,
+              36764,
+              38569,
+              38213,
+              38019,
+              38365,
+              38843,
+              38012
+            ],
+            "medianMicros": 38300.0,
+            "checksum": 1006492017
+          }
+        }
+      }
+    },
+    "aot": {
+      "schemaVersion": 1,
+      "kind": "parser-strategy-runtime",
+      "runtime": "aot",
+      "environment": {
+        "dartVersion": "3.12.2 (stable) (Tue Jun 9 01:11:39 2026 -0700) on \"macos_arm64\"",
+        "os": "macos Version 26.5.2 (Build 25F84)",
+        "cpu": "Apple M3 Max"
+      },
+      "config": {
+        "samplesPerScenario": 9,
+        "coldInputs": 60000,
+        "hotParsesPerSample": 60000,
+        "candidateOrder": [
+          "regexp",
+          "scanner",
+          "hybrid"
+        ],
+        "scenarioOrder": "alternates cold/hot by round",
+        "warmup": "one complete cold and hot workload per candidate",
+        "coldBatchPolicy": "disjoint precreated batch per sample",
+        "corpus": [
+          "literal only",
+          "%d",
+          "%+08.3f",
+          "%-*.*s",
+          "%#x %d %s %.17g",
+          "%% %1$d %llx %b %"
+        ],
+        "sink": 211612740
+      },
+      "scenarios": {
+        "cold": {
+          "regexp": {
+            "samplesMicros": [
+              41290,
+              39234,
+              39245,
+              38156,
+              38579,
+              38581,
+              38461,
+              38694,
+              38707
+            ],
+            "medianMicros": 38694.0,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              6911,
+              6347,
+              6985,
+              6710,
+              6805,
+              6509,
+              6871,
+              7057,
+              7120
+            ],
+            "medianMicros": 6871.0,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              38359,
+              37492,
+              37802,
+              37713,
+              38138,
+              37822,
+              37438,
+              38309,
+              37580
+            ],
+            "medianMicros": 37802.0,
+            "checksum": 1006492017
+          }
+        },
+        "hot": {
+          "regexp": {
+            "samplesMicros": [
+              38344,
+              36917,
+              37358,
+              37488,
+              37421,
+              37422,
+              36902,
+              37083,
+              37016
+            ],
+            "medianMicros": 37358.0,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              5989,
+              5962,
+              5946,
+              5903,
+              6027,
+              5755,
+              6138,
+              5744,
+              5889
+            ],
+            "medianMicros": 5946.0,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              37512,
+              37448,
+              37180,
+              37414,
+              37349,
+              37442,
+              37538,
+              37677,
+              37260
+            ],
+            "medianMicros": 37442.0,
+            "checksum": 1006492017
+          }
+        }
+      }
+    },
+    "js": {
+      "schemaVersion": 1,
+      "kind": "parser-strategy-runtime",
+      "runtime": "js",
+      "environment": {
+        "dartVersion": "Dart 3.12.2",
+        "os": "darwin 25.5.0 (arm64); Node v26.5.0",
+        "cpu": "Apple M3 Max"
+      },
+      "config": {
+        "samplesPerScenario": 9,
+        "coldInputs": 60000,
+        "hotParsesPerSample": 60000,
+        "candidateOrder": [
+          "regexp",
+          "scanner",
+          "hybrid"
+        ],
+        "scenarioOrder": "alternates cold/hot by round",
+        "warmup": "one complete cold and hot workload per candidate",
+        "coldBatchPolicy": "disjoint precreated batch per sample",
+        "corpus": [
+          "literal only",
+          "%d",
+          "%+08.3f",
+          "%-*.*s",
+          "%#x %d %s %.17g",
+          "%% %1$d %llx %b %"
+        ],
+        "sink": 211612740
+      },
+      "scenarios": {
+        "cold": {
+          "regexp": {
+            "samplesMicros": [
+              24000,
+              23000,
+              24000,
+              23000,
+              24000,
+              24000,
+              24000,
+              25000,
+              25000
+            ],
+            "medianMicros": 24000,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              21000,
+              21000,
+              21000,
+              22000,
+              22000,
+              21000,
+              21000,
+              21000,
+              21000
+            ],
+            "medianMicros": 21000,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              21000,
+              22000,
+              21000,
+              22000,
+              22000,
+              21000,
+              20000,
+              22000,
+              21000
+            ],
+            "medianMicros": 21000,
+            "checksum": 1006492017
+          }
+        },
+        "hot": {
+          "regexp": {
+            "samplesMicros": [
+              18000,
+              19000,
+              19000,
+              19000,
+              19000,
+              17000,
+              20000,
+              19000,
+              18000
+            ],
+            "medianMicros": 19000,
+            "checksum": 1006492017
+          },
+          "scanner": {
+            "samplesMicros": [
+              16000,
+              16000,
+              16000,
+              17000,
+              16000,
+              17000,
+              16000,
+              17000,
+              17000
+            ],
+            "medianMicros": 16000,
+            "checksum": 1006492017
+          },
+          "hybrid": {
+            "samplesMicros": [
+              19000,
+              18000,
+              19000,
+              19000,
+              18000,
+              19000,
+              18000,
+              19000,
+              19000
+            ],
+            "medianMicros": 19000,
+            "checksum": 1006492017
+          }
+        }
+      }
+    }
+  },
+  "mediansMicros": {
+    "jit": {
+      "cold": {
+        "regexp": 39089.0,
+        "scanner": 7082.0,
+        "hybrid": 38355.0
+      },
+      "hot": {
+        "regexp": 38540.0,
+        "scanner": 6545.0,
+        "hybrid": 38300.0
+      }
+    },
+    "aot": {
+      "cold": {
+        "regexp": 38694.0,
+        "scanner": 6871.0,
+        "hybrid": 37802.0
+      },
+      "hot": {
+        "regexp": 37358.0,
+        "scanner": 5946.0,
+        "hybrid": 37442.0
+      }
+    },
+    "js": {
+      "cold": {
+        "regexp": 24000,
+        "scanner": 21000,
+        "hybrid": 21000
+      },
+      "hot": {
+        "regexp": 19000,
+        "scanner": 16000,
+        "hybrid": 19000
+      }
+    }
+  },
+  "normalized": {
+    "jit": {
+      "cold": {
+        "regexp": 5.519486020898051,
+        "scanner": 1.0,
+        "hybrid": 5.4158429822084155
+      },
+      "hot": {
+        "regexp": 5.888464476699771,
+        "scanner": 1.0,
+        "hybrid": 5.8517952635599695
+      }
+    },
+    "aot": {
+      "cold": {
+        "regexp": 5.631494687818367,
+        "scanner": 1.0,
+        "hybrid": 5.501673701062436
+      },
+      "hot": {
+        "regexp": 6.282879246552304,
+        "scanner": 1.0,
+        "hybrid": 6.297006390850992
+      }
+    },
+    "js": {
+      "cold": {
+        "regexp": 1.1428571428571428,
+        "scanner": 1.0,
+        "hybrid": 1.0
+      },
+      "hot": {
+        "regexp": 1.1875,
+        "scanner": 1.0,
+        "hybrid": 1.1875
+      }
+    }
+  },
+  "scores": {
+    "regexp": 3.405791905944018,
+    "scanner": 1.0,
+    "hybrid": 3.3052397078335947
+  },
+  "sourceSizeBytes": {
+    "regexp": 964,
+    "scanner": 2942,
+    "hybrid": 937
+  },
+  "selectionRule": "lowest geometric score; within 1% smaller source; then scanner",
+  "selected": "scanner"
+}
