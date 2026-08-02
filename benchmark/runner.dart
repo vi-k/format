@@ -255,6 +255,7 @@ BenchmarkScenarioResult _resultFor(
     keyScenario: scenario.keyScenario,
     comparisonKind: scenario.comparisonKind,
     comparisonRationale: scenario.comparisonRationale,
+    referenceLabel: scenario.referenceLabel,
     candidateMedianNanoseconds: candidate,
     baselineMedianNanoseconds:
         scenario.comparisonKind == BenchmarkComparisonKind.performance

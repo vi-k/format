@@ -122,6 +122,16 @@ void main() {
     );
   });
 
+  test('format_intl uses a pinned golden reference rather than Format', () {
+    final scenario = benchmarkScenarios.singleWhere(
+      (scenario) => scenario.id == 'brace.format_intl.hot',
+    );
+    expect(scenario.referenceKind, BenchmarkReferenceKind.golden);
+    expect(scenario.referenceLabel, 'golden-intl:uk_UA:1234');
+    final outcome = scenario.baseline!(0);
+    expect((outcome as TextOutcome).value, '1\u00a0234');
+  });
+
   test('non-overlapping sprintf7 conversions stay informational', () {
     final byId = {
       for (final scenario in benchmarkScenarios) scenario.id: scenario,

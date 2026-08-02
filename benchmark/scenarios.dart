@@ -244,6 +244,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     candidate: (_) => _capture(() => _intlFormat.format('{:n}', 1234)),
     reference: (_) => const TextOutcome('1\u00a0234'),
     referenceKind: BenchmarkReferenceKind.golden,
+    referenceLabel: 'golden-intl:uk_UA:1234',
   ),
   _printfComparable(
     'printf.literal',
@@ -574,6 +575,7 @@ BenchmarkScenario _braceReference(
   required BenchmarkOperation candidate,
   required BenchmarkOperation reference,
   BenchmarkReferenceKind referenceKind = BenchmarkReferenceKind.executable,
+  String? referenceLabel,
 }) => BenchmarkScenario(
   id: '$name.hot',
   dialect: BenchmarkDialect.braces,
@@ -586,6 +588,7 @@ BenchmarkScenario _braceReference(
   comparisonKind: BenchmarkComparisonKind.correctnessOnly,
   comparisonRationale: rationale,
   referenceKind: referenceKind,
+  referenceLabel: referenceLabel,
 );
 
 BenchmarkScenario _printfInformation(

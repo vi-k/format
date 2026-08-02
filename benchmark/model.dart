@@ -70,6 +70,7 @@ final class BenchmarkScenario {
   final BenchmarkApiPath apiPath;
   final int fieldCount;
   final BenchmarkReferenceKind referenceKind;
+  final String? referenceLabel;
 
   BenchmarkScenario({
     required this.id,
@@ -85,6 +86,7 @@ final class BenchmarkScenario {
     this.apiPath = BenchmarkApiPath.withValues,
     this.fieldCount = 1,
     this.referenceKind = BenchmarkReferenceKind.executable,
+    this.referenceLabel,
   }) : templates = List.unmodifiable(templates) {
     if (id.isEmpty) throw ArgumentError.value(id, 'id', 'Must not be empty.');
     if (fieldCount < 1) throw ArgumentError.value(fieldCount, 'fieldCount');
@@ -128,6 +130,10 @@ final class BenchmarkScenario {
         'comparisonRationale',
         'Reference-only comparisons explain why no ratio is measured.',
       );
+    }
+    if (referenceKind == BenchmarkReferenceKind.golden &&
+        (referenceLabel == null || referenceLabel!.isEmpty)) {
+      throw ArgumentError('Golden references require a stable label.');
     }
   }
 
@@ -176,6 +182,7 @@ final class BenchmarkScenarioResult {
   final bool keyScenario;
   final BenchmarkComparisonKind comparisonKind;
   final String? comparisonRationale;
+  final String? referenceLabel;
   final int? candidateMedianNanoseconds;
   final int? baselineMedianNanoseconds;
   final double? ratio;
@@ -187,6 +194,7 @@ final class BenchmarkScenarioResult {
     required this.keyScenario,
     required this.comparisonKind,
     required this.comparisonRationale,
+    required this.referenceLabel,
     required this.candidateMedianNanoseconds,
     required this.baselineMedianNanoseconds,
     required this.ratio,
@@ -204,6 +212,7 @@ final class BenchmarkScenarioResult {
       'keyScenario': keyScenario,
       'comparisonKind': comparisonKind.name,
       'comparisonRationale': comparisonRationale,
+      'referenceLabel': referenceLabel,
       'candidateMedianNanoseconds': candidateMedianNanoseconds,
       'baselineMedianNanoseconds': baselineMedianNanoseconds,
       'ratio': ratio,
@@ -220,6 +229,7 @@ final class BenchmarkScenarioResult {
           json['comparisonKind']! as String,
         ),
         comparisonRationale: json['comparisonRationale'] as String?,
+        referenceLabel: json['referenceLabel'] as String?,
         candidateMedianNanoseconds: json['candidateMedianNanoseconds'] as int?,
         baselineMedianNanoseconds: json['baselineMedianNanoseconds'] as int?,
         ratio: (json['ratio'] as num?)?.toDouble(),
