@@ -101,6 +101,20 @@ diff.
 Gate-entrypoint продолжает немедленно завершаться при несовпадении результата,
 поскольку его измерения имеют смысл только после проверки точного output.
 
+## Конфигурации запуска VS Code
+
+Существующие пользовательские конфигурации в `.vscode/launch.json` сохраняются.
+К ним добавляются отдельные Dart-конфигурации для:
+
+- восстановленного `example/bin/benchmark.dart`;
+- нового `example/bin/format2_gate_benchmark.dart`;
+- `benchmark/runner.dart` в явном JIT smoke-режиме без release-gate claim;
+- `benchmark/parser_strategy.dart` в JIT-режиме с JSON в `/private/tmp`.
+
+Performance-benchmark нельзя запускать параллельно, поэтому compound,
+одновременно стартующий все конфигурации, не создаётся. Все entrypoint доступны
+по отдельности в списке Run and Debug и используют корректный рабочий каталог.
+
 ## Тестирование и критерии приёмки
 
 Реализация выполняется через цикл RED/GREEN TDD.
