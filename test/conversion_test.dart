@@ -59,6 +59,8 @@ final class _FormattingToString {
 }
 
 void main() {
+  const isJavaScript = identical(1, 1.0);
+
   test('s conversion uses Dart toString and preserves null', () {
     expect(format('{!s}', 42), '42');
     expect(format('{!s}', null), 'null');
@@ -89,10 +91,12 @@ void main() {
     expect(format('{!r}', -0.0), '-0.0');
   });
 
-  test('r and a conversions use Python shortest double spelling', () {
-    expect(format('{!r}', 1e20), '1e+20');
+  test('r and a conversions use platform-aware number spelling', () {
+    const integralSpelling = isJavaScript ? '100000000000000000000' : '1e+20';
+
+    expect(format('{!r}', 1e20), integralSpelling);
     expect(format('{!r}', 1e-7), '1e-07');
-    expect(format('{!a}', 1e20), '1e+20');
+    expect(format('{!a}', 1e20), integralSpelling);
     expect(format('{!a}', 1e-7), '1e-07');
   });
 
