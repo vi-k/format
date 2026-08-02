@@ -13,11 +13,81 @@
 - Все shell-команды начинаются с `rtk`, все изменения файлов выполняются через `apply_patch`.
 - Не менять публичный API и parser.
 - Не менять пользовательские незакоммиченные `.vscode/launch.json`, `.vscode/c_cpp_properties.json`, `.vscode/settings.json`.
-- Не менять пользовательские незакоммиченные `example/bin/benchmark.dart`, `example/lib/src/format_benchmark.dart`, `example/lib/src/format3_benchmark.dart`, `example/test/restored_benchmark_test.dart` и связанные с незавершённым rename файлы.
+- Task 0 завершает явно включённый пользователем rename `FormatBenchmark` → `Format3Benchmark`; после его коммита остальные tasks не меняют `example/`.
 - Timing-порог не добавляется в обычный unit-test suite; performance RED/GREEN фиксируется существующим benchmark harness.
 - Недесятичные пути `b`, `o`, `x`, `X` сохраняют `toRadixString(radix)`.
 - Benchmark-матрица использует JS-safe `9007199254740991`; VM correctness-тесты отдельно покрывают полные 64-битные границы.
 - Каждый кодовый task проходит RED → GREEN и заканчивается отдельным коммитом.
+
+---
+
+### Task 0: Завершить rename benchmark-класса Format 3
+
+**Files:**
+- Modify: `example/bin/benchmark.dart`
+- Modify: `example/lib/benchmark.dart`
+- Delete: `example/lib/src/format_benchmark.dart`
+- Create: `example/lib/src/format3_benchmark.dart`
+- Modify: `example/test/restored_benchmark_test.dart`
+
+**Interfaces:**
+- Produces: экспортируемый `Format3Benchmark` с прежним benchmark-поведением и именем `format::format`.
+- Consumes: существующие пользовательские rename-правки и `MyBenchmarkBase`.
+
+- [ ] **Step 1: Подтвердить существующий RED**
+
+```bash
+rtk dart test test/restored_benchmark_test.dart
+rtk dart analyze
+```
+
+Run from `example/`. Expected: compile/analyzer errors — barrel экспортирует
+удалённый `src/format_benchmark.dart`, поэтому `Format3Benchmark` не виден
+driver и тесту.
+
+- [ ] **Step 2: Завершить barrel rename минимальной правкой**
+
+В `example/lib/benchmark.dart` заменить:
+
+```dart
+export 'src/format_benchmark.dart';
+```
+
+на:
+
+```dart
+export 'src/format3_benchmark.dart';
+```
+
+Не менять тело пользовательского `Format3Benchmark` и порядок движков в
+driver.
+
+- [ ] **Step 3: Подтвердить GREEN**
+
+```bash
+rtk dart test test/restored_benchmark_test.dart
+rtk dart analyze
+```
+
+Run from `example/`. Expected: 2 restored tests PASS вместе с gate tests;
+analyzer — `No issues found!`.
+
+- [ ] **Step 4: Проверить rename scope**
+
+```bash
+rtk git diff --check
+rtk git status --short
+```
+
+Expected: rename включает только пять перечисленных example-файлов;
+`.vscode/` остаётся незатронутым.
+
+- [ ] **Step 5: Commit**
+
+```bash
+rtk git add example/bin/benchmark.dart example/lib/benchmark.dart example/lib/src/format_benchmark.dart example/lib/src/format3_benchmark.dart example/test/restored_benchmark_test.dart
+rtk git commit -m "refactor: name the Format 3 benchmark explicitly"
+```
 
 ---
 
