@@ -430,8 +430,9 @@ String _displayFloatBody(
   _FormatSpec spec,
   NumberLocale? locale,
   FormatExceptionContext context,
-  bool special,
-) {
+  bool special, {
+  bool localeGrouping = true,
+}) {
   var suffix = '';
   if (body.endsWith('%')) {
     suffix = '%';
@@ -450,7 +451,7 @@ String _displayFloatBody(
   var fraction = point < 0 ? '' : mantissa.substring(point + 1);
 
   String? localeGroupSeparator;
-  if (locale != null) {
+  if (locale != null && localeGrouping) {
     final enabled = _readLocale(context, () => locale.groupingEnabled);
     if (enabled) {
       final grouping = List<int>.from(
@@ -495,10 +496,13 @@ String _displayFloatBody(
   }
   var displayed = integer + decimalSeparator + fraction;
   if (exponentMatch != null) {
-    final exponentSeparator =
+    var exponentSeparator =
         locale == null
             ? exponentMatch.group(1)!
             : _readLocale(context, () => locale.exponentSeparator);
+    if (exponentMatch.group(1) == 'E') {
+      exponentSeparator = exponentSeparator.toUpperCase();
+    }
     final exponentNegative = exponentMatch.group(2) == '-';
     final exponentSign =
         locale == null

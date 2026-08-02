@@ -28,6 +28,12 @@ String _formatPrintfValue(
   'o' ||
   'x' ||
   'X' => _formatPrintfInteger(value, conversion, engine, context),
+  'f' ||
+  'F' ||
+  'e' ||
+  'E' ||
+  'g' ||
+  'G' => _formatPrintfDouble(value, conversion, engine, context),
   _ =>
     throw InvalidSpecifierException(
       context,
@@ -136,5 +142,82 @@ String _formatPrintfInteger(
       width: conversion.width,
     ),
     textUnit: engine.textUnit,
+  );
+}
+
+String _formatPrintfDouble(
+  Object? value,
+  _ResolvedPrintfConversion conversion,
+  Format engine,
+  FormatExceptionContext context,
+) {
+  if (value is! double) {
+    throw UnsupportedFormatValueException(context, value);
+  }
+  final type = conversion.node.type;
+  final binary = Binary64.fromDouble(value);
+  final uppercase = type == 'E' || type == 'F' || type == 'G';
+  late final _AsciiFloat formatted;
+  if (!binary.isFinite) {
+    final word = binary.isNaN ? 'nan' : 'inf';
+    formatted = _AsciiFloat(
+      uppercase ? word.toUpperCase() : word,
+      false,
+      special: true,
+    );
+  } else {
+    final precision = conversion.precision ?? 6;
+    final alternate = conversion.flags.contains(_PrintfFlag.alternate);
+    formatted = switch (type) {
+      'f' || 'F' => _formatFixed(binary, precision, alternate),
+      'e' || 'E' => _formatScientific(binary, precision, alternate, type),
+      'g' || 'G' => _formatGeneral(
+        binary,
+        precision == 0 ? 1 : precision,
+        alternate,
+        type == 'G' ? 'E' : 'e',
+      ),
+      _ => throw StateError('Unsupported decimal printf conversion: $type'),
+    };
+  }
+
+  final locale = engine.numberLocale;
+  final negative = !binary.isNaN && binary.signBit;
+  final requestedSign =
+      conversion.flags.contains(_PrintfFlag.sign)
+          ? '+'
+          : conversion.flags.contains(_PrintfFlag.space)
+          ? ' '
+          : null;
+  final sign = _localizedSign(negative, requestedSign, locale, context);
+  final left = conversion.flags.contains(_PrintfFlag.left);
+  final zero =
+      conversion.flags.contains(_PrintfFlag.zero) &&
+      !left &&
+      !formatted.special;
+  final spec = _FormatSpec(
+    align: left ? '<' : null,
+    alternate: conversion.flags.contains(_PrintfFlag.alternate),
+    zero: zero,
+    width: conversion.width,
+    precision: conversion.precision,
+    type: type,
+  );
+  return applyNumericWidth(
+    sign: sign,
+    prefix: '',
+    digits: formatted.body,
+    spec: spec,
+    textUnit: engine.textUnit,
+    fitRegroupedZeroPadding: true,
+    formatDigits:
+        (body) => _displayFloatBody(
+          body,
+          spec,
+          locale,
+          context,
+          formatted.special,
+          localeGrouping: false,
+        ),
   );
 }
