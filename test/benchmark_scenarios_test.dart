@@ -14,6 +14,7 @@ void main() {
     final ids = benchmarkScenarios.map((scenario) => scenario.id).toSet();
     for (final required in [
       'brace.literal.cold',
+      'brace.int.large_decimal.hot',
       'brace.mixed_named.hot.10',
       'brace.graphemes.hot',
       'brace.nested_precision.hot',
@@ -24,6 +25,25 @@ void main() {
     ]) {
       expect(ids, contains(required));
     }
+  });
+
+  test('large decimal integer is a key Format 2 comparison', () {
+    final scenario = benchmarkScenarios.singleWhere(
+      (value) => value.id == 'brace.int.large_decimal.hot',
+    );
+
+    expect(scenario.keyScenario, isTrue);
+    expect(scenario.comparisonKind, BenchmarkComparisonKind.performance);
+    expect(
+      scenario.expected,
+      isA<TextOutcome>().having(
+        (outcome) => outcome.value,
+        'value',
+        '9007199254740991',
+      ),
+    );
+    expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
+    expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
   });
 
   test(

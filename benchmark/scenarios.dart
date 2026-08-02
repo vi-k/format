@@ -89,6 +89,13 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     key: true,
   ),
   _braceComparable(
+    'brace.int.large_decimal',
+    template: '{:d}',
+    values: const [9007199254740991],
+    expected: '9007199254740991',
+    key: true,
+  ),
+  _braceComparable(
     'brace.bigint.default',
     template: '{}',
     values: [BigInt.parse('9007199254740993')],
