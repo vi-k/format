@@ -7,6 +7,8 @@ import '../benchmark/model.dart';
 import '../benchmark/runner.dart';
 import '../benchmark/scenarios.dart';
 
+const _testSourceRevision = '0123456789abcdef0123456789abcdef01234567';
+
 void main() {
   test('benchmark matrix covers every required dimension', () {
     final ids = benchmarkScenarios.map((scenario) => scenario.id).toSet();
@@ -311,6 +313,7 @@ void main() {
         'js',
         'benchmark/runner.dart',
         '-Dformat.benchmark.dartCompilerVersion=3.12.2',
+        '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
         '-O4',
         '-o',
         output,
@@ -348,6 +351,7 @@ void main() {
         'dart2js.compile-time-define',
       );
       expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
+      expect(report.sourceRevision, _testSourceRevision);
       expect(
         report.scenarios
             .where(
@@ -377,6 +381,7 @@ void main() {
           'compile',
           'exe',
           'benchmark/runner.dart',
+          '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
           '-o',
           output,
         ]);
@@ -411,6 +416,7 @@ void main() {
           'value': 'true',
         });
         expect(report.executableSizeBytes, greaterThan(0));
+        expect(report.sourceRevision, _testSourceRevision);
       } finally {
         await directory.delete(recursive: true);
       }

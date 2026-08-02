@@ -16,6 +16,8 @@ Map<String, String> runtimeProvenance() => const <String, String>{
   'detector': 'unsupported',
 };
 
+String sourceRevision() => '';
+
 Map<String, String> environmentInfo() => const <String, String>{
   'dartVersion': 'unsupported',
   'os': 'unsupported',

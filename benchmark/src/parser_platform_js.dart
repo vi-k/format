@@ -3,6 +3,9 @@ import 'dart:js_interop';
 const _dartCompilerVersion = String.fromEnvironment(
   'format.benchmark.dartCompilerVersion',
 );
+const _sourceRevision = String.fromEnvironment(
+  'format.benchmark.sourceRevision',
+);
 
 @JS('process')
 external _NodeProcess get _process;
@@ -72,4 +75,7 @@ String detectedRuntime() => 'js';
 Map<String, String> runtimeProvenance() => <String, String>{
   'detector': 'dart2js.compile-time-define',
   'dartCompilerVersion': _dartCompilerVersion,
+  'nodeVersion': _process.version,
 };
+
+String sourceRevision() => _sourceRevision;

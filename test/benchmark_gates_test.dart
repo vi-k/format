@@ -95,6 +95,52 @@ void main() {
     expect(() => evaluateGateReports(missingCompiler), throwsFormatException);
   });
 
+  test('gates require Node 24.8.0 and one canonical source revision', () {
+    final wrongNode = _completeReports();
+    final js = wrongNode.indexWhere((report) => report.runtime == 'js');
+    wrongNode[js] = _copyReport(
+      wrongNode[js],
+      runtimeProvenance: const {
+        'detector': 'dart2js.compile-time-define',
+        'dartCompilerVersion': '3.12.2',
+        'nodeVersion': 'v26.5.0',
+      },
+    );
+    expect(() => evaluateGateReports(wrongNode), throwsFormatException);
+
+    final mismatchedCompiler = _completeReports();
+    final secondJs = mismatchedCompiler.lastIndexWhere(
+      (report) => report.runtime == 'js',
+    );
+    mismatchedCompiler[secondJs] = _copyReport(
+      mismatchedCompiler[secondJs],
+      runtimeProvenance: const {
+        'detector': 'dart2js.compile-time-define',
+        'dartCompilerVersion': '3.12.3',
+        'nodeVersion': 'v24.8.0',
+      },
+    );
+    expect(
+      () => evaluateGateReports(mismatchedCompiler),
+      throwsFormatException,
+    );
+
+    final missing = _completeReports();
+    missing[0] = _copyReport(missing[0], sourceRevision: '');
+    expect(() => evaluateGateReports(missing), throwsFormatException);
+
+    final malformed = _completeReports();
+    malformed[0] = _copyReport(malformed[0], sourceRevision: 'not-a-sha');
+    expect(() => evaluateGateReports(malformed), throwsFormatException);
+
+    final mismatched = _completeReports();
+    mismatched[0] = _copyReport(
+      mismatched[0],
+      sourceRevision: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    );
+    expect(() => evaluateGateReports(mismatched), throwsFormatException);
+  });
+
   test(
     'merged gates reject smoke, non-gateable, short, and mismatched runs',
     () {
@@ -239,9 +285,11 @@ BenchmarkReport _report({
     'js' => const {
       'detector': 'dart2js.compile-time-define',
       'dartCompilerVersion': '3.12.2',
+      'nodeVersion': 'v24.8.0',
     },
     _ => const {},
   },
+  sourceRevision: '0123456789abcdef0123456789abcdef01234567',
   run: run,
   versions: const {'dartVersion': 'test', 'os': 'test', 'cpu': 'test'},
   smoke: false,
@@ -279,10 +327,12 @@ BenchmarkReport _copyReport(
   int? run,
   String? detectedRuntime,
   Map<String, String>? runtimeProvenance,
+  String? sourceRevision,
 }) => BenchmarkReport(
   runtime: report.runtime,
   detectedRuntime: detectedRuntime ?? report.detectedRuntime,
   runtimeProvenance: runtimeProvenance ?? report.runtimeProvenance,
+  sourceRevision: sourceRevision ?? report.sourceRevision,
   run: run ?? report.run,
   versions: report.versions,
   smoke: smoke ?? report.smoke,

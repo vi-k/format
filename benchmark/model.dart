@@ -247,6 +247,7 @@ final class BenchmarkReport {
   final String runtime;
   final String detectedRuntime;
   final Map<String, String> runtimeProvenance;
+  final String sourceRevision;
   final int run;
   final Map<String, String> versions;
   final int? executableSizeBytes;
@@ -261,6 +262,7 @@ final class BenchmarkReport {
     required this.runtime,
     required this.detectedRuntime,
     required Map<String, String> runtimeProvenance,
+    required this.sourceRevision,
     required this.run,
     required Map<String, String> versions,
     this.executableSizeBytes,
@@ -294,6 +296,7 @@ final class BenchmarkReport {
     'runtime': runtime,
     'detectedRuntime': detectedRuntime,
     'runtimeProvenance': runtimeProvenance,
+    'sourceRevision': sourceRevision,
     'run': run,
     'versions': versions,
     'executableSizeBytes': executableSizeBytes,
@@ -310,6 +313,7 @@ final class BenchmarkReport {
     detectedRuntime: json['detectedRuntime']! as String,
     runtimeProvenance: (json['runtimeProvenance']! as Map<Object?, Object?>)
         .map((key, value) => MapEntry(key! as String, value! as String)),
+    sourceRevision: json['sourceRevision']! as String,
     run: json['run']! as int,
     versions: (json['versions']! as Map<Object?, Object?>).map(
       (key, value) => MapEntry(key! as String, value! as String),

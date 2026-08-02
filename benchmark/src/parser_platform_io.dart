@@ -1,6 +1,9 @@
 import 'dart:io';
 
 const _isAot = bool.fromEnvironment('dart.vm.product');
+const _sourceRevision = String.fromEnvironment(
+  'format.benchmark.sourceRevision',
+);
 
 List<String> effectiveArguments(List<String> mainArguments) => mainArguments;
 
@@ -16,6 +19,8 @@ Map<String, String> runtimeProvenance() => <String, String>{
   'detector': 'dart.vm.product',
   'value': '$_isAot',
 };
+
+String sourceRevision() => _sourceRevision;
 
 int? executableSizeBytes() {
   if (!_isAot) return null;

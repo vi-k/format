@@ -107,12 +107,14 @@ double geometricMean(Iterable<double> ratios) {
 
 final class GateReport {
   final bool passed;
+  final String sourceRevision;
   final int aotExecutableSizeBytes;
   final List<DialectGate> gates;
   final List<BenchmarkReport> reports;
 
   const GateReport({
     required this.passed,
+    required this.sourceRevision,
     required this.aotExecutableSizeBytes,
     required this.gates,
     required this.reports,
@@ -121,6 +123,7 @@ final class GateReport {
   Map<String, Object?> toJson() => {
     'schemaVersion': 1,
     'passed': passed,
+    'sourceRevision': sourceRevision,
     'aotExecutableSizeBytes': aotExecutableSizeBytes,
     'reports': reports.map(_reportSummary).toList(),
     'gates': gates.map((gate) => gate.toJson()).toList(),
@@ -142,6 +145,7 @@ GateReport evaluateGateReports(Iterable<BenchmarkReport> input) {
   }
 
   final gates = <DialectGate>[];
+  final sourceRevision = _sourceRevisionFor(reports);
   int? aotSize;
   for (final entry in _requiredRuntimeDialects.entries) {
     final pair = _validatePair(entry.key, byRuntime[entry.key]!, entry.value);
@@ -160,6 +164,7 @@ GateReport evaluateGateReports(Iterable<BenchmarkReport> input) {
   }
   return GateReport(
     passed: gates.every((gate) => gate.passed),
+    sourceRevision: sourceRevision,
     aotExecutableSizeBytes: aotSize!,
     gates: List.unmodifiable(gates),
     reports: List.unmodifiable(reports),
@@ -238,6 +243,11 @@ void _validateReport(BenchmarkReport report) {
           'js run ${report.run} lacks a concrete Dart compiler version.',
         );
       }
+      if (report.runtimeProvenance['nodeVersion'] != 'v24.8.0') {
+        throw FormatException(
+          'js run ${report.run} requires Node v24.8.0 provenance.',
+        );
+      }
   }
   final ids = <String>{};
   for (final scenario in report.scenarios) {
@@ -272,6 +282,17 @@ void _validateReport(BenchmarkReport report) {
     }
     _validateSamples(report, scenario);
   }
+}
+
+String _sourceRevisionFor(List<BenchmarkReport> reports) {
+  final revisions = reports.map((report) => report.sourceRevision).toSet();
+  if (revisions.length != 1 ||
+      !RegExp(r'^[0-9a-f]{40}$').hasMatch(revisions.single)) {
+    throw const FormatException(
+      'Gateable reports require one canonical full source revision.',
+    );
+  }
+  return revisions.single;
 }
 
 void _requireProvenance(BenchmarkReport report, String detector, String value) {
@@ -597,6 +618,7 @@ Map<String, Object?> _reportSummary(BenchmarkReport report) => {
   'runtime': report.runtime,
   'detectedRuntime': report.detectedRuntime,
   'runtimeProvenance': report.runtimeProvenance,
+  'sourceRevision': report.sourceRevision,
   'run': report.run,
   'versions': report.versions,
   'smoke': report.smoke,

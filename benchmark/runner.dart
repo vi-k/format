@@ -153,6 +153,7 @@ BenchmarkReport runBenchmark(
     runtime: detectedRuntime,
     detectedRuntime: detectedRuntime,
     runtimeProvenance: platform.runtimeProvenance(),
+    sourceRevision: platform.sourceRevision(),
     run: options.run,
     versions: {
       ...platform.environmentInfo(),
