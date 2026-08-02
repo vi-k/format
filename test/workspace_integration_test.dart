@@ -1,4 +1,6 @@
 import 'package:format/format.dart';
+// The workspace boundary test intentionally imports the sibling public API.
+// ignore: depend_on_referenced_packages
 import 'package:format_intl/format_intl.dart';
 import 'package:test/test.dart';
 
