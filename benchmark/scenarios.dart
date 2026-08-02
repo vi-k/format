@@ -139,13 +139,13 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
   ),
   _braceInformation(
     'brace.mixed_named.hot.10',
-    template: '{name} {} {}',
-    expected: const TextOutcome('Ada zero one'),
+    template: '{name} {} {} {} {} {} {} {} {} {}',
+    expected: const TextOutcome('Ada 1 2 3 4 5 6 7 8 9'),
     candidate:
         (_) => _capture(
           () => formatWith(
-            '{name} {} {}',
-            positional: const ['zero', 'one'],
+            '{name} {} {} {} {} {} {} {} {} {}',
+            positional: const [1, 2, 3, 4, 5, 6, 7, 8, 9],
             named: const {'name': 'Ada'},
           ),
         ),
@@ -168,11 +168,12 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: const TextOutcome('1.000000e+00'),
     candidate: (_) => _capture(() => format('{:e}', 1.0)),
   ),
-  _braceInformation(
+  _braceComparable(
     'brace.double.general',
     template: '{:g}',
-    expected: const TextOutcome('12.5'),
-    candidate: (_) => _capture(() => format('{:g}', 12.5)),
+    values: const [12.5],
+    expected: '12.5',
+    key: true,
   ),
   _braceInformation(
     'brace.percent',
@@ -340,17 +341,19 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [42],
     expected: '0x00002a',
   ),
-  _printfInformation(
+  _printfComparable(
     'printf.exponential',
     template: '%e',
-    expected: const TextOutcome('1.000000e+00'),
-    candidate: (_) => _capture(() => sprintf('%e', 1.0)),
+    values: const [1.0],
+    expected: '1.000000e+00',
+    key: true,
   ),
-  _printfInformation(
+  _printfComparable(
     'printf.general',
     template: '%g',
-    expected: const TextOutcome('12.5'),
-    candidate: (_) => _capture(() => sprintf('%g', 12.5)),
+    values: const [12.5],
+    expected: '12.5',
+    key: true,
   ),
   _printfInformation(
     'printf.hex_float.hot',
@@ -364,11 +367,12 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: const TextOutcome('0X1.8P+0'),
     candidate: (_) => _capture(() => sprintf('%A', 1.5)),
   ),
-  _printfInformation(
+  _printfComparable(
     'printf.specials',
-    template: '%F',
-    expected: const TextOutcome('INF'),
-    candidate: (_) => _capture(() => sprintf('%F', double.infinity)),
+    template: '%.2F',
+    values: const [double.infinity],
+    expected: 'INF',
+    key: true,
   ),
   _printfInformation(
     'printf.unicode',
@@ -441,7 +445,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
   ),
   _printfComparable(
     'printf.uppercase_fixed',
-    template: '%F',
+    template: '%.2F',
     values: const [12.5],
     expected: '12.50',
     key: true,
