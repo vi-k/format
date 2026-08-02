@@ -1,4 +1,5 @@
-export 'src/engine.dart' show Format, defaultFormat, format, formatWith;
+export 'src/engine.dart'
+    show Format, defaultFormat, format, formatWith, sprintf, vsprintf;
 export 'src/errors.dart'
     show
         AmbiguousFormatterException,
