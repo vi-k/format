@@ -191,6 +191,9 @@ List<BenchmarkReport> _validatePair(
   if (first.recordedRounds != second.recordedRounds) {
     throw FormatException('$runtime reports have mismatched recorded rounds.');
   }
+  if (!_sameStringMap(first.runtimeProvenance, second.runtimeProvenance)) {
+    throw FormatException('$runtime reports have mismatched provenance.');
+  }
   _validateScenarioMatrix(first, expectedDialects);
   _validateScenarioMatrix(second, expectedDialects);
   _validateMatchingScenarios(first, second);
@@ -210,6 +213,31 @@ void _validateReport(BenchmarkReport report) {
   }
   if (!_requiredRuntimeDialects.containsKey(report.runtime)) {
     throw FormatException('Unknown benchmark runtime: ${report.runtime}.');
+  }
+  if (report.detectedRuntime != report.runtime) {
+    throw FormatException(
+      '${report.runtime} run ${report.run} has mismatched runtime provenance.',
+    );
+  }
+  switch (report.runtime) {
+    case 'jit':
+      _requireProvenance(report, 'dart.vm.product', 'false');
+    case 'aot':
+      _requireProvenance(report, 'dart.vm.product', 'true');
+    case 'js':
+      if (report.runtimeProvenance['detector'] !=
+          'dart2js.compile-time-define') {
+        throw FormatException('js run ${report.run} lacks dart2js provenance.');
+      }
+      final compiler = report.runtimeProvenance['dartCompilerVersion'];
+      if (compiler == null ||
+          !RegExp(
+            r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$',
+          ).hasMatch(compiler)) {
+        throw FormatException(
+          'js run ${report.run} lacks a concrete Dart compiler version.',
+        );
+      }
   }
   final ids = <String>{};
   for (final scenario in report.scenarios) {
@@ -245,6 +273,19 @@ void _validateReport(BenchmarkReport report) {
     _validateSamples(report, scenario);
   }
 }
+
+void _requireProvenance(BenchmarkReport report, String detector, String value) {
+  if (report.runtimeProvenance['detector'] != detector ||
+      report.runtimeProvenance['value'] != value) {
+    throw FormatException(
+      '${report.runtime} run ${report.run} has invalid runtime provenance.',
+    );
+  }
+}
+
+bool _sameStringMap(Map<String, String> first, Map<String, String> second) =>
+    first.length == second.length &&
+    first.entries.every((entry) => second[entry.key] == entry.value);
 
 void _validateSamples(
   BenchmarkReport report,
@@ -554,6 +595,8 @@ bool _sameSet<T>(Set<T> first, Set<T> second) =>
 
 Map<String, Object?> _reportSummary(BenchmarkReport report) => {
   'runtime': report.runtime,
+  'detectedRuntime': report.detectedRuntime,
+  'runtimeProvenance': report.runtimeProvenance,
   'run': report.run,
   'versions': report.versions,
   'smoke': report.smoke,

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+const _isAot = bool.fromEnvironment('dart.vm.product');
+
 List<String> effectiveArguments(List<String> mainArguments) => mainArguments;
 
 void writeTextFile(String path, String contents) {
@@ -8,7 +10,15 @@ void writeTextFile(String path, String contents) {
 
 String readTextFile(String path) => File(path).readAsStringSync();
 
+String detectedRuntime() => _isAot ? 'aot' : 'jit';
+
+Map<String, String> runtimeProvenance() => <String, String>{
+  'detector': 'dart.vm.product',
+  'value': '$_isAot',
+};
+
 int? executableSizeBytes() {
+  if (!_isAot) return null;
   final executable = File(Platform.resolvedExecutable);
   return executable.existsSync() ? executable.lengthSync() : null;
 }

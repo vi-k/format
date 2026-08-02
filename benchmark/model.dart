@@ -245,6 +245,8 @@ final class BenchmarkScenarioResult {
 
 final class BenchmarkReport {
   final String runtime;
+  final String detectedRuntime;
+  final Map<String, String> runtimeProvenance;
   final int run;
   final Map<String, String> versions;
   final int? executableSizeBytes;
@@ -257,6 +259,8 @@ final class BenchmarkReport {
 
   BenchmarkReport({
     required this.runtime,
+    required this.detectedRuntime,
+    required Map<String, String> runtimeProvenance,
     required this.run,
     required Map<String, String> versions,
     this.executableSizeBytes,
@@ -266,7 +270,8 @@ final class BenchmarkReport {
     required this.recordedRounds,
     required Iterable<BenchmarkSample> samples,
     required Iterable<BenchmarkScenarioResult> scenarios,
-  }) : versions = UnmodifiableMapView(Map.of(versions)),
+  }) : runtimeProvenance = UnmodifiableMapView(Map.of(runtimeProvenance)),
+       versions = UnmodifiableMapView(Map.of(versions)),
        samples = List.unmodifiable(samples),
        scenarios = List.unmodifiable(scenarios) {
     if (smoke && gateable) {
@@ -285,8 +290,10 @@ final class BenchmarkReport {
   }
 
   Map<String, Object?> toJson() => {
-    'schemaVersion': 1,
+    'schemaVersion': 2,
     'runtime': runtime,
+    'detectedRuntime': detectedRuntime,
+    'runtimeProvenance': runtimeProvenance,
     'run': run,
     'versions': versions,
     'executableSizeBytes': executableSizeBytes,
@@ -300,6 +307,9 @@ final class BenchmarkReport {
 
   static BenchmarkReport fromJson(Map<String, Object?> json) => BenchmarkReport(
     runtime: json['runtime']! as String,
+    detectedRuntime: json['detectedRuntime']! as String,
+    runtimeProvenance: (json['runtimeProvenance']! as Map<Object?, Object?>)
+        .map((key, value) => MapEntry(key! as String, value! as String)),
     run: json['run']! as int,
     versions: (json['versions']! as Map<Object?, Object?>).map(
       (key, value) => MapEntry(key! as String, value! as String),

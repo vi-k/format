@@ -97,6 +97,14 @@ BenchmarkReport runBenchmark(
   BenchmarkRunOptions options, {
   Iterable<BenchmarkScenario>? scenarios,
 }) {
+  final detectedRuntime = platform.detectedRuntime();
+  if (options.runtime != detectedRuntime) {
+    throw ArgumentError.value(
+      options.runtime,
+      'runtime',
+      'Does not match detected runtime $detectedRuntime.',
+    );
+  }
   final selected = (scenarios ?? benchmarkScenarios)
       .where(
         (scenario) =>
@@ -112,7 +120,7 @@ BenchmarkReport runBenchmark(
 
   final rawSamples = <BenchmarkSample>[];
   final operations =
-      options.runtime == 'js'
+      detectedRuntime == 'js'
           ? _javascriptOperations
           : options.smoke
           ? 1
@@ -142,7 +150,9 @@ BenchmarkReport runBenchmark(
 
   final results = selected.map((scenario) => _resultFor(scenario, rawSamples));
   return BenchmarkReport(
-    runtime: options.runtime,
+    runtime: detectedRuntime,
+    detectedRuntime: detectedRuntime,
+    runtimeProvenance: platform.runtimeProvenance(),
     run: options.run,
     versions: {
       ...platform.environmentInfo(),
@@ -151,7 +161,7 @@ BenchmarkReport runBenchmark(
       'sprintf7Baseline': '7.0.0/f1e74f2',
     },
     executableSizeBytes:
-        options.runtime == 'aot' ? platform.executableSizeBytes() : null,
+        detectedRuntime == 'aot' ? platform.executableSizeBytes() : null,
     smoke: options.smoke,
     gateable: !options.smoke,
     warmupRounds: _warmupRounds,

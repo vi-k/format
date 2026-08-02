@@ -92,6 +92,36 @@ void main() {
     expect(BenchmarkReport.fromJson(report.toJson()).toJson(), report.toJson());
   });
 
+  test('runner records detected JIT provenance and rejects a false label', () {
+    final options = const BenchmarkRunOptions(
+      dialect: BenchmarkDialect.braces,
+      phase: BenchmarkPhase.hot,
+      runtime: 'jit',
+      run: 1,
+      samples: 1,
+      smoke: true,
+    );
+    final report = runBenchmark(options);
+
+    expect(report.runtime, 'jit');
+    expect(report.detectedRuntime, 'jit');
+    expect(report.runtimeProvenance['detector'], 'dart.vm.product');
+    expect(report.runtimeProvenance['value'], 'false');
+    expect(
+      () => runBenchmark(
+        const BenchmarkRunOptions(
+          dialect: BenchmarkDialect.braces,
+          phase: BenchmarkPhase.hot,
+          runtime: 'aot',
+          run: 1,
+          samples: 1,
+          smoke: true,
+        ),
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('reference-only locale comparisons never produce a ratio', () {
     final references = benchmarkScenarios.where(
       (scenario) =>
@@ -280,11 +310,22 @@ void main() {
         'compile',
         'js',
         'benchmark/runner.dart',
+        '-Dformat.benchmark.dartCompilerVersion=3.12.2',
         '-O4',
         '-o',
         output,
       ]);
       expect(compile.exitCode, 0, reason: compile.stderr.toString());
+
+      final mismatch = await Process.run('node', [
+        output,
+        '--runtime=jit',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+      ]);
+      expect(mismatch.exitCode, isNonZero);
 
       final run = await Process.run('node', [
         output,
@@ -300,6 +341,13 @@ void main() {
         jsonDecode(await File('${directory.path}/report.json').readAsString())
             as Map<String, Object?>,
       );
+      expect(report.runtime, 'js');
+      expect(report.detectedRuntime, 'js');
+      expect(
+        report.runtimeProvenance['detector'],
+        'dart2js.compile-time-define',
+      );
+      expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
       expect(
         report.scenarios
             .where(
@@ -316,4 +364,56 @@ void main() {
       await directory.delete(recursive: true);
     }
   });
+
+  test(
+    'compiled AOT runner rejects JIT label and records AOT provenance',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'format-aot-runner-',
+      );
+      final output = '${directory.path}/runner';
+      try {
+        final compile = await Process.run(Platform.resolvedExecutable, [
+          'compile',
+          'exe',
+          'benchmark/runner.dart',
+          '-o',
+          output,
+        ]);
+        expect(compile.exitCode, 0, reason: compile.stderr.toString());
+
+        final mismatch = await Process.run(output, [
+          '--runtime=jit',
+          '--dialect=braces',
+          '--run=1',
+          '--samples=1',
+          '--smoke',
+        ]);
+        expect(mismatch.exitCode, isNonZero);
+
+        final run = await Process.run(output, [
+          '--runtime=aot',
+          '--dialect=braces',
+          '--run=1',
+          '--samples=1',
+          '--smoke',
+          '--output=${directory.path}/report.json',
+        ]);
+        expect(run.exitCode, 0, reason: run.stderr.toString());
+        final report = BenchmarkReport.fromJson(
+          jsonDecode(await File('${directory.path}/report.json').readAsString())
+              as Map<String, Object?>,
+        );
+        expect(report.runtime, 'aot');
+        expect(report.detectedRuntime, 'aot');
+        expect(report.runtimeProvenance, const {
+          'detector': 'dart.vm.product',
+          'value': 'true',
+        });
+        expect(report.executableSizeBytes, greaterThan(0));
+      } finally {
+        await directory.delete(recursive: true);
+      }
+    },
+  );
 }

@@ -10,6 +10,12 @@ String readTextFile(String path) {
 
 int? executableSizeBytes() => null;
 
+String detectedRuntime() => 'unsupported';
+
+Map<String, String> runtimeProvenance() => const <String, String>{
+  'detector': 'unsupported',
+};
+
 Map<String, String> environmentInfo() => const <String, String>{
   'dartVersion': 'unsupported',
   'os': 'unsupported',

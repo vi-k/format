@@ -77,6 +77,24 @@ void main() {
     expect(result.toJson()['gates'], hasLength(5));
   });
 
+  test('gates reject absent or mismatched runtime provenance', () {
+    final mismatched = _completeReports();
+    final jit = mismatched.indexWhere((report) => report.runtime == 'jit');
+    mismatched[jit] = _copyReport(mismatched[jit], detectedRuntime: 'aot');
+    expect(() => evaluateGateReports(mismatched), throwsFormatException);
+
+    final missingCompiler = _completeReports();
+    final js = missingCompiler.indexWhere((report) => report.runtime == 'js');
+    missingCompiler[js] = _copyReport(
+      missingCompiler[js],
+      runtimeProvenance: const {
+        'detector': 'dart2js.compile-time-define',
+        'dartCompilerVersion': 'unavailable',
+      },
+    );
+    expect(() => evaluateGateReports(missingCompiler), throwsFormatException);
+  });
+
   test(
     'merged gates reject smoke, non-gateable, short, and mismatched runs',
     () {
@@ -214,6 +232,16 @@ BenchmarkReport _report({
   int? executableSizeBytes,
 }) => BenchmarkReport(
   runtime: runtime,
+  detectedRuntime: runtime,
+  runtimeProvenance: switch (runtime) {
+    'jit' => const {'detector': 'dart.vm.product', 'value': 'false'},
+    'aot' => const {'detector': 'dart.vm.product', 'value': 'true'},
+    'js' => const {
+      'detector': 'dart2js.compile-time-define',
+      'dartCompilerVersion': '3.12.2',
+    },
+    _ => const {},
+  },
   run: run,
   versions: const {'dartVersion': 'test', 'os': 'test', 'cpu': 'test'},
   smoke: false,
@@ -249,8 +277,12 @@ BenchmarkReport _copyReport(
   bool? gateable,
   int? recordedRounds,
   int? run,
+  String? detectedRuntime,
+  Map<String, String>? runtimeProvenance,
 }) => BenchmarkReport(
   runtime: report.runtime,
+  detectedRuntime: detectedRuntime ?? report.detectedRuntime,
+  runtimeProvenance: runtimeProvenance ?? report.runtimeProvenance,
   run: run ?? report.run,
   versions: report.versions,
   smoke: smoke ?? report.smoke,
@@ -274,16 +306,21 @@ BenchmarkReport _withPerformanceRatio(
     (scenario) =>
         (scenario! as Map<String, Object?>)['scenarioId'] == scenarioId,
   );
-  final scenario = Map<String, Object?>.from(
-    scenarios[scenarioIndex]! as Map<String, Object?>,
-  )
-    ..['candidateMedianNanoseconds'] = candidate
-    ..['baselineMedianNanoseconds'] = 100
-    ..['ratio'] = candidate / 100;
+  final scenario =
+      Map<String, Object?>.from(
+          scenarios[scenarioIndex]! as Map<String, Object?>,
+        )
+        ..['candidateMedianNanoseconds'] = candidate
+        ..['baselineMedianNanoseconds'] = 100
+        ..['ratio'] = candidate / 100;
   scenarios[scenarioIndex] = scenario;
-  final samples = (json['samples']! as List<Object?>)
-      .map((sample) => Map<String, Object?>.from(sample! as Map<String, Object?>))
-      .toList();
+  final samples =
+      (json['samples']! as List<Object?>)
+          .map(
+            (sample) =>
+                Map<String, Object?>.from(sample! as Map<String, Object?>),
+          )
+          .toList();
   for (final sample in samples) {
     if (sample['scenarioId'] == scenarioId && sample['engine'] == 'candidate') {
       sample['elapsedNanoseconds'] = candidate;
