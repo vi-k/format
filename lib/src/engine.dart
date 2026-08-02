@@ -6,6 +6,8 @@ import 'text_unit.dart';
 
 part 'api.dart';
 part 'format.dart';
+part 'printf_ast.dart';
+part 'printf_parser.dart';
 part 'printf_processor.dart';
 part 'brace_processor.dart';
 part 'representation.dart';
