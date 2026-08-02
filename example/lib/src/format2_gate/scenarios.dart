@@ -52,6 +52,7 @@ final class GateBenchmarkValueFormatter extends Formatter<GateBenchmarkValue> {
 }
 
 final gateBenchmarkFormat = Format(
+  numberLocale: const _GateEnUsNumberLocale(),
   textUnit: TextUnit.graphemeClusters,
   formatters: const [GateBenchmarkValueFormatter()],
 );
@@ -89,7 +90,7 @@ final List<GateBenchmarkScenario> gateBenchmarkScenarios = [
   ),
   const GateBenchmarkScenario.positional(
     name: 'locale n',
-    template: '{:,d}',
+    template: '{:,n}',
     values: [123456],
     expected: '123,456',
   ),
@@ -111,4 +112,32 @@ GateBenchmarkScenario _placeholderScenario(int count) {
     expected: List.generate(count, (index) => '$index').join('|'),
     placeholderCount: count,
   );
+}
+
+final class _GateEnUsNumberLocale implements NumberLocale {
+  const _GateEnUsNumberLocale();
+
+  @override
+  String get decimalSeparator => '.';
+
+  @override
+  String get exponentSeparator => 'e';
+
+  @override
+  String get groupSeparator => ',';
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  bool get groupingEnabled => true;
+
+  @override
+  String get minusSign => '-';
+
+  @override
+  String get plusSign => '+';
+
+  @override
+  String localizeDigits(String asciiDigits) => asciiDigits;
 }

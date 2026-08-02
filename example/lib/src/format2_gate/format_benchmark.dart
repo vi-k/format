@@ -8,11 +8,12 @@ final class GateFormatBenchmark extends GateBenchmarkBase {
   @override
   String execute() {
     final namedValues = scenario.namedValues;
+    final template = scenario.template == '{:,n}' ? '{:n}' : scenario.template;
     return namedValues == null
         ? gateBenchmarkFormat.formatWith(
-          scenario.template,
+          template,
           positional: scenario.positionalValues!,
         )
-        : gateBenchmarkFormat.formatWith(scenario.template, named: namedValues);
+        : gateBenchmarkFormat.formatWith(template, named: namedValues);
   }
 }

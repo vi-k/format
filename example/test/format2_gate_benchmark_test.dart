@@ -1,4 +1,5 @@
 import 'package:example/format2_gate_benchmark.dart';
+import 'package:intl/intl.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -14,12 +15,25 @@ void main() {
     },
   );
 
-  test('gate locale scenario executes without an invalid specifier', () {
-    final scenario = gateBenchmarkScenarios.singleWhere(
-      (value) => value.name == 'locale n',
-    );
-    final benchmark = GateFormatBenchmark(scenario);
+  test(
+    'gate locale n keeps its template and produces the shared locale output',
+    () {
+      final previousLocale = Intl.defaultLocale;
+      addTearDown(() => Intl.defaultLocale = previousLocale);
+      Intl.defaultLocale = 'en_US';
 
-    expect(benchmark.execute(), scenario.expected);
-  });
+      final scenario = gateBenchmarkScenarios.singleWhere(
+        (value) => value.name == 'locale n',
+      );
+
+      expect(
+        [
+          GateFormatBenchmark(scenario).execute(),
+          GateLegacyFormatBenchmark(scenario).execute(),
+        ],
+        ['123,456', '123,456'],
+      );
+      expect(scenario.template, '{:,n}');
+    },
+  );
 }
