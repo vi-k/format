@@ -9,9 +9,8 @@ void main() {
     final formatUk = engine.format;
     final sprintfUk = engine.sprintf;
 
-    expect(formatUk('{:n}', 1234), contains('1'));
-    expect(formatUk('{:n}', 1234), isNot('1,234'));
-    expect(sprintfUk('%.1f', 1.5), '1,5');
+    expect(formatUk('{:n}', 1234), '1\u00A0234');
+    expect(sprintfUk('%.1f', 1234.5), '1234,5');
   });
 
   test('fromDefault snapshots the current locale', () {

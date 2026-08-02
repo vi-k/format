@@ -6,7 +6,7 @@ void main() {
   test('workspace public imports configure both formatting dialects', () {
     final engine = Format(numberLocale: IntlNumberLocale('uk_UA'));
 
-    expect(engine.format('{:n}', 1234), isNot('1,234'));
-    expect(engine.sprintf('%.1f', 1.5), '1,5');
+    expect(engine.format('{:n}', 1234), '1\u00A0234');
+    expect(engine.sprintf('%.1f', 1234.5), '1234,5');
   });
 }
