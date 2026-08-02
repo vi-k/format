@@ -6,6 +6,10 @@ import 'package:intl/number_symbols_data.dart' show numberFormatSymbols;
 part 'grouping_pattern.dart';
 
 final class IntlNumberLocale implements NumberLocale {
+  factory IntlNumberLocale.fromDefault() => IntlNumberLocale(
+    Intl.getCurrentLocale(),
+  );
+
   factory IntlNumberLocale(String localeName) {
     final verifiedLocale = Intl.verifiedLocale(
       Intl.canonicalizedLocale(localeName),
