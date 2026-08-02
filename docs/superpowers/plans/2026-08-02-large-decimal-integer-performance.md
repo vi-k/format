@@ -321,15 +321,17 @@ rtk dart analyze lib/src/number_format.dart
 
 Expected: все tests PASS; analyzer без новых ошибок и предупреждений.
 
-- [ ] **Step 4: Повторить benchmark дважды**
+- [ ] **Step 4: Выполнить smoke только как диагностический sanity-check**
 
 ```bash
 rtk dart run benchmark/runner.dart --dialect=braces --phase=hot --run=1 --samples=1 --smoke --output=/private/tmp/large-int-direct-1.json
 rtk dart run benchmark/runner.dart --dialect=braces --phase=hot --run=2 --samples=1 --smoke --output=/private/tmp/large-int-direct-2.json
-rtk jq -s -e '[.[].scenarios[] | select(.scenarioId == "brace.int.large_decimal.hot") | .ratio] | length == 2 and all(.[]; . <= 1.05)' /private/tmp/large-int-direct-1.json /private/tmp/large-int-direct-2.json
+rtk jq '.scenarios[] | select(.scenarioId == "brace.int.large_decimal.hot") | {candidateMedianNanoseconds, baselineMedianNanoseconds, ratio}' /private/tmp/large-int-direct-1.json /private/tmp/large-int-direct-2.json
 ```
 
-Expected: jq exit 0 для обоих файлов.
+Expected: оба сценария корректны. Smoke выполняет одну операцию на round и не
+используется для threshold-решения: при наносекундных операциях его ratio
+доминируется overhead harness.
 
 - [ ] **Step 5: Commit**
 
@@ -337,6 +339,26 @@ Expected: jq exit 0 для обоих файлов.
 rtk git add lib/src/number_format.dart
 rtk git commit -m "perf: avoid BigInt conversion for decimal int"
 ```
+
+- [ ] **Step 6: Подтвердить gate двумя non-smoke JIT-прогонами**
+
+Получить новый commit revision:
+
+```bash
+rtk git rev-parse HEAD
+```
+
+Подставить его вместо `<40hex>`:
+
+```bash
+rtk dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --dialect=braces --phase=hot --run=1 --output=/private/tmp/large-int-direct-gate-1.json
+rtk dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --dialect=braces --phase=hot --run=2 --output=/private/tmp/large-int-direct-gate-2.json
+rtk jq -s -e '[.[].scenarios[] | select(.scenarioId == "brace.int.large_decimal.hot") | .ratio] | length == 2 and all(.[]; . <= 1.05)' /private/tmp/large-int-direct-gate-1.json /private/tmp/large-int-direct-gate-2.json
+```
+
+Expected: два gateable 7-round/100-operation отчёта с matching provenance;
+jq exit 0. Если gate не проходит, не добавлять новую оптимизацию в этот task —
+вернуть `BLOCKED` с абсолютными медианами и ratio.
 
 ---
 
