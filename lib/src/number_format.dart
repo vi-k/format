@@ -14,16 +14,9 @@ String formatBraceInteger(
   Format settings,
   FormatExceptionContext context,
 ) {
-  final integer = switch (value) {
-    int() => BigInt.from(value),
-    BigInt() => value,
-    _ => throw UnsupportedFormatValueException(context, value),
-  };
   final type = spec.type ?? 'd';
   _validateIntegerSpec(spec, type, context);
 
-  final negative = integer.isNegative;
-  final magnitude = negative ? -integer : integer;
   final isLocaleDecimal = type == 'n';
   final radix = switch (type) {
     'b' => 2,
@@ -36,7 +29,20 @@ String formatBraceInteger(
         'This integer presentation type is not supported yet.',
       ),
   };
-  final digits = formatMagnitude(magnitude, radix, uppercase: type == 'X');
+  final negative = switch (value) {
+    int() => value.isNegative,
+    BigInt() => value.isNegative,
+    _ => throw UnsupportedFormatValueException(context, value),
+  };
+  final digits = switch (value) {
+    int() => _formatIntMagnitude(value, radix, uppercase: type == 'X'),
+    BigInt() => formatMagnitude(
+      value.isNegative ? -value : value,
+      radix,
+      uppercase: type == 'X',
+    ),
+    _ => throw UnsupportedFormatValueException(context, value),
+  };
   final prefix = _integerPrefix(type, spec.alternate);
 
   if (isLocaleDecimal) {
@@ -93,6 +99,12 @@ String formatBraceInteger(
 String formatMagnitude(BigInt magnitude, int radix, {bool uppercase = false}) {
   final digits =
       radix == 10 ? magnitude.toString() : magnitude.toRadixString(radix);
+  return uppercase ? digits.toUpperCase() : digits;
+}
+
+String _formatIntMagnitude(int value, int radix, {bool uppercase = false}) {
+  final raw = radix == 10 ? value.toString() : value.toRadixString(radix);
+  final digits = value.isNegative ? raw.substring(1) : raw;
   return uppercase ? digits.toUpperCase() : digits;
 }
 
