@@ -1,5 +1,12 @@
 part of 'engine.dart';
 
+bool _isIntegerValue(Object? value) {
+  if (value is BigInt) return true;
+  if (value is! int) return false;
+  if (value is! double) return true;
+  return value.isFinite && !(value == 0 && value.isNegative);
+}
+
 String formatBraceInteger(
   Object value,
   // ignore: library_private_types_in_public_api
@@ -178,7 +185,7 @@ String formatBraceDouble(
     BigInt() => value.toDouble(),
     _ => throw UnsupportedFormatValueException(context, value),
   };
-  if ((value is int || value is BigInt) && !converted.isFinite) {
+  if (_isIntegerValue(value) && !converted.isFinite) {
     throw UnsupportedFormatValueException(context, value);
   }
 

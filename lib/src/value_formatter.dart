@@ -18,14 +18,14 @@ String formatValue(
   if (value is String) {
     return _formatText(value, spec, engine.textUnit, context);
   }
-  if (value is double) {
-    return formatBraceDouble(value, spec, engine, context);
-  }
-  if (value is int || value is BigInt) {
+  if (_isIntegerValue(value)) {
     if (_isFloatingFormatType(spec.type)) {
       return formatBraceDouble(value!, spec, engine, context);
     }
     return formatBraceInteger(value!, spec, engine, context);
+  }
+  if (value is double) {
+    return formatBraceDouble(value, spec, engine, context);
   }
 
   if (_isEmptySpecification(spec)) {
@@ -309,7 +309,7 @@ void _validateCharacterSpec(_FormatSpec spec, FormatExceptionContext context) {
 
 int _unicodeScalar(Object? value, FormatExceptionContext context) {
   final candidate = switch (value) {
-    int() => BigInt.from(value),
+    int() when _isIntegerValue(value) => BigInt.from(value),
     BigInt() => value,
     _ => null,
   };

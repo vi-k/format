@@ -45,8 +45,10 @@ final class _RepresentationWriter {
         output.write(_quoteString(value));
       case BigInt():
         output.write(value.toString());
-      case num():
-        output.write(_number(value));
+      case int() when _isIntegerValue(value):
+        output.write(BigInt.from(value).toString());
+      case double():
+        output.write(_pythonShortestDouble(value));
       case Map<Object?, Object?>():
         _writeMap(value, output);
       case Set<Object?>():
@@ -56,13 +58,6 @@ final class _RepresentationWriter {
       default:
         output.write(_representExtension(value));
     }
-  }
-
-  String _number(num value) {
-    if (value is double) {
-      return _pythonShortestDouble(value);
-    }
-    return value.toString();
   }
 
   String _quoteString(String value) {

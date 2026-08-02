@@ -80,6 +80,16 @@ Width, fill, and alignment are applied by the engine after a custom formatter
 returns, while `FormatOptions` provides sign, alternate form, zero, grouping,
 precision, and the optional additional template.
 
+## JavaScript number semantics
+
+dart2js represents an `int` and an integral `double` as the same JavaScript
+`number`. Format canonically treats that indistinguishable value as an integer:
+empty, integer, `!r`, and container formatting spell both `42` and `42.0` as
+`42`. Explicit floating-point specifiers such as `f`, `e`, `g`, and `%` still
+select floating-point formatting. On the Dart VM, `42` and `42.0` remain
+distinct and empty formatting produces `42` and `42.0` respectively. `BigInt`
+remains a separate value kind on every platform.
+
 ## Format 2.0 migration
 
 Version 2.0 removes the old String extensions, `format2`/`format2m`, positional

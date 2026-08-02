@@ -41,6 +41,14 @@
       "reason": "format_intl предоставляет дополнительные locale-возможности вне нормативного C locale core."
     },
     {
+      "dart": {"result": "42 42 42"},
+      "id": "dart-js-integral-number-canonicalization",
+      "input": {"platform": "JavaScript", "template": "{0} {0:d} {0!r}", "value": 42.0},
+      "python": {"error": "ValueError"},
+      "readme_anchor": "#javascript-number-semantics",
+      "reason": "dart2js не сохраняет различие между int и целочисленным double, поэтому Format канонически обрабатывает такой JavaScript number как int."
+    },
+    {
       "dart": {"result": "значение строкового ключа name"},
       "id": "dart-map-dot-key",
       "input": {"template": "{value.name}", "value": {"name": "Ada"}},

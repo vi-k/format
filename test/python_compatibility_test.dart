@@ -142,6 +142,6 @@ void main() {
       'test/fixtures/python_divergences.json',
     );
 
-    expect(suite.ids, hasLength(9));
+    expect(suite.ids, hasLength(10));
   });
 }
