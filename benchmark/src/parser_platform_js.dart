@@ -14,6 +14,11 @@ extension type _NodeProcess._(JSObject _) implements JSObject {
 extension type _NodeFileSystem._(JSObject _) implements JSObject {
   external String readFileSync(String path, String encoding);
   external void writeFileSync(String path, String contents);
+  external _NodeFileStat statSync(String path);
+}
+
+extension type _NodeFileStat._(JSObject _) implements JSObject {
+  external num get size;
 }
 
 extension type _NodeOs._(JSObject _) implements JSObject {
@@ -37,6 +42,11 @@ void writeTextFile(String path, String contents) {
 String readTextFile(String path) => _NodeFileSystem._(
   _process.getBuiltinModule('fs'),
 ).readFileSync(path, 'utf8');
+
+int? executableSizeBytes() =>
+    _NodeFileSystem._(
+      _process.getBuiltinModule('fs'),
+    ).statSync(_process.argv.toDart[1].toDart).size.toInt();
 
 Map<String, String> environmentInfo() {
   final os = _NodeOs._(_process.getBuiltinModule('os'));

@@ -623,9 +623,22 @@ BenchmarkOutcome _capture(String Function() operation) {
   try {
     return TextOutcome(operation());
   } on Object catch (error) {
-    return ErrorOutcome(error.runtimeType.toString());
+    return ErrorOutcome(_errorCategory(error));
   }
 }
+
+String _errorCategory(Object error) => switch (error) {
+  InvalidFormatException() => 'InvalidFormatException',
+  InvalidSpecifierException() => 'InvalidSpecifierException',
+  MissingFormatArgumentException() => 'MissingFormatArgumentException',
+  FormatLookupException() => 'FormatLookupException',
+  UnsupportedConversionException() => 'UnsupportedConversionException',
+  UnsupportedFormatValueException() => 'UnsupportedFormatValueException',
+  FormatConfigurationException() => 'FormatConfigurationException',
+  AmbiguousFormatterException() => 'AmbiguousFormatterException',
+  FormatExtensionException() => 'FormatExtensionException',
+  _ => error.runtimeType.toString(),
+};
 
 final class _BenchmarkFormatter extends Formatter<int> {
   @override

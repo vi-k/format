@@ -8,6 +8,11 @@ void writeTextFile(String path, String contents) {
 
 String readTextFile(String path) => File(path).readAsStringSync();
 
+int? executableSizeBytes() {
+  final executable = File(Platform.resolvedExecutable);
+  return executable.existsSync() ? executable.lengthSync() : null;
+}
+
 Map<String, String> environmentInfo() => <String, String>{
   'dartVersion': Platform.version,
   'os': '${Platform.operatingSystem} ${Platform.operatingSystemVersion}',

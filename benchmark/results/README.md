@@ -19,8 +19,22 @@ rtk dart run benchmark/runner.dart --dialect=braces --phase=hot --run=1 --sample
 
 Every report has `schemaVersion`, `runtime`, `run`, `versions`, raw `samples`,
 per-scenario medians, and candidate/baseline ratios. Reports deliberately have
-no gate result; Task 3 owns gating. A smoke report has `smoke: true` and
-`gateable: false`, so gates must reject it.
+no gate result; `benchmark/gates.dart` owns gating. A smoke report has
+`smoke: true` and `gateable: false`, so gates reject it.
+
+Run the six full reports (two JIT, two AOT, and two printf-only JavaScript)
+before merging them:
+
+```sh
+rtk dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --output=/private/tmp/format3-gates.json
+```
+
+The merge rejects smoke/non-gateable reports, fewer than seven or mismatched
+rounds, missing runtime/dialect/run pairs, omitted matrix scenarios, invalid
+ratios, and missing raw samples. Its JSON retains each report's environment,
+absolute median times and ratios, two-run reproduction evidence, geometric
+means, and AOT executable size. A threshold fails only when the same violation
+reproduces in both runs.
 
 `comparisonKind` distinguishes frozen performance intersections
 (`performance`) from `correctnessOnly` output references and `informational`

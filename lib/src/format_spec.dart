@@ -38,6 +38,8 @@ _FormatSpec parseFormatSpec(
   TextUnit textUnit,
   FormatExceptionContext context,
 ) {
+  final simple = _simpleBuiltinFormatSpec(source);
+  if (simple != null) return simple;
   final units = textUnit.split(source);
   var index = 0;
   String? fill;
@@ -169,6 +171,16 @@ const _builtInTypes = {
   'X',
   '%',
 };
+
+/// Test seam for the cold parser allocation fast path. It is deliberately not
+/// exported by `format.dart`.
+bool debugUsesSimpleBuiltinFormatSpec(String source) =>
+    _simpleBuiltinFormatSpec(source) != null;
+
+_FormatSpec? _simpleBuiltinFormatSpec(String source) {
+  if (source.length != 1 || source.codeUnitAt(0) > 0x7f) return null;
+  return _builtInTypes.contains(source) ? _FormatSpec(type: source) : null;
+}
 
 bool _isAlign(String value) =>
     value == '<' || value == '>' || value == '=' || value == '^';

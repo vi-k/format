@@ -247,6 +247,7 @@ final class BenchmarkReport {
   final String runtime;
   final int run;
   final Map<String, String> versions;
+  final int? executableSizeBytes;
   final bool smoke;
   final bool gateable;
   final int warmupRounds;
@@ -258,6 +259,7 @@ final class BenchmarkReport {
     required this.runtime,
     required this.run,
     required Map<String, String> versions,
+    this.executableSizeBytes,
     required this.smoke,
     required this.gateable,
     required this.warmupRounds,
@@ -267,10 +269,19 @@ final class BenchmarkReport {
   }) : versions = UnmodifiableMapView(Map.of(versions)),
        samples = List.unmodifiable(samples),
        scenarios = List.unmodifiable(scenarios) {
-    if (smoke && gateable)
+    if (smoke && gateable) {
       throw ArgumentError('Smoke reports are not gateable.');
-    if (gateable && recordedRounds < 7)
+    }
+    if (gateable && recordedRounds < 7) {
       throw ArgumentError('Gateable reports require seven rounds.');
+    }
+    if (executableSizeBytes != null && executableSizeBytes! < 1) {
+      throw ArgumentError.value(
+        executableSizeBytes,
+        'executableSizeBytes',
+        'Must be positive when present.',
+      );
+    }
   }
 
   Map<String, Object?> toJson() => {
@@ -278,6 +289,7 @@ final class BenchmarkReport {
     'runtime': runtime,
     'run': run,
     'versions': versions,
+    'executableSizeBytes': executableSizeBytes,
     'smoke': smoke,
     'gateable': gateable,
     'warmupRounds': warmupRounds,
@@ -292,6 +304,7 @@ final class BenchmarkReport {
     versions: (json['versions']! as Map<Object?, Object?>).map(
       (key, value) => MapEntry(key! as String, value! as String),
     ),
+    executableSizeBytes: json['executableSizeBytes'] as int?,
     smoke: json['smoke']! as bool,
     gateable: json['gateable']! as bool,
     warmupRounds: json['warmupRounds']! as int,

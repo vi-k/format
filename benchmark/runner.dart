@@ -6,6 +6,7 @@ import 'src/parser_platform.dart' as platform;
 
 const int _warmupRounds = 3;
 const int _minimumRecordedRounds = 7;
+const int _javascriptOperations = 10000;
 
 final class BenchmarkRunOptions {
   final BenchmarkDialect? dialect;
@@ -110,7 +111,12 @@ BenchmarkReport runBenchmark(
   selected.forEach(_validateScenario);
 
   final rawSamples = <BenchmarkSample>[];
-  final operations = options.smoke ? 1 : 100;
+  final operations =
+      options.runtime == 'js'
+          ? _javascriptOperations
+          : options.smoke
+          ? 1
+          : 100;
   for (var round = 0; round < _warmupRounds; round++) {
     for (final scenario in selected) {
       _measureRound(
@@ -144,6 +150,8 @@ BenchmarkReport runBenchmark(
       'format2Baseline': '86febb4',
       'sprintf7Baseline': '7.0.0/f1e74f2',
     },
+    executableSizeBytes:
+        options.runtime == 'aot' ? platform.executableSizeBytes() : null,
     smoke: options.smoke,
     gateable: !options.smoke,
     warmupRounds: _warmupRounds,

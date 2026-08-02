@@ -8,6 +8,8 @@ String readTextFile(String path) {
   throw UnsupportedError('No file-system platform adapter');
 }
 
+int? executableSizeBytes() => null;
+
 Map<String, String> environmentInfo() => const <String, String>{
   'dartVersion': 'unsupported',
   'os': 'unsupported',

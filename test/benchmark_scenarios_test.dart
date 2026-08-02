@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:test/test.dart';
 
 import '../benchmark/model.dart';
@@ -265,5 +268,52 @@ void main() {
       ),
       throwsA(isA<StateError>()),
     );
+  });
+
+  test('compiled JavaScript runner preserves typed error outcomes', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'format-js-runner-',
+    );
+    final output = '${directory.path}/runner.js';
+    try {
+      final compile = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'js',
+        'benchmark/runner.dart',
+        '-O4',
+        '-o',
+        output,
+      ]);
+      expect(compile.exitCode, 0, reason: compile.stderr.toString());
+
+      final run = await Process.run('node', [
+        output,
+        '--runtime=js',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+        '--output=${directory.path}/report.json',
+      ]);
+      expect(run.exitCode, 0, reason: run.stderr.toString());
+      final report = BenchmarkReport.fromJson(
+        jsonDecode(await File('${directory.path}/report.json').readAsString())
+            as Map<String, Object?>,
+      );
+      expect(
+        report.scenarios
+            .where(
+              (scenario) =>
+                  scenario.comparisonKind ==
+                  BenchmarkComparisonKind.performance,
+            )
+            .map((scenario) => scenario.ratio),
+        everyElement(
+          isA<double>().having((ratio) => ratio.isFinite, 'finite', isTrue),
+        ),
+      );
+    } finally {
+      await directory.delete(recursive: true);
+    }
   });
 }
