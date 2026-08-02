@@ -7,6 +7,8 @@ import 'baselines/format2/format2.dart';
 import 'baselines/sprintf7/lib/sprintf.dart' as sprintf7;
 import 'model.dart';
 
+const _braceScalarTemplate = '{:.1s}';
+
 final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
   _braceComparable(
     'brace.literal',
@@ -68,9 +70,9 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
   ),
   _braceInformation(
     'brace.text.scalars',
-    template: '{:.3s}',
+    template: _braceScalarTemplate,
     expected: const TextOutcome('e'),
-    candidate: (_) => _capture(() => format('{:.1s}', 'e\u0301')),
+    candidate: (_) => _capture(() => format(_braceScalarTemplate, 'e\u0301')),
   ),
   _braceComparable(
     'brace.text.graphemes_ascii',

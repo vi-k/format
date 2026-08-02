@@ -176,6 +176,7 @@ void main() {
         (byId['brace.text.scalars.hot']!.expected as TextOutcome).value,
         'e',
       );
+      expect(byId['brace.text.scalars.hot']!.templates.single, '{:.1s}');
       expect(
         (byId['brace.graphemes.hot']!.expected as TextOutcome).value,
         'e\u0301',
