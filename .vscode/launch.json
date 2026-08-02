@@ -12,11 +12,45 @@
             "args": []
         },
         {
-            "name": "benchmark",
+            "name": "Benchmark: original example",
             "request": "launch",
             "type": "dart",
             "program": "example/bin/benchmark.dart",
+            "cwd": "${workspaceFolder}/example",
             "args": []
+        },
+        {
+            "name": "Benchmark: Format 2 gate",
+            "request": "launch",
+            "type": "dart",
+            "program": "example/bin/format2_gate_benchmark.dart",
+            "cwd": "${workspaceFolder}/example",
+            "args": []
+        },
+        {
+            "name": "Benchmark: release harness smoke",
+            "request": "launch",
+            "type": "dart",
+            "program": "benchmark/runner.dart",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--runtime=jit",
+                "--run=1",
+                "--samples=1",
+                "--smoke",
+                "--output=/private/tmp/format3-vscode-smoke.json"
+            ]
+        },
+        {
+            "name": "Benchmark: parser strategy JIT",
+            "request": "launch",
+            "type": "dart",
+            "program": "benchmark/parser_strategy.dart",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--runtime=jit",
+                "--output=/private/tmp/parser-strategy-vscode-jit.json"
+            ]
         },
         {
             "name": "test",
