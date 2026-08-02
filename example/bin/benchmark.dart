@@ -14,8 +14,8 @@ void main(List<String> arguments) {
 void _run() {
   final benchmarks = [
     SprintfBenchmark(),
-    FormatBenchmark(),
     Format2Benchmark(),
+    Format3Benchmark(),
   ];
 
   for (final template in testData) {

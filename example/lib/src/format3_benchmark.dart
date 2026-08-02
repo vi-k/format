@@ -7,8 +7,8 @@ final _format3Benchmark = Format(textUnit: TextUnit.graphemeClusters);
 String _formatCurrent(String template, List<Object?> values) =>
     _format3Benchmark.formatWith(template, positional: values);
 
-final class FormatBenchmark extends MyBenchmarkBase {
-  FormatBenchmark() : super(name: 'format::format');
+final class Format3Benchmark extends MyBenchmarkBase {
+  Format3Benchmark() : super(name: 'format::format');
 
   @override
   bool get isSprintf => false;
