@@ -8,6 +8,7 @@ part 'api.dart';
 part 'format.dart';
 part 'printf_ast.dart';
 part 'printf_parser.dart';
+part 'printf_formatter.dart';
 part 'printf_processor.dart';
 part 'brace_processor.dart';
 part 'representation.dart';

@@ -74,27 +74,20 @@ void main() {
     expect(vsprintf('%s %s', values), 'first second');
   });
 
-  test('sprintf reports unsupported syntax with typed context', () {
-    try {
-      sprintf('%5s', 'value');
-      fail('Expected InvalidFormatException.');
-    } on InvalidFormatException catch (error) {
-      expect(error.context.template, '%5s');
-      expect(error.context.offset, 0);
-      expect(error.context.fragment, '%5');
-      expect(error.context.specifier, '5');
-    }
+  test('sprintf applies parsed width through the public API', () {
+    expect(sprintf('%6s', 'value'), ' value');
   });
 
-  test('sprintf keeps unsupported conversions typed', () {
+  test('sprintf keeps invalid conversions typed', () {
     try {
-      sprintf('%f', 1);
+      sprintf('%q', 1);
       fail('Expected InvalidFormatException.');
     } on InvalidFormatException catch (error) {
-      expect(error.context.template, '%f');
+      expect(error.context.template, '%q');
       expect(error.context.offset, 0);
-      expect(error.context.fragment, '%f');
-      expect(error.context.specifier, 'f');
+      expect(error.context.fragment, '%q');
+      expect(error.context.specifier, 'q');
+      expect(error.context.conversion, 'q');
     }
   });
 
@@ -136,7 +129,7 @@ void main() {
     } else {
       expect(
         () => sprintf('%d', integralDouble),
-        throwsA(isA<UnsupportedConversionException>()),
+        throwsA(isA<UnsupportedFormatValueException>()),
       );
     }
   });
@@ -144,12 +137,13 @@ void main() {
   test('sprintf reports incompatible decimal values as typed errors', () {
     try {
       sprintf('%d', '42');
-      fail('Expected UnsupportedConversionException.');
-    } on UnsupportedConversionException catch (error) {
+      fail('Expected UnsupportedFormatValueException.');
+    } on UnsupportedFormatValueException catch (error) {
       expect(error.context.template, '%d');
       expect(error.context.offset, 0);
       expect(error.context.fragment, '%d');
       expect(error.context.specifier, 'd');
+      expect(error.context.conversion, 'd');
       expect(error.context.argumentIndex, 0);
     }
   });

@@ -104,7 +104,11 @@ final class Format {
   );
 
   String vsprintf(String template, List<Object?> values) =>
-      _PrintfProcessor(template, List<Object?>.unmodifiable(values)).format();
+      _PrintfProcessor(
+        template,
+        List<Object?>.unmodifiable(values),
+        this,
+      ).format();
 
   String formatWith(
     String template, {
