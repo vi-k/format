@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "divergences": [
+    {
+      "id": "arbitrary-tostring-for-s",
+      "input": {"template": "%s", "value": "arbitrary Dart object"},
+      "cpp": {"error": "requires a pointer to a null-terminated character array"},
+      "dart": {"result": "value.toString()"},
+      "reason": "Dart values have no C character-pointer representation, so %s deliberately uses toString().",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "canonical-special-values",
+      "input": {"template": "%f %F", "values": ["infinity", "NaN"]},
+      "cpp": {"result": "implementation-permitted spelling of infinity and NaN"},
+      "dart": {"result": "deterministic inf/INF and nan/NAN spelling"},
+      "reason": "Format chooses stable special-value spellings from the representations permitted by C++23.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "fixed-rounding-mode",
+      "input": {"template": "%.0f", "value": 2.5},
+      "cpp": {"result": "depends on the active floating-point rounding mode"},
+      "dart": {"result": "2 (nearest, ties to even)"},
+      "reason": "Format has no process-global floating-point environment and always applies deterministic nearest-even rounding.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "format-intl-locale-extensions",
+      "input": {"template": "%+.2f", "value": 12.5, "locale": "custom NumberLocale"},
+      "cpp": {"result": "active C locale conventions"},
+      "dart": {"result": "symbols and digit alphabet supplied by NumberLocale"},
+      "reason": "format_intl and NumberLocale expose locale capabilities beyond the normative LC_ALL=C comparison.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "negative-unsigned-error",
+      "input": {"template": "%u", "value": -1},
+      "cpp": {"result": "wraps after an explicit conversion to an unsigned C type"},
+      "dart": {"error": "UnsupportedFormatValueException"},
+      "reason": "Unsigned printf conversions reject negative Dart integers instead of applying a hidden machine-width wrap.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "typed-invalid-format-error",
+      "input": {"template": "%q", "arguments": []},
+      "cpp": {"error": "undefined behavior for an invalid conversion specification"},
+      "dart": {"error": "InvalidFormatException"},
+      "reason": "Invalid percent grammar is rejected before argument access with structured format context.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unicode-character-scalar",
+      "input": {"template": "%c", "value": 128512},
+      "cpp": {"result": "narrow unsigned-char conversion"},
+      "dart": {"result": "the Unicode scalar 😀"},
+      "reason": "Dart strings are Unicode and %c accepts a valid Unicode scalar rather than one narrow byte.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unicode-string-text-units",
+      "input": {"template": "%.1s", "value": "😀"},
+      "cpp": {"result": "precision limits encoded narrow bytes"},
+      "dart": {"result": "precision limits the configured TextUnit"},
+      "reason": "String width and precision use Unicode scalars by default, with grapheme clusters available explicitly.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unsupported-cpp26-binary",
+      "input": {"template": "%b", "value": 5},
+      "cpp": {"result": "binary conversion in C++26"},
+      "dart": {"error": "InvalidFormatException"},
+      "reason": "The supported compatibility target is the selected C++23 sprintf subset, not later %b/%B additions.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unsupported-length-modifiers",
+      "input": {"template": "%lld", "value": 42},
+      "cpp": {"result": "conversion selected by a fixed-width length modifier"},
+      "dart": {"error": "InvalidFormatException"},
+      "reason": "Dart int and BigInt do not expose the C integer-width type matrix, so length modifiers are intentionally absent.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unsupported-pointer-conversion",
+      "input": {"template": "%p", "value": "native pointer"},
+      "cpp": {"result": "implementation-defined pointer representation"},
+      "dart": {"error": "InvalidFormatException"},
+      "reason": "The core API accepts Dart values and does not expose native pointer formatting or %n writes.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "unsupported-posix-indexing",
+      "input": {"template": "%2$d", "arguments": [1, 2]},
+      "cpp": {"result": "second argument on POSIX implementations"},
+      "dart": {"error": "InvalidFormatException"},
+      "reason": "Arguments are consumed sequentially; the non-standard POSIX dollar-index syntax is not part of the dialect.",
+      "readme_anchor": "#sprintf"
+    },
+    {
+      "id": "wide-dart-integers",
+      "input": {"template": "%x", "value": "123456789012345678901234567890 (BigInt)"},
+      "cpp": {"error": "requires selection of a finite-width integer type"},
+      "dart": {"result": "exact hexadecimal digits without truncation"},
+      "reason": "Supported Dart int and BigInt magnitudes are formatted directly rather than coerced to a machine width.",
+      "readme_anchor": "#sprintf"
+    }
+  ]
+}

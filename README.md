@@ -49,6 +49,30 @@ Intl.defaultLocale = 'uk_UA';
 format('{:,.8n}', [123456.789]);
 ```
 
+## sprintf
+
+Use `sprintf` for direct arguments and `vsprintf` for a list:
+
+```dart
+sprintf('%s: %#08x', 'answer', 42);       // answer: 0x00002a
+vsprintf('%*.*f', [8, 2, 1.5]);           //     1.50
+```
+
+The C++23-compatible subset supports `%%`, `%c`, `%s`, signed and unsigned
+integer conversions, and decimal or hexadecimal floating-point conversions.
+Width and precision may be literals or `*` arguments. Formatting is
+deterministic: floating-point rounding is nearest-even, special values use
+`inf`/`nan` (or uppercase variants), and negative unsigned values are rejected
+instead of wrapped.
+
+This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX
+`$` argument indexing, and C++26 `%b`/`%B`. String width and precision use the
+configured Unicode `TextUnit`; `%c` accepts a Unicode scalar; `%s` calls
+`toString()` for non-string Dart values; and `int`/`BigInt` are not truncated
+to a C machine width. A configured `NumberLocale`, including one supplied by
+`format_intl`, may localize signs, separators, and digits beyond the normative
+`LC_ALL=C` compatibility profile.
+
 ## Custom formatters
 
 Implement `Formatter<T>`, then register it globally for the current isolate:

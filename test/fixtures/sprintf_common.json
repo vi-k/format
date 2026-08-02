@@ -1,0 +1,273 @@
+{
+  "schema": 1,
+  "reference": {
+    "standard": "C++23",
+    "locale": "C"
+  },
+  "cases": [
+    {
+      "id": "character-ascii",
+      "template": "%c",
+      "arguments": [{"type": "int", "value": 65}],
+      "expected": {"output": "A"}
+    },
+    {
+      "id": "double-a-default",
+      "template": "%a",
+      "arguments": [{"type": "double", "value": 1.5}],
+      "expected": {"output": "0x1.8p+0"}
+    },
+    {
+      "id": "double-a-max-finite",
+      "template": "%a",
+      "arguments": [{"type": "double", "value": 1.7976931348623157e308}],
+      "expected": {"output": "0x1.fffffffffffffp+1023"}
+    },
+    {
+      "id": "double-a-min-normal",
+      "template": "%a",
+      "arguments": [{"type": "double", "value": 2.2250738585072014e-308}],
+      "expected": {"output": "0x1p-1022"}
+    },
+    {
+      "id": "double-a-precision",
+      "template": "%.1a",
+      "arguments": [{"type": "double", "value": 1.5625}],
+      "expected": {"output": "0x1.9p+0"}
+    },
+    {
+      "id": "double-a-subnormal",
+      "template": "%a",
+      "arguments": [{"type": "double", "value": 5e-324}],
+      "expected": {
+        "allowed": ["0x0.0000000000001p-1022", "0x1p-1074"]
+      }
+    },
+    {
+      "id": "double-a-upper",
+      "template": "%A",
+      "arguments": [{"type": "double", "value": 1.5}],
+      "expected": {"output": "0X1.8P+0"}
+    },
+    {
+      "id": "double-e-default",
+      "template": "%e",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "1.250000e+01"}
+    },
+    {
+      "id": "double-e-precision",
+      "template": "%.3e",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "1.250e+01"}
+    },
+    {
+      "id": "double-e-upper",
+      "template": "%.3E",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "1.250E+01"}
+    },
+    {
+      "id": "double-f-alternate-zero",
+      "template": "%#.0f",
+      "arguments": [{"type": "double", "value": 1.0}],
+      "expected": {"output": "1."}
+    },
+    {
+      "id": "double-f-default",
+      "template": "%f",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "12.500000"}
+    },
+    {
+      "id": "double-f-negative-zero",
+      "template": "%f",
+      "arguments": [{"type": "double", "value": "-0"}],
+      "expected": {"output": "-0.000000"}
+    },
+    {
+      "id": "double-f-precision",
+      "template": "%.2f",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "12.50"}
+    },
+    {
+      "id": "double-f-round-even-down",
+      "template": "%.0f",
+      "arguments": [{"type": "double", "value": 2.5}],
+      "expected": {"output": "2"}
+    },
+    {
+      "id": "double-f-round-even-up",
+      "template": "%.0f",
+      "arguments": [{"type": "double", "value": 3.5}],
+      "expected": {"output": "4"}
+    },
+    {
+      "id": "double-g-alternate",
+      "template": "%#.5g",
+      "arguments": [{"type": "double", "value": 12.0}],
+      "expected": {"output": "12.000"}
+    },
+    {
+      "id": "double-g-fixed",
+      "template": "%.5g",
+      "arguments": [{"type": "double", "value": 12.5}],
+      "expected": {"output": "12.5"}
+    },
+    {
+      "id": "double-g-scientific",
+      "template": "%.3g",
+      "arguments": [{"type": "double", "value": 12345.0}],
+      "expected": {"output": "1.23e+04"}
+    },
+    {
+      "id": "double-infinity-lower",
+      "template": "%f",
+      "arguments": [{"type": "double", "value": "inf"}],
+      "expected": {"allowed": ["inf", "infinity"]}
+    },
+    {
+      "id": "double-infinity-upper",
+      "template": "%F",
+      "arguments": [{"type": "double", "value": "inf"}],
+      "expected": {"allowed": ["INF", "INFINITY"]}
+    },
+    {
+      "id": "dynamic-negative-precision",
+      "template": "%.*f",
+      "arguments": [
+        {"type": "int", "value": -1},
+        {"type": "double", "value": 1.5}
+      ],
+      "expected": {"output": "1.500000"}
+    },
+    {
+      "id": "dynamic-negative-width",
+      "template": "%*d",
+      "arguments": [
+        {"type": "int", "value": -5},
+        {"type": "int", "value": 42}
+      ],
+      "expected": {"output": "42   "}
+    },
+    {
+      "id": "dynamic-width-precision-order",
+      "template": "%*.*f",
+      "arguments": [
+        {"type": "int", "value": 8},
+        {"type": "int", "value": 2},
+        {"type": "double", "value": 1.5}
+      ],
+      "expected": {"output": "    1.50"}
+    },
+    {
+      "id": "integer-alternate-hex",
+      "template": "%#x",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "0x2a"}
+    },
+    {
+      "id": "integer-alternate-octal",
+      "template": "%#o",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "052"}
+    },
+    {
+      "id": "integer-decimal",
+      "template": "%d",
+      "arguments": [{"type": "int", "value": -42}],
+      "expected": {"output": "-42"}
+    },
+    {
+      "id": "integer-i",
+      "template": "%i",
+      "arguments": [{"type": "int", "value": -42}],
+      "expected": {"output": "-42"}
+    },
+    {
+      "id": "integer-left-width",
+      "template": "%-6d",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "42    "}
+    },
+    {
+      "id": "integer-precision-zero",
+      "template": "%.0d",
+      "arguments": [{"type": "int", "value": 0}],
+      "expected": {"output": ""}
+    },
+    {
+      "id": "integer-sign-plus",
+      "template": "%+d",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "+42"}
+    },
+    {
+      "id": "integer-sign-space",
+      "template": "% d",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": " 42"}
+    },
+    {
+      "id": "integer-unsigned",
+      "template": "%u",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "42"}
+    },
+    {
+      "id": "integer-upper-hex",
+      "template": "%X",
+      "arguments": [{"type": "int", "value": 48879}],
+      "expected": {"output": "BEEF"}
+    },
+    {
+      "id": "integer-zero-prefix-width",
+      "template": "%#08x",
+      "arguments": [{"type": "int", "value": 42}],
+      "expected": {"output": "0x00002a"}
+    },
+    {
+      "id": "integer-zero-width",
+      "template": "%06d",
+      "arguments": [{"type": "int", "value": -42}],
+      "expected": {"output": "-00042"}
+    },
+    {
+      "id": "literal-percent",
+      "template": "rate=100%%",
+      "arguments": [],
+      "expected": {"output": "rate=100%"}
+    },
+    {
+      "id": "mixed-consumption",
+      "template": "%s:%*.*f:%#x",
+      "arguments": [
+        {"type": "string", "value": "v"},
+        {"type": "int", "value": 7},
+        {"type": "int", "value": 2},
+        {"type": "double", "value": 1.5},
+        {"type": "int", "value": 42}
+      ],
+      "expected": {"output": "v:   1.50:0x2a"}
+    },
+    {
+      "id": "string-basic",
+      "template": "%s",
+      "arguments": [{"type": "string", "value": "hello"}],
+      "expected": {"output": "hello"}
+    },
+    {
+      "id": "string-precision",
+      "template": "%.3s",
+      "arguments": [{"type": "string", "value": "hello"}],
+      "expected": {"output": "hel"}
+    },
+    {
+      "id": "string-width",
+      "template": "%8s",
+      "arguments": [{"type": "string", "value": "hi"}],
+      "expected": {"output": "      hi"}
+    }
+  ]
+}
