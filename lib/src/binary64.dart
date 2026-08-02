@@ -76,6 +76,31 @@ final class Binary64 {
     return quotient;
   }
 
+  /// Rounds the significand to a binary fraction of [fractionBits] bits.
+  ///
+  /// The binary point remains after bit 52, including for subnormal values,
+  /// so callers can keep the canonical exponent -1022 for subnormals.
+  BigInt roundBinaryFraction(int fractionBits) {
+    assert(isFinite);
+    if (fractionBits < 0) {
+      throw ArgumentError.value(
+        fractionBits,
+        'fractionBits',
+        'must not be negative',
+      );
+    }
+    if (fractionBits >= 52) return significand << (fractionBits - 52);
+
+    final shift = 52 - fractionBits;
+    final quotient = significand >> shift;
+    final remainder = significand - (quotient << shift);
+    final halfway = BigInt.one << (shift - 1);
+    if (remainder > halfway || (remainder == halfway && quotient.isOdd)) {
+      return quotient + BigInt.one;
+    }
+    return quotient;
+  }
+
   /// Returns floor(log10(abs(value))) for a finite non-zero value.
   int decimalExponent() {
     assert(isFinite && !isZero);

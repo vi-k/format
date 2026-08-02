@@ -148,4 +148,62 @@ void main() {
       );
     }
   });
+
+  test('formats hexadecimal doubles', () {
+    expect(sprintf('%a', 1.5), '0x1.8p+0');
+    expect(sprintf('%A', 1.5), '0X1.8P+0');
+    expect(sprintf('%#.0a', 1.0), '0x1.p+0');
+    expect(sprintf('%.1a', 1.96875), '0x2.0p+0');
+    expect(sprintf('%a', 0.0), '0x0p+0');
+    expect(sprintf('%a', -0.0), '-0x0p+0');
+  });
+
+  test('formats hexadecimal binary64 boundaries canonically', () {
+    expect(sprintf('%a', 5e-324), '0x0.0000000000001p-1022');
+    expect(sprintf('%a', 2.2250738585072014e-308), '0x1p-1022');
+    expect(sprintf('%a', 1.7976931348623157e308), '0x1.fffffffffffffp+1023');
+    expect(sprintf('%.13a', 0.1), '0x1.999999999999ap-4');
+    expect(sprintf('%.14a', 0.1), '0x1.999999999999a0p-4');
+  });
+
+  test('rounds hexadecimal precision ties to even', () {
+    expect(sprintf('%.0a', 1.5), '0x2p+0');
+    expect(sprintf('%.1a', 1.03125), '0x1.0p+0');
+    expect(sprintf('%.1a', 1.09375), '0x1.2p+0');
+    expect(sprintf('%.0a', 1.7976931348623157e308), '0x2p+1023');
+    expect(sprintf('%.0a', 5e-324), '0x0p-1022');
+  });
+
+  test('formats every exact hexadecimal precision from 0 through 13', () {
+    const expected = [
+      '0x2p-4',
+      '0x1.ap-4',
+      '0x1.9ap-4',
+      '0x1.99ap-4',
+      '0x1.999ap-4',
+      '0x1.9999ap-4',
+      '0x1.99999ap-4',
+      '0x1.999999ap-4',
+      '0x1.9999999ap-4',
+      '0x1.99999999ap-4',
+      '0x1.999999999ap-4',
+      '0x1.9999999999ap-4',
+      '0x1.99999999999ap-4',
+      '0x1.999999999999ap-4',
+    ];
+    for (var precision = 0; precision <= 13; precision++) {
+      expect(
+        sprintf('%.${precision}a', 0.1),
+        expected[precision],
+        reason: 'precision $precision',
+      );
+    }
+  });
+
+  test('applies hexadecimal signs width and special policy', () {
+    expect(sprintf('%+020.3a', 1.5), '+0x0000000001.800p+0');
+    expect(sprintf('%-20.3a', 1.5), '0x1.800p+0          ');
+    expect(sprintf('%+08a', double.infinity), '    +inf');
+    expect(sprintf('%08A', double.negativeInfinity), '    -INF');
+  });
 }
