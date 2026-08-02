@@ -34,6 +34,7 @@ void main() {
 
     expect(scenario.keyScenario, isTrue);
     expect(scenario.comparisonKind, BenchmarkComparisonKind.performance);
+    expect(scenario.templates, const ['{:d}']);
     expect(
       scenario.expected,
       isA<TextOutcome>().having(
