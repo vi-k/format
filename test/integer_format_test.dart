@@ -88,6 +88,21 @@ void main() {
     expect(format('{:+,d}', 9223372036854775807), '+9,223,372,036,854,775,807');
   });
 
+  test('formats the minimum int through every direct integer presentation', () {
+    const minInt = -9223372036854775808;
+
+    expect(
+      format('{:b}', minInt),
+      '-1000000000000000000000000000000000000000000000000000000000000000',
+    );
+    expect(format('{:o}', minInt), '-1000000000000000000000');
+    expect(format('{:d}', minInt), '-9223372036854775808');
+    expect(format('{:n}', minInt), '-9223372036854775808');
+    expect(format('{:x}', minInt), '-8000000000000000');
+    expect(format('{:X}', minInt), '-8000000000000000');
+    expect(format('{:#020x}', minInt), '-0x08000000000000000');
+  });
+
   test('formats alternate integer forms and negative prefixes', () {
     expect(format('{:#b}', 42), '0b101010');
     expect(format('{:#o}', 42), '0o52');
