@@ -8,6 +8,10 @@ enum BenchmarkPhase { cold, hot }
 /// unavailable because this Format 3 feature has no overlapping counterpart.
 enum BenchmarkComparisonKind { performance, correctnessOnly, informational }
 
+enum BenchmarkApiPath { topLevel, withValues, tearOff, configured }
+
+enum BenchmarkReferenceKind { executable, golden }
+
 sealed class BenchmarkOutcome {
   const BenchmarkOutcome();
 
@@ -63,6 +67,9 @@ final class BenchmarkScenario {
   final BenchmarkOperation? baseline;
   final BenchmarkComparisonKind comparisonKind;
   final String? comparisonRationale;
+  final BenchmarkApiPath apiPath;
+  final int fieldCount;
+  final BenchmarkReferenceKind referenceKind;
 
   BenchmarkScenario({
     required this.id,
@@ -75,8 +82,12 @@ final class BenchmarkScenario {
     this.baseline,
     this.comparisonKind = BenchmarkComparisonKind.performance,
     this.comparisonRationale,
+    this.apiPath = BenchmarkApiPath.withValues,
+    this.fieldCount = 1,
+    this.referenceKind = BenchmarkReferenceKind.executable,
   }) : templates = List.unmodifiable(templates) {
     if (id.isEmpty) throw ArgumentError.value(id, 'id', 'Must not be empty.');
+    if (fieldCount < 1) throw ArgumentError.value(fieldCount, 'fieldCount');
     if (this.templates.isEmpty) {
       throw ArgumentError.value(templates, 'templates', 'Must not be empty.');
     }
@@ -160,6 +171,9 @@ final class BenchmarkSample {
 
 final class BenchmarkScenarioResult {
   final String scenarioId;
+  final BenchmarkDialect dialect;
+  final BenchmarkPhase phase;
+  final bool keyScenario;
   final BenchmarkComparisonKind comparisonKind;
   final String? comparisonRationale;
   final int? candidateMedianNanoseconds;
@@ -168,6 +182,9 @@ final class BenchmarkScenarioResult {
 
   const BenchmarkScenarioResult({
     required this.scenarioId,
+    required this.dialect,
+    required this.phase,
+    required this.keyScenario,
     required this.comparisonKind,
     required this.comparisonRationale,
     required this.candidateMedianNanoseconds,
@@ -175,18 +192,30 @@ final class BenchmarkScenarioResult {
     required this.ratio,
   });
 
-  Map<String, Object?> toJson() => {
-    'scenarioId': scenarioId,
-    'comparisonKind': comparisonKind.name,
-    'comparisonRationale': comparisonRationale,
-    'candidateMedianNanoseconds': candidateMedianNanoseconds,
-    'baselineMedianNanoseconds': baselineMedianNanoseconds,
-    'ratio': ratio,
-  };
+  Map<String, Object?> toJson() {
+    if (comparisonKind != BenchmarkComparisonKind.performance &&
+        ratio != null) {
+      throw ArgumentError('Only performance scenarios may have ratios.');
+    }
+    return {
+      'scenarioId': scenarioId,
+      'dialect': dialect.name,
+      'phase': phase.name,
+      'keyScenario': keyScenario,
+      'comparisonKind': comparisonKind.name,
+      'comparisonRationale': comparisonRationale,
+      'candidateMedianNanoseconds': candidateMedianNanoseconds,
+      'baselineMedianNanoseconds': baselineMedianNanoseconds,
+      'ratio': ratio,
+    };
+  }
 
   static BenchmarkScenarioResult fromJson(Map<String, Object?> json) =>
       BenchmarkScenarioResult(
         scenarioId: json['scenarioId']! as String,
+        dialect: BenchmarkDialect.values.byName(json['dialect']! as String),
+        phase: BenchmarkPhase.values.byName(json['phase']! as String),
+        keyScenario: json['keyScenario']! as bool,
         comparisonKind: BenchmarkComparisonKind.values.byName(
           json['comparisonKind']! as String,
         ),
@@ -194,7 +223,14 @@ final class BenchmarkScenarioResult {
         candidateMedianNanoseconds: json['candidateMedianNanoseconds'] as int?,
         baselineMedianNanoseconds: json['baselineMedianNanoseconds'] as int?,
         ratio: (json['ratio'] as num?)?.toDouble(),
-      );
+      ).._validate();
+
+  void _validate() {
+    if (comparisonKind != BenchmarkComparisonKind.performance &&
+        ratio != null) {
+      throw ArgumentError('Only performance scenarios may have ratios.');
+    }
+  }
 }
 
 final class BenchmarkReport {
@@ -220,7 +256,12 @@ final class BenchmarkReport {
     required Iterable<BenchmarkScenarioResult> scenarios,
   }) : versions = UnmodifiableMapView(Map.of(versions)),
        samples = List.unmodifiable(samples),
-       scenarios = List.unmodifiable(scenarios);
+       scenarios = List.unmodifiable(scenarios) {
+    if (smoke && gateable)
+      throw ArgumentError('Smoke reports are not gateable.');
+    if (gateable && recordedRounds < 7)
+      throw ArgumentError('Gateable reports require seven rounds.');
+  }
 
   Map<String, Object?> toJson() => {
     'schemaVersion': 1,

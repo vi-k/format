@@ -139,6 +139,96 @@ void main() {
     }
   });
 
+  test('matrix records the API call shape behind API-path scenarios', () {
+    final byId = {
+      for (final scenario in benchmarkScenarios) scenario.id: scenario,
+    };
+    expect(byId['brace.top_level.hot']!.apiPath, BenchmarkApiPath.topLevel);
+    expect(byId['brace.with.hot']!.apiPath, BenchmarkApiPath.withValues);
+    expect(byId['brace.tear_off.hot']!.apiPath, BenchmarkApiPath.tearOff);
+    expect(byId['printf.sprintf.hot']!.apiPath, BenchmarkApiPath.topLevel);
+    expect(byId['printf.vsprintf.hot']!.apiPath, BenchmarkApiPath.withValues);
+    expect(byId['printf.tear_off.hot']!.apiPath, BenchmarkApiPath.tearOff);
+  });
+
+  test(
+    'matrix structurally covers multi-field, Unicode, and cold dimensions',
+    () {
+      final byId = {
+        for (final scenario in benchmarkScenarios) scenario.id: scenario,
+      };
+      expect(byId['brace.mixed_named.hot.10']!.fieldCount, 10);
+      expect(
+        (byId['brace.double.default.hot']!.expected as TextOutcome).value,
+        '1.23456789',
+      );
+      expect(
+        (byId['brace.text.scalars.hot']!.expected as TextOutcome).value,
+        'e',
+      );
+      expect(
+        (byId['brace.graphemes.hot']!.expected as TextOutcome).value,
+        'e\u0301',
+      );
+      for (final id in [
+        'printf.exponential.hot',
+        'printf.uppercase_exponential.hot',
+        'printf.general.hot',
+        'printf.uppercase_general.hot',
+        'printf.uppercase_fixed.hot',
+        'printf.conversions.cold',
+        'printf.dynamic.cold',
+        'brace.parser_heavy.cold',
+        'brace.fields.10.cold',
+      ]) {
+        expect(byId[id], isNotNull, reason: id);
+      }
+      expect(byId['printf.dynamic.cold']!.keyScenario, isTrue);
+    },
+  );
+
+  test(
+    'report rejects gateable smoke, short gateable rounds, and forbidden ratios',
+    () {
+      final valid =
+          runBenchmark(
+            const BenchmarkRunOptions(
+              dialect: BenchmarkDialect.braces,
+              phase: BenchmarkPhase.hot,
+              run: 1,
+              samples: 1,
+              smoke: true,
+            ),
+          ).toJson();
+      final gateableSmoke = Map<String, Object?>.from(valid)
+        ..['gateable'] = true;
+      expect(
+        () => BenchmarkReport.fromJson(gateableSmoke),
+        throwsArgumentError,
+      );
+      final shortGateable =
+          Map<String, Object?>.from(valid)
+            ..['smoke'] = false
+            ..['gateable'] = true;
+      expect(
+        () => BenchmarkReport.fromJson(shortGateable),
+        throwsArgumentError,
+      );
+      final results = List<Object?>.from(valid['scenarios']! as List<Object?>);
+      final nonPerformance =
+          Map<String, Object?>.from(results.first! as Map<String, Object?>)
+            ..['comparisonKind'] = 'informational'
+            ..['ratio'] = 1.0;
+      results[0] = nonPerformance;
+      final forbiddenRatio = Map<String, Object?>.from(valid)
+        ..['scenarios'] = results;
+      expect(
+        () => BenchmarkReport.fromJson(forbiddenRatio),
+        throwsArgumentError,
+      );
+    },
+  );
+
   test('runner checks a comparable output before recording timing', () {
     final scenario = BenchmarkScenario(
       id: 'test.mismatch.hot',

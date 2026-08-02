@@ -26,18 +26,21 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:d}',
     values: const [42],
     expected: '42',
+    apiPath: BenchmarkApiPath.topLevel,
   ),
   _braceComparable(
     'brace.with',
     template: '{0:d}',
     values: const [42],
     expected: '42',
+    apiPath: BenchmarkApiPath.withValues,
   ),
   _braceComparable(
     'brace.tear_off',
     template: '{:d}',
     values: const [42],
     expected: '42',
+    apiPath: BenchmarkApiPath.tearOff,
   ),
   _braceComparable(
     'brace.fields.1',
@@ -63,11 +66,11 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: List<Object?>.filled(50, 1),
     expected: '1' * 50,
   ),
-  _braceComparable(
+  _braceInformation(
     'brace.text.scalars',
     template: '{:.3s}',
-    values: const ['abcde'],
-    expected: 'abc',
+    expected: const TextOutcome('e'),
+    candidate: (_) => _capture(() => format('{:.1s}', 'e\u0301')),
   ),
   _braceComparable(
     'brace.text.graphemes_ascii',
@@ -146,6 +149,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
             named: const {'name': 'Ada'},
           ),
         ),
+    fieldCount: 10,
   ),
   _braceInformation(
     'brace.graphemes.hot',
@@ -235,9 +239,10 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:n}',
     expected: const TextOutcome('1\u00a0234'),
     rationale:
-        'IntlNumberLocale is an adapter/reference, not a frozen performance competitor.',
+        'Pinned uk_UA Intl output is a golden reference, not a performance competitor.',
     candidate: (_) => _capture(() => _intlFormat.format('{:n}', 1234)),
-    reference: (_) => _capture(() => _intlReferenceFormat.format('{:n}', 1234)),
+    reference: (_) => const TextOutcome('1\u00a0234'),
+    referenceKind: BenchmarkReferenceKind.golden,
   ),
   _printfComparable(
     'printf.literal',
@@ -251,18 +256,21 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '%d',
     values: const [42],
     expected: '42',
+    apiPath: BenchmarkApiPath.topLevel,
   ),
   _printfComparable(
     'printf.vsprintf',
     template: '%s:%d',
     values: const ['value', 3],
     expected: 'value:3',
+    apiPath: BenchmarkApiPath.withValues,
   ),
   _printfComparable(
     'printf.tear_off',
     template: '%d',
     values: const [42],
     expected: '42',
+    apiPath: BenchmarkApiPath.tearOff,
   ),
   _printfComparable(
     'printf.conversions.1',
@@ -380,14 +388,71 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: const ErrorOutcome('InvalidFormatException'),
     candidate: (_) => _capture(() => sprintf('%q', 1)),
   ),
+  _braceComparable(
+    'brace.parser_heavy',
+    cold: true,
+    template: '{{{0:d}}}',
+    values: const [42],
+    expected: '{42}',
+  ),
+  _braceComparable(
+    'brace.fields.10',
+    cold: true,
+    template: '{0:d}{1:d}{2:d}{3:d}{4:d}{5:d}{6:d}{7:d}{8:d}{9:d}',
+    values: const [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    expected: '12345678910',
+    key: true,
+  ),
+  _braceInformation(
+    'brace.double.default',
+    template: '{}',
+    expected: const TextOutcome('1.23456789'),
+    candidate: (_) => _capture(() => format('{}', 1.23456789)),
+  ),
+  _printfComparable(
+    'printf.conversions',
+    cold: true,
+    template: '%d%d%d%d%d',
+    values: const [1, 2, 3, 4, 5],
+    expected: '12345',
+    key: true,
+  ),
+  _printfComparable(
+    'printf.dynamic',
+    cold: true,
+    template: '%*.*f',
+    values: const [10, 2, 12.5],
+    expected: '     12.50',
+    key: true,
+  ),
+  _printfComparable(
+    'printf.uppercase_exponential',
+    template: '%E',
+    values: const [1.0],
+    expected: '1.000000E+00',
+    key: true,
+  ),
+  _printfComparable(
+    'printf.uppercase_general',
+    template: '%G',
+    values: const [12.5],
+    expected: '12.5',
+    key: true,
+  ),
+  _printfComparable(
+    'printf.uppercase_fixed',
+    template: '%F',
+    values: const [12.5],
+    expected: '12.50',
+    key: true,
+  ),
 ]);
 
 final Format _benchmarkFormat = Format(formatters: [_BenchmarkFormatter()]);
+final _braceTearOff = defaultFormat.format;
+final _printfTearOff = defaultFormat.sprintf;
 final Format _cFormat = Format(numberLocale: const CNumberLocale());
 final Format _intlFormat = Format(numberLocale: IntlNumberLocale('uk_UA'));
-final Format _intlReferenceFormat = Format(
-  numberLocale: IntlNumberLocale('uk_UA'),
-);
 
 BenchmarkScenario _braceComparable(
   String name, {
@@ -397,6 +462,7 @@ BenchmarkScenario _braceComparable(
   required String expected,
   bool key = false,
   bool graphemes = false,
+  BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
 }) {
   final templates = _templates(cold, template);
   final engine = graphemes ? Format(textUnit: TextUnit.graphemeClusters) : null;
@@ -408,14 +474,25 @@ BenchmarkScenario _braceComparable(
     dialect: BenchmarkDialect.braces,
     phase: cold ? BenchmarkPhase.cold : BenchmarkPhase.hot,
     keyScenario: key,
+    apiPath: apiPath,
     expected: TextOutcome(cold ? '$expected [0]' : expected),
     templates: templates,
     candidate:
         (iteration) => _capture(
-          () => (engine?.formatWith ?? formatWith)(
-            templates[iteration % templates.length],
-            positional: values,
-          ),
+          () => switch (apiPath) {
+            BenchmarkApiPath.topLevel => format(
+              templates[iteration % templates.length],
+              values.first,
+            ),
+            BenchmarkApiPath.tearOff => _braceTearOff(
+              templates[iteration % templates.length],
+              values.first,
+            ),
+            _ => (engine?.formatWith ?? formatWith)(
+              templates[iteration % templates.length],
+              positional: values,
+            ),
+          },
         ),
     baseline:
         (iteration) => _capture(
@@ -431,6 +508,7 @@ BenchmarkScenario _printfComparable(
   required List<Object?> values,
   required String expected,
   bool key = false,
+  BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
 }) {
   final templates = _templates(cold, template);
   return BenchmarkScenario(
@@ -441,11 +519,22 @@ BenchmarkScenario _printfComparable(
     dialect: BenchmarkDialect.printf,
     phase: cold ? BenchmarkPhase.cold : BenchmarkPhase.hot,
     keyScenario: key,
+    apiPath: apiPath,
     expected: TextOutcome(cold ? '$expected [0]' : expected),
     templates: templates,
     candidate:
         (iteration) => _capture(
-          () => vsprintf(templates[iteration % templates.length], values),
+          () => switch (apiPath) {
+            BenchmarkApiPath.topLevel => sprintf(
+              templates[iteration % templates.length],
+              values.first,
+            ),
+            BenchmarkApiPath.tearOff => _printfTearOff(
+              templates[iteration % templates.length],
+              values.first,
+            ),
+            _ => vsprintf(templates[iteration % templates.length], values),
+          },
         ),
     baseline:
         (iteration) => _capture(
@@ -460,6 +549,7 @@ BenchmarkScenario _braceInformation(
   required String template,
   required BenchmarkOutcome expected,
   required BenchmarkOperation candidate,
+  int fieldCount = 1,
 }) => BenchmarkScenario(
   id: name.contains('.hot') ? name : '$name.hot',
   dialect: BenchmarkDialect.braces,
@@ -468,6 +558,7 @@ BenchmarkScenario _braceInformation(
   expected: expected,
   templates: [template],
   candidate: candidate,
+  fieldCount: fieldCount,
   comparisonKind: BenchmarkComparisonKind.informational,
 );
 
@@ -478,6 +569,7 @@ BenchmarkScenario _braceReference(
   required String rationale,
   required BenchmarkOperation candidate,
   required BenchmarkOperation reference,
+  BenchmarkReferenceKind referenceKind = BenchmarkReferenceKind.executable,
 }) => BenchmarkScenario(
   id: '$name.hot',
   dialect: BenchmarkDialect.braces,
@@ -489,6 +581,7 @@ BenchmarkScenario _braceReference(
   baseline: reference,
   comparisonKind: BenchmarkComparisonKind.correctnessOnly,
   comparisonRationale: rationale,
+  referenceKind: referenceKind,
 );
 
 BenchmarkScenario _printfInformation(

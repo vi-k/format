@@ -191,12 +191,12 @@ void _measureRound(
       sink,
     );
     final baseline = scenario.baseline;
-    if (baseline != null) {
+    if (baseline != null && scenario.includeRatio) {
       _measure('baseline', baseline, scenario, round, operations, record, sink);
     }
   } else {
     final baseline = scenario.baseline;
-    if (baseline != null) {
+    if (baseline != null && scenario.includeRatio) {
       _measure('baseline', baseline, scenario, round, operations, record, sink);
     }
     _measure(
@@ -244,16 +244,22 @@ BenchmarkScenarioResult _resultFor(
 ) {
   final candidate = _median(samples, scenario.id, 'candidate');
   final baseline =
-      scenario.baseline == null
+      !scenario.includeRatio || scenario.baseline == null
           ? null
           : _median(samples, scenario.id, 'baseline');
   final ratio = scenario.includeRatio ? candidate / baseline! : null;
   return BenchmarkScenarioResult(
     scenarioId: scenario.id,
+    dialect: scenario.dialect,
+    phase: scenario.phase,
+    keyScenario: scenario.keyScenario,
     comparisonKind: scenario.comparisonKind,
     comparisonRationale: scenario.comparisonRationale,
     candidateMedianNanoseconds: candidate,
-    baselineMedianNanoseconds: baseline,
+    baselineMedianNanoseconds:
+        scenario.comparisonKind == BenchmarkComparisonKind.performance
+            ? baseline
+            : null,
     ratio: ratio,
   );
 }
