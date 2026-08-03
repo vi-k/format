@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## 3.0.0
+
+* Added a Python-compatible brace-formatting engine with positional, named,
+  item, and attribute lookup; conversions; nested fields; and typed errors.
+* Added `sprintf` and `vsprintf` with a deterministic C++23-compatible subset
+  for text, integer, decimal floating-point, and hexadecimal floating-point
+  conversions.
+* Added immutable `Format` instances with configurable custom formatters,
+  lookups, representations, number locales, and Unicode text units.
+* Added the companion `format_intl` package for opt-in locale symbols,
+  grouping rules, and localized digits without coupling `format` to `intl`.
+* Defined consistent JavaScript number semantics and optimized decimal integer
+  formatting, including large values and the minimum VM integer.
+* Added cross-runtime compatibility fixtures and a reproducible JIT, AOT, and
+  JavaScript benchmark harness with frozen Format 2 and sprintf baselines.
+* Replaced `formatNamed` with `formatWith`; direct `format` and `sprintf` calls
+  now accept up to ten values, while their collection-based counterparts are
+  `formatWith` and `vsprintf`.
+
 ## 2.0.0
 
 * Replaced the legacy and experimental engines with one `format`/`formatNamed`

@@ -9,44 +9,55 @@ formatters.
 ```dart
 import 'package:format/format.dart';
 
-format('{} {}', ['hello', 'world']);
-format('{1} {0}', ['hello', 'world']);
-formatNamed('{name}: {value}', {'name': 'answer', 'value': 42});
+format('{} {}', 'hello', 'world');
+format('{1} {0}', 'hello', 'world');
+formatWith('{name}: {value}', named: {'name': 'answer', 'value': 42});
 ```
 
 The public formatting API consists of:
 
 ```dart
-String format(String template, List<Object?> values);
-String formatNamed(String template, Map<String, Object?> values);
+format(String template, [Object? value1, ..., Object? value10]);
+formatWith(
+  String template, {
+  List<Object?> positional = const [],
+  Map<String, Object?> named = const {},
+});
+sprintf(String template, [Object? value1, ..., Object? value10]);
+vsprintf(String template, List<Object?> values);
 ```
 
 Literal width and precision are supported in templates:
 
 ```dart
-format('{:08d}', [42]);       // 00000042
-format('{:>10.2f}', [12.34]); //      12.34
-format('{:*^9s}', ['hello']); // **hello**
+format('{:08d}', 42);       // 00000042
+format('{:>10.2f}', 12.34); //      12.34
+format('{:*^9s}', 'hello'); // **hello**
 ```
 
 Use doubled braces to emit literal braces:
 
 ```dart
-format('{{value}} = {0}', [42]); // {value} = 42
+format('{{value}} = {0}', 42); // {value} = 42
 ```
 
-Formatting width is measured in Unicode grapheme clusters, so emoji and
-combined characters align as one visible character:
+Formatting width uses Unicode scalar values by default. Configure grapheme
+clusters when emoji and combined characters should align as one visible
+character:
 
 ```dart
-format('{:🇺🇦^10s}', ['peace']);
+final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
+graphemeFormat.format('{:🇺🇦^10s}', 'peace');
 ```
 
-The `n` specifier uses the current `intl` locale:
+The optional [`format_intl`](https://pub.dev/packages/format_intl) package
+adapts `intl` locale data without adding `intl` to this package's dependencies:
 
 ```dart
-Intl.defaultLocale = 'uk_UA';
-format('{:,.8n}', [123456.789]);
+import 'package:format_intl/format_intl.dart';
+
+final ukrainian = Format(numberLocale: IntlNumberLocale('uk_UA'));
+ukrainian.format('{:.8n}', 123456.789);
 ```
 
 ## sprintf
@@ -75,7 +86,7 @@ to a C machine width. A configured `NumberLocale`, including one supplied by
 
 ## Custom formatters
 
-Implement `Formatter<T>`, then register it globally for the current isolate:
+Implement `Formatter<T>`, then provide it to an immutable `Format` instance:
 
 ```dart
 final class JsonFormatter extends Formatter<Map<String, Object?>> {
@@ -90,9 +101,8 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
       value.toString();
 }
 
-Format.registerFormatter(JsonFormatter());
-format('{:json}', [<String, Object?>{'answer': 42}]);
-Format.unregisterFormatter('json');
+final jsonFormat = Format(formatters: [JsonFormatter()]);
+jsonFormat.format('{:json}', <String, Object?>{'answer': 42});
 ```
 
 Custom specifiers must match `[A-Za-z][A-Za-z0-9_]*`. Built-in names are
@@ -114,17 +124,20 @@ select floating-point formatting. On the Dart VM, `42` and `42.0` remain
 distinct and empty formatting produces `42` and `42.0` respectively. `BigInt`
 remains a separate value kind on every platform.
 
-## Format 2.0 migration
+## Format 3.0 migration
 
-Version 2.0 removes the old String extensions, `format2`/`format2m`, positional
-convenience arguments, `Map<Symbol, Object?>`, and dynamic width or precision.
-Replace them as follows:
+Version 3.0 removes `formatNamed` and treats a `List` passed to `format` as one
+value. Pass direct values separately, or use `formatWith` for positional and
+named collections:
 
 ```dart
-format('{} {}', ['hello', 'world']);
-formatNamed('{name}: {value}', {'name': 'answer', 'value': 42});
+format('{} {}', 'hello', 'world');
+formatWith(
+  '{name}: {value}',
+  named: {'name': 'answer', 'value': 42},
+);
 ```
 
-Forms such as `{:{}}`, `{:.{}}`, and `{:{width}}` are invalid. Use decimal
-literals directly in the template. Formatting failures use the typed
-`FormattingException` hierarchy.
+Formatting failures use the typed `FormattingException` hierarchy. Configure
+custom formatters, lookups, representations, locales, and text units by
+constructing a `Format` instance instead of mutating global registries.
