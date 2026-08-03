@@ -28,6 +28,8 @@ final class Format {
   final List<Representation<dynamic>> representations;
   final NumberLocale numberLocale;
   final TextUnit textUnit;
+  final DoubleFormatMode doubleFormatMode;
+  final DoubleSpecialValueSpelling doubleSpecialValueSpelling;
 
   Format({
     Iterable<Formatter<dynamic>> formatters = const [],
@@ -35,6 +37,8 @@ final class Format {
     Iterable<Representation<dynamic>> representations = const [],
     this.numberLocale = const CNumberLocale(),
     this.textUnit = TextUnit.unicodeScalars,
+    this.doubleFormatMode = DoubleFormatMode.dartSdk,
+    this.doubleSpecialValueSpelling = DoubleSpecialValueSpelling.dartSdk,
   }) : formatters = List.unmodifiable(formatters),
        lookups = List.unmodifiable(lookups),
        representations = List.unmodifiable(representations) {

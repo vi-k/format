@@ -1,4 +1,5 @@
 import 'binary64.dart';
+import 'double_format.dart';
 import 'errors.dart';
 import 'extensions.dart';
 import 'number_locale.dart';

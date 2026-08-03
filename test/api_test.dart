@@ -48,6 +48,25 @@ void main() {
     expect(appFormatWith('{name}', named: const {'name': 'ok'}), 'ok');
   });
 
+  test('Format exposes immutable double formatting profiles', () {
+    final defaults = Format();
+    final compatible = Format(
+      doubleFormatMode: DoubleFormatMode.compatible,
+      doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+    );
+
+    expect(defaults.doubleFormatMode, DoubleFormatMode.dartSdk);
+    expect(
+      defaults.doubleSpecialValueSpelling,
+      DoubleSpecialValueSpelling.dartSdk,
+    );
+    expect(compatible.doubleFormatMode, DoubleFormatMode.compatible);
+    expect(
+      compatible.doubleSpecialValueSpelling,
+      DoubleSpecialValueSpelling.short,
+    );
+  });
+
   test('exports Format 3 extension and locale contracts', () {
     const options = FormatOptions(
       sign: '+',

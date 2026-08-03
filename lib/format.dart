@@ -1,3 +1,5 @@
+export 'src/double_format.dart'
+    show DoubleFormatMode, DoubleSpecialValueSpelling;
 export 'src/engine.dart'
     show Format, defaultFormat, format, formatWith, sprintf, vsprintf;
 export 'src/errors.dart'
