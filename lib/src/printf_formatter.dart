@@ -160,11 +160,16 @@ String _formatPrintfDouble(
   final uppercase = type == 'E' || type == 'F' || type == 'G' || type == 'A';
   late final _AsciiFloat formatted;
   if (!value.isFinite) {
-    final word = value.isNaN ? 'nan' : 'inf';
-    formatted = _AsciiFloat(
-      uppercase ? word.toUpperCase() : word,
-      false,
-      special: true,
+    formatted = _formatSpecialDouble(value, uppercase, engine);
+  } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk &&
+      type != 'a' &&
+      type != 'A') {
+    formatted = _formatDartDouble(
+      value,
+      type,
+      conversion.precision,
+      conversion.flags.contains(_PrintfFlag.alternate),
+      context,
     );
   } else {
     final precision = conversion.precision ?? 6;

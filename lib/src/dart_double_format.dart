@@ -1,5 +1,19 @@
 part of 'engine.dart';
 
+_AsciiFloat _formatSpecialDouble(
+  double value,
+  bool uppercase,
+  Format settings,
+) {
+  final short =
+      settings.doubleFormatMode == DoubleFormatMode.compatible ||
+      settings.doubleSpecialValueSpelling == DoubleSpecialValueSpelling.short;
+  var body =
+      value.isNaN ? (short ? 'nan' : 'NaN') : (short ? 'inf' : 'Infinity');
+  if (short && uppercase) body = body.toUpperCase();
+  return _AsciiFloat(body, false, special: true);
+}
+
 _AsciiFloat _formatDartDouble(
   double value,
   String? type,

@@ -210,13 +210,7 @@ String formatBraceDouble(
 
   late final _AsciiFloat formatted;
   if (!formattingValue.isFinite) {
-    final nan = formattingValue.isNaN;
-    final word = nan ? 'nan' : 'inf';
-    formatted = _AsciiFloat(
-      uppercase ? word.toUpperCase() : word,
-      false,
-      special: true,
-    );
+    formatted = _formatSpecialDouble(formattingValue, uppercase, settings);
   } else if (settings.doubleFormatMode == DoubleFormatMode.dartSdk) {
     formatted = _formatDartDouble(
       formattingValue,

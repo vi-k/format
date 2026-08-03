@@ -14,17 +14,12 @@ void main() {
   });
 
   test('compatible brace formatting preserves exact legacy results', () {
-    final compatible = Format(
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
+    final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
     expect(compatible.format('{:.0f}', 2.5), '2');
     expect(compatible.format('{:e}', 1.0), '1.000000e+00');
     expect(compatible.format('{:.3g}', 1.0), '1');
-    expect(
-      compatible.format('{:.21f}', 0.1),
-      '0.100000000000000005551',
-    );
+    expect(compatible.format('{:.21f}', 0.1), '0.100000000000000005551');
   });
 
   test('Dart brace formatting keeps common numeric layout', () {
@@ -51,4 +46,42 @@ void main() {
       );
     });
   }
+
+  test('default sprintf uses Dart SDK decimal conversions', () {
+    expect(sprintf('%.0f', 2.5), '3');
+    expect(sprintf('%e', 1.0), '1e+0');
+    expect(sprintf('%.3g', 1.0), '1.00');
+  });
+
+  for (final template in ['%.21f', '%.21e', '%.0g', '%.22g']) {
+    test('Dart sprintf rejects SDK precision range: $template', () {
+      expect(
+        () => sprintf(template, 1.0),
+        throwsA(
+          isA<InvalidSpecifierException>()
+              .having((error) => error.context.template, 'template', template)
+              .having(
+                (error) => error.context.specifier,
+                'specifier',
+                template[template.length - 1],
+              ),
+        ),
+      );
+    });
+  }
+
+  test('special value spelling is configurable in Dart mode', () {
+    final short = Format(
+      doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+    );
+    final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
+
+    expect(format('{}', double.nan), 'NaN');
+    expect(format('{}', double.infinity), 'Infinity');
+    expect(format('{}', double.negativeInfinity), '-Infinity');
+    expect(short.format('{}', double.nan), 'nan');
+    expect(short.sprintf('%F', double.infinity), 'INF');
+    expect(compatible.format('{}', double.infinity), 'inf');
+    expect(compatible.sprintf('%G', double.nan), 'NAN');
+  });
 }

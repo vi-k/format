@@ -64,6 +64,11 @@ final class _ExpandingZeroLocale implements NumberLocale {
       asciiDigits.replaceAll('0', '٠٠');
 }
 
+final _compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
+
+String sprintf(String template, Object? value) =>
+    _compatibleFormat.sprintf(template, value);
+
 void main() {
   test('matches C++23 decimal float rules', () {
     expect(sprintf('%.0f', 2.5), '2');
@@ -112,7 +117,10 @@ void main() {
   });
 
   test('localizes symbols and digits without implicit grouping', () {
-    final localized = Format(numberLocale: _PrintfNumberLocale());
+    final localized = Format(
+      numberLocale: _PrintfNumberLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
 
     expect(localized.sprintf('%+.2f', 1234.5), '＋١٢٣٤,٥٠');
     expect(localized.sprintf('%+.1e', 12.0), '＋١,٢×10^＋٠١');
@@ -122,7 +130,10 @@ void main() {
   });
 
   test('fits zero padding after expanding localized digits', () {
-    final localized = Format(numberLocale: _ExpandingZeroLocale());
+    final localized = Format(
+      numberLocale: _ExpandingZeroLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
 
     expect(localized.sprintf('%010.2f', 12.5), '٠٠٠٠12.5٠٠');
   });
