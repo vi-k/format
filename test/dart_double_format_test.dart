@@ -47,6 +47,17 @@ void main() {
     });
   }
 
+  test('Dart brace precision validation also applies to special values', () {
+    expect(
+      () => format('{:.21f}', double.infinity),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => format('{:.0g}', double.nan),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
   test('default sprintf uses Dart SDK decimal conversions', () {
     expect(sprintf('%.0f', 2.5), '3');
     expect(sprintf('%e', 1.0), '1e+0');
@@ -69,6 +80,17 @@ void main() {
       );
     });
   }
+
+  test('Dart sprintf precision validation also applies to special values', () {
+    expect(
+      () => sprintf('%.21f', double.infinity),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => sprintf('%.0g', double.nan),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
 
   test('special value spelling is configurable in Dart mode', () {
     final short = Format(

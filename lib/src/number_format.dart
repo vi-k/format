@@ -207,6 +207,9 @@ String formatBraceDouble(
   final uppercase = type == 'E' || type == 'F' || type == 'G';
   final percent = type == '%';
   final formattingValue = percent ? converted * 100 : converted;
+  if (settings.doubleFormatMode == DoubleFormatMode.dartSdk) {
+    _validateDartDoublePrecision(type, spec.precision, context);
+  }
 
   late final _AsciiFloat formatted;
   if (!formattingValue.isFinite) {

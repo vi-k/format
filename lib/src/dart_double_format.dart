@@ -21,7 +21,6 @@ _AsciiFloat _formatDartDouble(
   bool alternate,
   FormatExceptionContext context,
 ) {
-  _validateDartDoublePrecision(type, precision, context);
   final magnitude = value.abs();
   var body = switch (type) {
     'f' || 'F' => magnitude.toStringAsFixed(precision ?? 6),

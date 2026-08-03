@@ -158,12 +158,17 @@ String _formatPrintfDouble(
   }
   final type = conversion.node.type;
   final uppercase = type == 'E' || type == 'F' || type == 'G' || type == 'A';
+  final dartDecimal =
+      engine.doubleFormatMode == DoubleFormatMode.dartSdk &&
+      type != 'a' &&
+      type != 'A';
+  if (dartDecimal) {
+    _validateDartDoublePrecision(type, conversion.precision, context);
+  }
   late final _AsciiFloat formatted;
   if (!value.isFinite) {
     formatted = _formatSpecialDouble(value, uppercase, engine);
-  } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk &&
-      type != 'a' &&
-      type != 'A') {
+  } else if (dartDecimal) {
     formatted = _formatDartDouble(
       value,
       type,
