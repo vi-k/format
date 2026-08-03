@@ -1,6 +1,7 @@
 # format
 
-`format` is a Dart package for Python-style string formatting with positional
+`format` brings Python-style braces and printf-style mini-languages to Dart
+while keeping Dart SDK number conversion as the default. It supports positional
 and named values, Unicode-aware alignment, locale-aware numbers, and custom
 formatters.
 
@@ -60,6 +61,51 @@ final ukrainian = Format(numberLocale: IntlNumberLocale('uk_UA'));
 ukrainian.format('{:.8n}', 123456.789);
 ```
 
+## Double formatting profiles
+
+Decimal `double` conversions use the Dart SDK by default. In particular, `f`,
+`e`, and `g` delegate to `toStringAsFixed`, `toStringAsExponential`, and
+`toStringAsPrecision` when a precision is present. The no-precision `g` and
+empty conversions use `toString()`:
+
+```dart
+format('{:.0f}', 2.5);          // 3
+format('{:e}', 1.0);            // 1e+0
+format('{:.3g}', 1.0);          // 1.00
+format('{}', double.infinity);  // Infinity
+```
+
+SDK precision limits therefore apply: `f`, `e`, and `%` accept 0 through 20,
+while `g` and `n` accept 1 through 21. As with `toStringAsFixed`, `f` may use
+exponential notation for magnitudes at or above `10^21`.
+
+Select `DoubleFormatMode.compatible` when exact Python brace-formatting and
+C++ printf rounding and spelling are required:
+
+```dart
+final compatible = Format(
+  doubleFormatMode: DoubleFormatMode.compatible,
+);
+
+compatible.format('{:.0f}', 2.5);          // 2
+compatible.format('{:e}', 1.0);            // 1.000000e+00
+compatible.format('{:.3g}', 1.0);          // 1
+compatible.format('{}', double.infinity);  // inf
+```
+
+In Dart SDK mode, non-finite values are `NaN` and `Infinity` by default. Their
+short spellings can be selected independently; compatible mode always uses
+short spellings:
+
+```dart
+final shortSpecials = Format(
+  doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+);
+
+shortSpecials.format('{}', double.nan);        // nan
+shortSpecials.sprintf('%F', double.infinity);  // INF
+```
+
 ## sprintf
 
 Use `sprintf` for direct arguments and `vsprintf` for a list:
@@ -69,12 +115,12 @@ sprintf('%s: %#08x', 'answer', 42);       // answer: 0x00002a
 vsprintf('%*.*f', [8, 2, 1.5]);           //     1.50
 ```
 
-The C++23-compatible subset supports `%%`, `%c`, `%s`, signed and unsigned
-integer conversions, and decimal or hexadecimal floating-point conversions.
-Width and precision may be literals or `*` arguments. Formatting is
-deterministic: floating-point rounding is nearest-even, special values use
-`inf`/`nan` (or uppercase variants), and negative unsigned values are rejected
-instead of wrapped.
+The C-style subset supports `%%`, `%c`, `%s`, signed and unsigned integer
+conversions, and decimal or hexadecimal floating-point conversions. Width and
+precision may be literals or `*` arguments. Decimal floating-point conversions
+use the selected double profile: Dart SDK semantics by default, or deterministic
+C++23-compatible nearest-even rounding and `inf`/`nan` spelling in compatible
+mode. Negative unsigned values are rejected instead of wrapped.
 
 This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX
 `$` argument indexing, and C++26 `%b`/`%B`. String width and precision use the
@@ -124,6 +170,14 @@ select floating-point formatting. On the Dart VM, `42` and `42.0` remain
 distinct and empty formatting produces `42` and `42.0` respectively. `BigInt`
 remains a separate value kind on every platform.
 
+## Representations
+
+The `!r` conversion produces a Dart-oriented representation, while `!a` also
+escapes non-ASCII characters. Nested `double` values follow the selected double
+profile and special-value spelling. Empty `Map` and `Set` values are both
+represented as `{}`. This ambiguity is intentional: non-empty values remain
+distinguishable by their entries.
+
 ## Format 3.0 migration
 
 Version 3.0 removes `formatNamed` and treats a `List` passed to `format` as one
@@ -141,3 +195,20 @@ formatWith(
 Formatting failures use the typed `FormattingException` hierarchy. Configure
 custom formatters, lookups, representations, locales, and text units by
 constructing a `Format` instance instead of mutating global registries.
+
+Version 3.0 uses Dart SDK decimal `double` conversion by default. Applications
+that depend on Python/C++ rounding, exponent layout, precision beyond the Dart
+SDK limits, or `inf`/`nan` spellings should construct a `Format` with
+`DoubleFormatMode.compatible`. This setting applies consistently to brace
+formatting, `sprintf`, and nested `!r`/`!a` representations.
+
+To compare both profiles on the current machine, run:
+
+```console
+cd example
+dart run bin/float_modes_benchmark.dart
+```
+
+The ANSI-colored report prints each formatted result and median time. VS Code
+also provides **Benchmark: float modes** and the **Benchmark: all** compound
+configuration.

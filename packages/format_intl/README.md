@@ -53,6 +53,21 @@ remain the responsibility of `format`. `IntlNumberLocale` does not select or
 apply number notation, including compact or scientific notation; notation
 remains the responsibility of `format`.
 
+Decimal `double` values use Dart SDK conversion by default. Locale symbols are
+applied after that conversion. Select the compatible profile when Python brace
+or C++ printf rounding and exponent layout are required:
+
+```dart
+final compatibleUkrainian = Format(
+  numberLocale: IntlNumberLocale('uk_UA'),
+  doubleFormatMode: DoubleFormatMode.compatible,
+);
+```
+
+`DoubleSpecialValueSpelling.short` selects `nan`/`inf` in Dart SDK mode;
+compatible mode always uses those short spellings. These profile settings
+belong to `Format`, not `IntlNumberLocale`.
+
 ## Default-locale snapshot
 
 Use `IntlNumberLocale.fromDefault()` when the `intl` current locale should be

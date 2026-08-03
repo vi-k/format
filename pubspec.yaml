@@ -1,5 +1,5 @@
 name: format
-description: Python-style and printf string formatting for Dart.
+description: Dart string formatting with Python-style braces and printf mini-languages.
 version: 3.0.0
 repository: https://github.com/vi-k/format
 issue_tracker: https://github.com/vi-k/format/issues
