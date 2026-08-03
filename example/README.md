@@ -18,14 +18,14 @@ dart run bin/format2_gate_benchmark.dart
 Compare the Dart SDK and Python/C++-compatible decimal `double` profiles:
 
 ```console
-dart run bin/float_modes_benchmark.dart
+dart run bin/double_modes_benchmark.dart
 ```
 
-The float-mode report shows the template, input value, formatted result, and
+The double-mode report shows the template, input value, formatted result, and
 median time for both profiles. Different results are highlighted so rounding
 and notation changes are visible alongside performance. Timing differences up
 to 5% are reported as equal by default. Library callers may change that limit
-with the `equivalenceThresholdPercent` argument to `runFloatModesBenchmark`.
+with the `equivalenceThresholdPercent` argument to `runDoubleModesBenchmark`.
 
 VS Code launch configurations are available for every benchmark. Use
 **Benchmark: all** to run the complete set.

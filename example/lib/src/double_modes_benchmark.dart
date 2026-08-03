@@ -11,7 +11,7 @@ final _compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
 var _benchmarkChecksum = 0;
 
-void runFloatModesBenchmark({
+void runDoubleModesBenchmark({
   BenchmarkLineWriter? writeLine,
   int warmupOperations = 1000,
   int operations = 10000,
@@ -30,7 +30,7 @@ void runFloatModesBenchmark({
     );
   }
   final emit = writeLine ?? print;
-  for (final scenario in _floatModeScenarios) {
+  for (final scenario in _doubleModeScenarios) {
     final dartResult = scenario.run(_dartFormat);
     final compatibleResult = scenario.run(_compatibleFormat);
     final measurements = _measureModes(
@@ -83,7 +83,7 @@ void runFloatModesBenchmark({
 }
 
 ({double dartMicros, double compatibleMicros}) _measureModes(
-  _FloatModeScenario scenario,
+  _DoubleModeScenario scenario,
   String dartResult,
   String compatibleResult,
   int warmupOperations,
@@ -154,13 +154,13 @@ double _median(List<double> values) {
   return values[values.length ~/ 2];
 }
 
-final class _FloatModeScenario {
+final class _DoubleModeScenario {
   final String dialect;
   final String template;
   final double value;
   final String Function(Format engine) run;
 
-  const _FloatModeScenario({
+  const _DoubleModeScenario({
     required this.dialect,
     required this.template,
     required this.value,
@@ -168,21 +168,23 @@ final class _FloatModeScenario {
   });
 }
 
-_FloatModeScenario _brace(String template, double value) => _FloatModeScenario(
-  dialect: 'Format',
-  template: template,
-  value: value,
-  run: (engine) => engine.format(template, value),
-);
+_DoubleModeScenario _brace(String template, double value) =>
+    _DoubleModeScenario(
+      dialect: 'Format',
+      template: template,
+      value: value,
+      run: (engine) => engine.format(template, value),
+    );
 
-_FloatModeScenario _printf(String template, double value) => _FloatModeScenario(
-  dialect: 'Sprintf',
-  template: template,
-  value: value,
-  run: (engine) => engine.sprintf(template, value),
-);
+_DoubleModeScenario _printf(String template, double value) =>
+    _DoubleModeScenario(
+      dialect: 'Sprintf',
+      template: template,
+      value: value,
+      run: (engine) => engine.sprintf(template, value),
+    );
 
-final _floatModeScenarios = <_FloatModeScenario>[
+final _doubleModeScenarios = <_DoubleModeScenario>[
   _brace('{:.2f}', 0.1),
   _brace('{:.2f}', 12345678901234.568),
   _brace('{:.0f}', 2.5),

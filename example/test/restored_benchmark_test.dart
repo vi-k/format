@@ -24,10 +24,10 @@ void main() {
     expect(scenario.$3.first.$2, '0');
   });
 
-  test('float modes benchmark prints results and timing for both modes', () {
+  test('double modes benchmark prints results and timing for both modes', () {
     final lines = <String>[];
 
-    runFloatModesBenchmark(
+    runDoubleModesBenchmark(
       writeLine: lines.add,
       warmupOperations: 1,
       operations: 2,
@@ -44,26 +44,29 @@ void main() {
     expect(output, contains('RESULTS DIFFER'));
   });
 
-  test('float modes benchmark treats differences inside threshold as equal', () {
+  test(
+    'double modes benchmark treats differences inside threshold as equal',
+    () {
+      final lines = <String>[];
+
+      runDoubleModesBenchmark(
+        writeLine: lines.add,
+        warmupOperations: 1,
+        operations: 2,
+        samples: 1,
+        equivalenceThresholdPercent: 1e9,
+      );
+
+      final output = lines.join('\n');
+      expect(output, contains('PERFORMANCE EQUAL'));
+      expect(output, contains('<= 1000000000.0%'));
+    },
+  );
+
+  test('double modes benchmark reports a winner outside threshold', () {
     final lines = <String>[];
 
-    runFloatModesBenchmark(
-      writeLine: lines.add,
-      warmupOperations: 1,
-      operations: 2,
-      samples: 1,
-      equivalenceThresholdPercent: 1e9,
-    );
-
-    final output = lines.join('\n');
-    expect(output, contains('PERFORMANCE EQUAL'));
-    expect(output, contains('<= 1000000000.0%'));
-  });
-
-  test('float modes benchmark reports a winner outside threshold', () {
-    final lines = <String>[];
-
-    runFloatModesBenchmark(
+    runDoubleModesBenchmark(
       writeLine: lines.add,
       warmupOperations: 1,
       operations: 2,
@@ -75,9 +78,9 @@ void main() {
   });
 
   for (final threshold in [-1.0, double.nan, double.infinity]) {
-    test('float modes benchmark rejects threshold $threshold', () {
+    test('double modes benchmark rejects threshold $threshold', () {
       expect(
-        () => runFloatModesBenchmark(equivalenceThresholdPercent: threshold),
+        () => runDoubleModesBenchmark(equivalenceThresholdPercent: threshold),
         throwsArgumentError,
       );
     });

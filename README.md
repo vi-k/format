@@ -93,6 +93,20 @@ compatible.format('{:.3g}', 1.0);          // 1
 compatible.format('{}', double.infinity);  // inf
 ```
 
+Compare both profiles on the current machine with the ANSI-colored benchmark:
+
+```console
+cd example
+dart run bin/double_modes_benchmark.dart
+```
+
+For finite `double` values in the benchmark scenarios,
+`DoubleFormatMode.dartSdk` is faster than compatible mode or falls within the
+default 5% equivalence threshold. The report prints both formatted results and
+median times; this performance conclusion does not include `NaN` or
+`Infinity`. VS Code also provides **Benchmark: double modes** and includes it
+in **Benchmark: all**.
+
 In Dart SDK mode, non-finite values are `NaN` and `Infinity` by default. Their
 short spellings can be selected independently; compatible mode always uses
 short spellings:
@@ -201,14 +215,3 @@ that depend on Python/C++ rounding, exponent layout, precision beyond the Dart
 SDK limits, or `inf`/`nan` spellings should construct a `Format` with
 `DoubleFormatMode.compatible`. This setting applies consistently to brace
 formatting, `sprintf`, and nested `!r`/`!a` representations.
-
-To compare both profiles on the current machine, run:
-
-```console
-cd example
-dart run bin/float_modes_benchmark.dart
-```
-
-The ANSI-colored report prints each formatted result and median time. VS Code
-also provides **Benchmark: float modes** and the **Benchmark: all** compound
-configuration.

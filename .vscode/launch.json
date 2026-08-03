@@ -25,10 +25,10 @@
       "args": []
     },
     {
-      "name": "Benchmark: float modes",
+      "name": "Benchmark: double modes",
       "request": "launch",
       "type": "dart",
-      "program": "bin/float_modes_benchmark.dart",
+      "program": "bin/double_modes_benchmark.dart",
       "cwd": "${workspaceFolder}/example",
       "args": []
     },
@@ -79,7 +79,7 @@
       "configurations": [
         "Benchmark: original example",
         "Benchmark: Format 2 gate",
-        "Benchmark: float modes",
+        "Benchmark: double modes",
         "Benchmark: release harness smoke",
         "Benchmark: parser strategy JIT"
       ]

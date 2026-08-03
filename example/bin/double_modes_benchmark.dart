@@ -4,6 +4,6 @@ import 'package:example/benchmark.dart';
 void main() {
   ansi.runZonedPrinter(
     defaultStyle: const ansi.Style(foreground: defaultFg),
-    runFloatModesBenchmark,
+    runDoubleModesBenchmark,
   );
 }
