@@ -6,6 +6,7 @@ import 'src/parser_platform.dart' as platform;
 
 const int _warmupRounds = 3;
 const int _minimumRecordedRounds = 7;
+const int _nativeOperations = 1000;
 const int _javascriptOperations = 10000;
 
 final class BenchmarkRunOptions {
@@ -124,7 +125,7 @@ BenchmarkReport runBenchmark(
           ? _javascriptOperations
           : options.smoke
           ? 1
-          : 100;
+          : _nativeOperations;
   for (var round = 0; round < _warmupRounds; round++) {
     for (final scenario in selected) {
       _measureRound(

@@ -136,6 +136,28 @@ void main() {
     expect(BenchmarkReport.fromJson(report.toJson()).toJson(), report.toJson());
   });
 
+  test(
+    'gateable JIT measurements use batches large enough to suppress noise',
+    () {
+      final scenario = benchmarkScenarios.singleWhere(
+        (value) => value.id == 'brace.double.fixed.hot',
+      );
+      final report = runBenchmark(
+        const BenchmarkRunOptions(
+          dialect: BenchmarkDialect.braces,
+          phase: BenchmarkPhase.hot,
+          run: 1,
+        ),
+        scenarios: [scenario],
+      );
+
+      expect(report.gateable, isTrue);
+      expect(report.samples.map((sample) => sample.operations).toSet(), const {
+        1000,
+      });
+    },
+  );
+
   test('runner records detected JIT provenance and rejects a false label', () {
     final options = const BenchmarkRunOptions(
       dialect: BenchmarkDialect.braces,
