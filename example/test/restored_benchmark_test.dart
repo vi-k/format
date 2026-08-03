@@ -38,9 +38,48 @@ void main() {
     expect(output, contains('{:.0f}'));
     expect(output, contains('Dart SDK'));
     expect(output, contains('Compatible'));
-    expect(output, contains('Result: 3'));
-    expect(output, contains('Result: 2'));
+    expect(output, contains(h2('3')));
+    expect(output, contains(h2('2')));
     expect(output, contains('µs/op'));
     expect(output, contains('RESULTS DIFFER'));
   });
+
+  test('float modes benchmark treats differences inside threshold as equal', () {
+    final lines = <String>[];
+
+    runFloatModesBenchmark(
+      writeLine: lines.add,
+      warmupOperations: 1,
+      operations: 2,
+      samples: 1,
+      equivalenceThresholdPercent: 1e9,
+    );
+
+    final output = lines.join('\n');
+    expect(output, contains('PERFORMANCE EQUAL'));
+    expect(output, contains('<= 1000000000.0%'));
+  });
+
+  test('float modes benchmark reports a winner outside threshold', () {
+    final lines = <String>[];
+
+    runFloatModesBenchmark(
+      writeLine: lines.add,
+      warmupOperations: 1,
+      operations: 2,
+      samples: 3,
+      equivalenceThresholdPercent: 0,
+    );
+
+    expect(lines.join('\n'), contains('FASTER:'));
+  });
+
+  for (final threshold in [-1.0, double.nan, double.infinity]) {
+    test('float modes benchmark rejects threshold $threshold', () {
+      expect(
+        () => runFloatModesBenchmark(equivalenceThresholdPercent: threshold),
+        throwsArgumentError,
+      );
+    });
+  }
 }

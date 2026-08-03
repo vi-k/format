@@ -16,9 +16,18 @@ void runFloatModesBenchmark({
   int warmupOperations = 1000,
   int operations = 10000,
   int samples = 7,
+  double equivalenceThresholdPercent = 5.0,
 }) {
   if (warmupOperations < 0 || operations <= 0 || samples <= 0) {
     throw ArgumentError('Benchmark operation counts must be positive.');
+  }
+  if (!equivalenceThresholdPercent.isFinite ||
+      equivalenceThresholdPercent < 0) {
+    throw ArgumentError.value(
+      equivalenceThresholdPercent,
+      'equivalenceThresholdPercent',
+      'must be finite and non-negative',
+    );
   }
   final emit = writeLine ?? print;
   for (final scenario in _floatModeScenarios) {
@@ -39,17 +48,17 @@ void runFloatModesBenchmark({
     emit(h2('Value: ${scenario.value}'));
     emit('');
     emit(
-      '${accent('Dart SDK')}: '
-      '${h2('Result: $dartResult')}  '
+      '${accent('Dart SDK')}:   '
+      '${h2(dartResult)}  '
       '${measurements.dartMicros.toStringAsFixed(3)} µs/op',
     );
     emit(
       '${accent('Compatible')}: '
-      '${h2('Result: $compatibleResult')}  '
+      '${h2(compatibleResult)}  '
       '${measurements.compatibleMicros.toStringAsFixed(3)} µs/op',
     );
     if (dartResult != compatibleResult) {
-      emit(warning('RESULTS DIFFER'));
+      emit(accentWarning('RESULTS DIFFER'));
     }
     final dartFaster = measurements.dartMicros <= measurements.compatibleMicros;
     final fastest = dartFaster ? 'Dart SDK' : 'Compatible';
@@ -59,7 +68,17 @@ void runFloatModesBenchmark({
         dartFaster ? measurements.dartMicros : measurements.compatibleMicros;
     final difference =
         fastestTime == 0 ? 0.0 : (slowest / fastestTime - 1) * 100;
-    emit(ok('$fastest FASTER: ${difference.toStringAsFixed(1)}%'));
+    if (difference <= equivalenceThresholdPercent) {
+      emit(
+        ok(
+          'PERFORMANCE EQUAL: difference '
+          '${difference.toStringAsFixed(1)}% <= '
+          '${equivalenceThresholdPercent.toStringAsFixed(1)}%',
+        ),
+      );
+    } else {
+      emit(ok('$fastest FASTER: ${difference.toStringAsFixed(1)}%'));
+    }
   }
 }
 
