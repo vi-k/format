@@ -92,6 +92,13 @@ final class _NonEmptyDigitsLocale implements NumberLocale {
   }
 }
 
+final _compatibleFormat = Format(
+  doubleFormatMode: DoubleFormatMode.compatible,
+);
+
+String format(String template, Object? value) =>
+    _compatibleFormat.format(template, value);
+
 void main() {
   test('rounds exact binary64 rationals with ties to even', () {
     expect(format('{:.0f}', 2.5), '2');
@@ -221,7 +228,10 @@ void main() {
     expect(format('{:010f}', double.infinity), '0000000inf');
     expect(format('{:010F}', double.negativeInfinity), '-000000INF');
 
-    final graphemes = Format(textUnit: TextUnit.graphemeClusters);
+    final graphemes = Format(
+      textUnit: TextUnit.graphemeClusters,
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     expect(graphemes.format('{:👩‍🔬>4.0f}', 42.0), '👩‍🔬👩‍🔬42');
   });
 
@@ -252,19 +262,28 @@ void main() {
   });
 
   test('formats double n through every locale callback', () {
-    final localized = Format(numberLocale: _LocalizedNumberLocale());
+    final localized = Format(
+      numberLocale: _LocalizedNumberLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     expect(localized.format('{:n}', 1234567.5), '١,٢٣٤٥٧×10^＋٠٦');
     expect(localized.format('{:+n}', 1e20), '＋١×10^＋٢٠');
     expect(localized.format('{:012n}', -1234.5), '−٠٠.٠١.٢٣٤,٥');
   });
 
   test('passes only non-empty ASCII digit runs to locale localization', () {
-    final configured = Format(numberLocale: _NonEmptyDigitsLocale());
+    final configured = Format(
+      numberLocale: _NonEmptyDigitsLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     expect(configured.format('{:n}', 1e20), '1e+20');
   });
 
   test('wraps double locale failures with format context', () {
-    final configured = Format(numberLocale: _ThrowingDoubleLocale());
+    final configured = Format(
+      numberLocale: _ThrowingDoubleLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     expect(
       () => configured.format('{:n}', 1.5),
       throwsA(

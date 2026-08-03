@@ -217,6 +217,14 @@ String formatBraceDouble(
       false,
       special: true,
     );
+  } else if (settings.doubleFormatMode == DoubleFormatMode.dartSdk) {
+    formatted = _formatDartDouble(
+      formattingValue,
+      type,
+      spec.precision,
+      spec.alternate,
+      context,
+    );
   } else if (type == null && spec.precision == null) {
     formatted = _formatShortest(converted, spec.alternate);
   } else {

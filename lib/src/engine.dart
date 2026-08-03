@@ -12,6 +12,7 @@ part 'printf_parser.dart';
 part 'printf_formatter.dart';
 part 'printf_processor.dart';
 part 'brace_processor.dart';
+part 'dart_double_format.dart';
 part 'representation.dart';
 part 'brace_ast.dart';
 part 'field_resolver.dart';
