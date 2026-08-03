@@ -58,12 +58,21 @@ void main() {
     });
 
     test('keeps distinguishable JavaScript doubles on floating paths', () {
-      expect(format('{}', double.infinity), 'inf');
-      expect(format('{:f}', double.infinity), 'inf');
-      expect(format('{!r}', double.negativeInfinity), '-inf');
-      expect(format('{}', -0.0), '-0.0');
+      final compatible = Format(
+        doubleFormatMode: DoubleFormatMode.compatible,
+      );
+
+      expect(format('{}', double.infinity), 'Infinity');
+      expect(format('{:f}', double.infinity), 'Infinity');
+      expect(format('{!r}', double.negativeInfinity), '-Infinity');
+      expect(compatible.format('{}', double.infinity), 'inf');
+      expect(compatible.format('{:f}', double.infinity), 'inf');
+      expect(compatible.format('{!r}', double.negativeInfinity), '-inf');
+      expect(format('{}', -0.0), isJavaScript ? '-0' : '-0.0');
       expect(format('{:f}', -0.0), '-0.000000');
       expect(format('{!r}', -0.0), '-0.0');
+      expect(compatible.format('{}', -0.0), '-0.0');
+      expect(compatible.format('{!r}', -0.0), '-0.0');
     });
   });
 }
