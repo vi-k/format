@@ -204,15 +204,13 @@ String formatBraceDouble(
 
   final type = spec.type;
   _validateDoubleSpec(spec, type, context);
-  final binary = Binary64.fromDouble(converted);
   final uppercase = type == 'E' || type == 'F' || type == 'G';
   final percent = type == '%';
-  final formattingBinary =
-      percent ? Binary64.fromDouble(converted * 100) : binary;
+  final formattingValue = percent ? converted * 100 : converted;
 
   late final _AsciiFloat formatted;
-  if (!formattingBinary.isFinite) {
-    final nan = formattingBinary.isNaN;
+  if (!formattingValue.isFinite) {
+    final nan = formattingValue.isNaN;
     final word = nan ? 'nan' : 'inf';
     formatted = _AsciiFloat(
       uppercase ? word.toUpperCase() : word,
@@ -224,22 +222,22 @@ String formatBraceDouble(
   } else {
     final precision = spec.precision ?? 6;
     formatted = switch (type) {
-      'f' || 'F' => _formatFixed(converted, binary, precision, spec.alternate),
-      'e' || 'E' => _formatScientific(binary, precision, spec.alternate, type!),
+      'f' || 'F' => _formatFixed(converted, precision, spec.alternate),
+      'e' || 'E' => _formatScientific(
+        Binary64.fromDouble(converted),
+        precision,
+        spec.alternate,
+        type!,
+      ),
       'g' || 'G' || 'n' => _formatGeneral(
-        binary,
+        Binary64.fromDouble(converted),
         precision == 0 ? 1 : precision,
         spec.alternate,
         type == 'G' ? 'E' : 'e',
       ),
-      '%' => _formatFixed(
-        converted * 100,
-        formattingBinary,
-        precision,
-        spec.alternate,
-      ),
+      '%' => _formatFixed(formattingValue, precision, spec.alternate),
       null => _formatGeneral(
-        binary,
+        Binary64.fromDouble(converted),
         precision == 0 ? 1 : precision,
         spec.alternate,
         'e',
@@ -249,7 +247,7 @@ String formatBraceDouble(
     };
   }
 
-  var negative = !formattingBinary.isNaN && formattingBinary.signBit;
+  var negative = !formattingValue.isNaN && formattingValue.isNegative;
   if (spec.normalizeNegativeZero && formatted.roundedZero) negative = false;
   final locale = type == 'n' ? settings.numberLocale : null;
   final sign =
@@ -304,16 +302,11 @@ const _fixedDecimalScales = <double>[
 
 const _maximumExactDoubleInteger = 4503599627370496.0;
 
-_AsciiFloat _formatFixed(
-  double source,
-  Binary64 binary,
-  int precision,
-  bool alternate,
-) {
+_AsciiFloat _formatFixed(double source, int precision, bool alternate) {
   final fast = _formatFixedFast(source, precision, alternate);
   if (fast != null) return fast;
 
-  final rounded = binary.roundDecimal(precision);
+  final rounded = Binary64.fromDouble(source).roundDecimal(precision);
   return _AsciiFloat(
     _fixedFromRounded(rounded, precision, alternate),
     rounded == BigInt.zero,

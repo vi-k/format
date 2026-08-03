@@ -157,11 +157,10 @@ String _formatPrintfDouble(
     throw UnsupportedFormatValueException(context, value);
   }
   final type = conversion.node.type;
-  final binary = Binary64.fromDouble(value);
   final uppercase = type == 'E' || type == 'F' || type == 'G' || type == 'A';
   late final _AsciiFloat formatted;
-  if (!binary.isFinite) {
-    final word = binary.isNaN ? 'nan' : 'inf';
+  if (!value.isFinite) {
+    final word = value.isNaN ? 'nan' : 'inf';
     formatted = _AsciiFloat(
       uppercase ? word.toUpperCase() : word,
       false,
@@ -171,16 +170,21 @@ String _formatPrintfDouble(
     final precision = conversion.precision ?? 6;
     final alternate = conversion.flags.contains(_PrintfFlag.alternate);
     formatted = switch (type) {
-      'f' || 'F' => _formatFixed(value, binary, precision, alternate),
-      'e' || 'E' => _formatScientific(binary, precision, alternate, type),
+      'f' || 'F' => _formatFixed(value, precision, alternate),
+      'e' || 'E' => _formatScientific(
+        Binary64.fromDouble(value),
+        precision,
+        alternate,
+        type,
+      ),
       'g' || 'G' => _formatGeneral(
-        binary,
+        Binary64.fromDouble(value),
         precision == 0 ? 1 : precision,
         alternate,
         type == 'G' ? 'E' : 'e',
       ),
       'a' || 'A' => _formatHexadecimal(
-        binary,
+        Binary64.fromDouble(value),
         conversion.precision,
         alternate,
         uppercase,
@@ -190,7 +194,7 @@ String _formatPrintfDouble(
   }
 
   final locale = engine.numberLocale;
-  final negative = !binary.isNaN && binary.signBit;
+  final negative = !value.isNaN && value.isNegative;
   final requestedSign =
       conversion.flags.contains(_PrintfFlag.sign)
           ? '+'
