@@ -10,4 +10,12 @@ void main() {
     expect(engine.debugUsesSimpleBuiltinFormatSpec('10d'), isFalse);
     expect(engine.debugUsesSimpleBuiltinFormatSpec('é'), isFalse);
   });
+
+  test('recognizes fixed double precision without Unicode tokenization', () {
+    expect(engine.debugUsesSimpleBuiltinFormatSpec('.0f'), isTrue);
+    expect(engine.debugUsesSimpleBuiltinFormatSpec('.2f'), isTrue);
+    expect(engine.debugUsesSimpleBuiltinFormatSpec('.20F'), isTrue);
+    expect(engine.debugUsesSimpleBuiltinFormatSpec('.f'), isFalse);
+    expect(engine.debugUsesSimpleBuiltinFormatSpec('.2g'), isFalse);
+  });
 }

@@ -178,9 +178,38 @@ bool debugUsesSimpleBuiltinFormatSpec(String source) =>
     _simpleBuiltinFormatSpec(source) != null;
 
 _FormatSpec? _simpleBuiltinFormatSpec(String source) {
-  if (source.length != 1 || source.codeUnitAt(0) > 0x7f) return null;
-  return _builtInTypes.contains(source) ? _FormatSpec(type: source) : null;
+  if (source.length == 1 && source.codeUnitAt(0) <= 0x7f) {
+    return _builtInTypes.contains(source) ? _FormatSpec(type: source) : null;
+  }
+  if (source.length < 3 || source.codeUnitAt(0) != 0x2e) return null;
+
+  final type = source.codeUnitAt(source.length - 1);
+  if (type != 0x46 && type != 0x66) return null;
+  var precision = 0;
+  for (var index = 1; index < source.length - 1; index++) {
+    final digit = source.codeUnitAt(index) - 0x30;
+    if (digit < 0 || digit > 9) return null;
+    precision = precision * 10 + digit;
+    if (precision > 20) return null;
+  }
+  return type == 0x66
+      ? _simpleFixedLowerSpecs[precision]
+      : _simpleFixedUpperSpecs[precision];
 }
+
+final _simpleFixedLowerSpecs = List<_FormatSpec>.unmodifiable(
+  List.generate(
+    21,
+    (precision) => _FormatSpec(precision: precision, type: 'f'),
+  ),
+);
+
+final _simpleFixedUpperSpecs = List<_FormatSpec>.unmodifiable(
+  List.generate(
+    21,
+    (precision) => _FormatSpec(precision: precision, type: 'F'),
+  ),
+);
 
 bool _isAlign(String value) =>
     value == '<' || value == '>' || value == '=' || value == '^';
