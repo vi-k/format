@@ -11,6 +11,19 @@ void main() {
     expect(sprintf('%X', 0x2af), '2AF');
   });
 
+  test('formats signed decimal boundaries with exactly one sign', () {
+    const minInt = -9223372036854775808;
+    const maxInt = 9223372036854775807;
+    final aboveInt = BigInt.parse('9223372036854775808');
+    final belowInt = BigInt.parse('-9223372036854775809');
+
+    expect(sprintf('%d', minInt), '-9223372036854775808');
+    expect(sprintf('%d', maxInt), '9223372036854775807');
+    expect(sprintf('%d', 0), '0');
+    expect(sprintf('%d', aboveInt), '9223372036854775808');
+    expect(sprintf('%d', belowInt), '-9223372036854775809');
+  });
+
   test('formats C integer precision and alternate prefixes', () {
     expect(sprintf('%.5d', 42), '00042');
     expect(sprintf('%.0d', 0), '');
