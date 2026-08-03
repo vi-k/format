@@ -85,19 +85,44 @@ void main() {
     expect(format('{!r}', true), 'true');
     expect(format('{!r}', false), 'false');
     expect(format('{!r}', null), 'null');
-    expect(format('{!r}', double.nan), 'nan');
-    expect(format('{!r}', double.infinity), 'inf');
-    expect(format('{!r}', double.negativeInfinity), '-inf');
+    expect(format('{!r}', double.nan), 'NaN');
+    expect(format('{!r}', double.infinity), 'Infinity');
+    expect(format('{!r}', double.negativeInfinity), '-Infinity');
     expect(format('{!r}', -0.0), '-0.0');
   });
 
-  test('r and a conversions use platform-aware number spelling', () {
+  test('compatible r and a use platform-aware Python number spelling', () {
     const integralSpelling = isJavaScript ? '100000000000000000000' : '1e+20';
+    final compatible = Format(
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
 
-    expect(format('{!r}', 1e20), integralSpelling);
-    expect(format('{!r}', 1e-7), '1e-07');
-    expect(format('{!a}', 1e20), integralSpelling);
-    expect(format('{!a}', 1e-7), '1e-07');
+    expect(compatible.format('{!r}', 1e20), integralSpelling);
+    expect(compatible.format('{!r}', 1e-7), '1e-07');
+    expect(compatible.format('{!a}', 1e20), integralSpelling);
+    expect(compatible.format('{!a}', 1e-7), '1e-07');
+  });
+
+  test('r conversion uses the configured double profile recursively', () {
+    final short = Format(
+      doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+    );
+    final compatible = Format(
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
+
+    expect(format('{!r}', [1e-7, double.infinity]), '[1e-7, Infinity]');
+    expect(short.format('{!r}', [double.nan]), '[nan]');
+    expect(
+      compatible.format('{!r}', [1e-7, double.infinity]),
+      '[1e-07, inf]',
+    );
+    expect(format('{!a}', ['é', double.infinity]), r"['\xe9', Infinity]");
+  });
+
+  test('empty maps and sets intentionally share Dart spelling', () {
+    expect(format('{!r}', <Object?, Object?>{}), '{}');
+    expect(format('{!r}', <Object?>{}), '{}');
   });
 
   test('r conversion represents positive and negative BigInt values', () {
@@ -122,7 +147,7 @@ void main() {
       "{'second': 2, 'first': 1}",
     );
     expect(format('{!r}', <Object?>{'x', 2}), "{'x', 2}");
-    expect(format('{!r}', <Object?>{}), 'set()');
+    expect(format('{!r}', <Object?>{}), '{}');
   });
 
   test('r conversion dispatches custom Iterable values as extensions', () {

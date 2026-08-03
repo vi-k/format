@@ -48,7 +48,7 @@ final class _RepresentationWriter {
       case int() when _isIntegerValue(value):
         output.write(BigInt.from(value).toString());
       case double():
-        output.write(_pythonShortestDouble(value));
+        output.write(_representDouble(value, engine));
       case Map<Object?, Object?>():
         _writeMap(value, output);
       case Set<Object?>():
@@ -112,7 +112,7 @@ final class _RepresentationWriter {
     }
     try {
       if (value.isEmpty) {
-        output.write('set()');
+        output.write('{}');
         return;
       }
       output.write('{');
@@ -198,6 +198,15 @@ final class _RepresentationWriter {
 
   String _extensionName(Representation<dynamic> representation) =>
       representation.runtimeType.toString();
+}
+
+String _representDouble(double value, Format engine) {
+  if (engine.doubleFormatMode == DoubleFormatMode.compatible) {
+    return _pythonShortestDouble(value);
+  }
+  if (value.isFinite) return value.toString();
+  final body = _formatSpecialDouble(value, false, engine).body;
+  return value.isNegative ? '-$body' : body;
 }
 
 String _asciiEscape(String value) {
