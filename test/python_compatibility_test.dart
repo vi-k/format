@@ -8,6 +8,9 @@ import 'support/fixture_value.dart';
 
 void main() {
   test('matches committed Python 3.14 fixtures', () async {
+    final compatibleFormat = Format(
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     final suite = await PythonFixtureSuite.load(
       'test/fixtures/python_format.json',
     );
@@ -16,7 +19,7 @@ void main() {
 
     for (final fixture in suite.cases) {
       expect(
-        () => formatWith(
+        () => compatibleFormat.formatWith(
           fixture.template,
           positional: fixture.positional,
           named: fixture.named,

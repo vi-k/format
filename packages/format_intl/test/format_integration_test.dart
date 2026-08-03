@@ -13,6 +13,20 @@ void main() {
     expect(sprintfUk('%.1f', 1234.5), '1234,5');
   });
 
+  test('one locale supports Dart and compatible double profiles', () {
+    final locale = IntlNumberLocale('uk_UA');
+    final dartFormat = Format(numberLocale: locale);
+    final compatibleFormat = Format(
+      numberLocale: locale,
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
+
+    expect(dartFormat.format('{:.3n}', 1.0), '1,00');
+    expect(compatibleFormat.format('{:.3n}', 1.0), '1');
+    expect(dartFormat.format('{:n}', double.infinity), 'Infinity');
+    expect(compatibleFormat.format('{:n}', double.infinity), 'inf');
+  });
+
   test('fromDefault snapshots the current locale', () {
     final previousDefaultLocale = Intl.defaultLocale;
     addTearDown(() => Intl.defaultLocale = previousDefaultLocale);

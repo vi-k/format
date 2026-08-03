@@ -8,13 +8,16 @@ import 'support/fixture_value.dart';
 
 void main() {
   test('matches committed std::sprintf C++23 fixtures', () async {
+    final compatibleFormat = Format(
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
     final suite = await SprintfFixtureSuite.load(
       'test/fixtures/sprintf_common.json',
     );
 
     for (final fixture in suite.cases) {
       expect(
-        () => vsprintf(fixture.template, fixture.arguments),
+        () => compatibleFormat.vsprintf(fixture.template, fixture.arguments),
         fixture.matcher,
         reason: fixture.id,
       );
