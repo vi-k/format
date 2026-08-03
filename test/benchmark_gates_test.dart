@@ -203,12 +203,12 @@ void main() {
     final reports = _completeReports();
     reports[0] = _withPerformanceRatio(
       reports[0],
-      'brace.double.fixed.hot',
+      'brace.double.fixed.compatible.hot',
       1.06,
     );
     reports[1] = _withPerformanceRatio(
       reports[1],
-      'brace.double.fixed.hot',
+      'brace.double.fixed.compatible.hot',
       1.06,
     );
     final directory = await Directory.systemTemp.createTemp('format-gates-');

@@ -102,18 +102,44 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: '9007199254740993',
   ),
   _braceComparable(
-    'brace.double.fixed',
+    'brace.double.fixed.dart',
+    template: '{:.2f}',
+    values: const [12.5],
+    expected: '12.50',
+  ),
+  _braceComparable(
+    'brace.double.fixed.compatible',
     template: '{:.2f}',
     values: const [12.5],
     expected: '12.50',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _braceComparable(
-    'brace.double.fixed_large',
+    'brace.double.fixed_large.dart',
+    template: '{:.2f}',
+    values: const [12345678901234.568],
+    expected: '12345678901234.57',
+  ),
+  _braceComparable(
+    'brace.double.fixed_large.compatible',
     template: '{:.2f}',
     values: const [12345678901234.568],
     expected: '12345678901234.57',
     key: true,
+    candidateFormat: _compatibleFormat,
+  ),
+  _braceInformation(
+    'brace.double.half_tie.dart',
+    template: '{:.0f}',
+    expected: const TextOutcome('3'),
+    candidate: (_) => _capture(() => format('{:.0f}', 2.5)),
+  ),
+  _braceInformation(
+    'brace.double.half_tie.compatible',
+    template: '{:.0f}',
+    expected: const TextOutcome('2'),
+    candidate: (_) => _capture(() => _compatibleFormat.format('{:.0f}', 2.5)),
   ),
   _braceComparable(
     'brace.grouping',
@@ -138,6 +164,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:f}',
     values: const [double.nan],
     expected: 'nan',
+    candidateFormat: _compatibleFormat,
   ),
   _braceInformation(
     'brace.auto_manual',
@@ -182,7 +209,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.double.exponential',
     template: '{:e}',
     expected: const TextOutcome('1.000000e+00'),
-    candidate: (_) => _capture(() => format('{:e}', 1.0)),
+    candidate: (_) => _capture(() => _compatibleFormat.format('{:e}', 1.0)),
   ),
   _braceComparable(
     'brace.double.general',
@@ -190,6 +217,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [12.5],
     expected: '12.5',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _braceInformation(
     'brace.percent',
@@ -320,6 +348,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [10, 2, 12.5],
     expected: '     12.50',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.text',
@@ -351,6 +380,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [12.5],
     expected: '12.50',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.flags',
@@ -364,6 +394,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [1.0],
     expected: '1.000000e+00',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.general',
@@ -371,6 +402,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [12.5],
     expected: '12.5',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfInformation(
     'printf.hex_float.hot',
@@ -390,6 +422,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [double.infinity],
     expected: 'INF',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfInformation(
     'printf.unicode',
@@ -445,6 +478,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [10, 2, 12.5],
     expected: '     12.50',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.uppercase_exponential',
@@ -452,6 +486,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [1.0],
     expected: '1.000000E+00',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.uppercase_general',
@@ -459,6 +494,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [12.5],
     expected: '12.5',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
   _printfComparable(
     'printf.uppercase_fixed',
@@ -466,10 +502,14 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [12.5],
     expected: '12.50',
     key: true,
+    candidateFormat: _compatibleFormat,
   ),
 ]);
 
 final Format _benchmarkFormat = Format(formatters: [_BenchmarkFormatter()]);
+final Format _compatibleFormat = Format(
+  doubleFormatMode: DoubleFormatMode.compatible,
+);
 final _braceTearOff = defaultFormat.format;
 final _printfTearOff = defaultFormat.sprintf;
 final Format _cFormat = Format(numberLocale: const CNumberLocale());
@@ -484,9 +524,12 @@ BenchmarkScenario _braceComparable(
   bool key = false,
   bool graphemes = false,
   BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
+  Format? candidateFormat,
 }) {
   final templates = _templates(cold, template);
-  final engine = graphemes ? Format(textUnit: TextUnit.graphemeClusters) : null;
+  final engine =
+      candidateFormat ??
+      (graphemes ? Format(textUnit: TextUnit.graphemeClusters) : null);
   return BenchmarkScenario(
     id:
         name.contains('.cold') || name.contains('.hot')
@@ -530,6 +573,7 @@ BenchmarkScenario _printfComparable(
   required String expected,
   bool key = false,
   BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
+  Format? candidateFormat,
 }) {
   final templates = _templates(cold, template);
   return BenchmarkScenario(
@@ -546,6 +590,10 @@ BenchmarkScenario _printfComparable(
     candidate:
         (iteration) => _capture(
           () => switch (apiPath) {
+            _ when candidateFormat != null => candidateFormat.vsprintf(
+              templates[iteration % templates.length],
+              values,
+            ),
             BenchmarkApiPath.topLevel => sprintf(
               templates[iteration % templates.length],
               values.first,

@@ -15,7 +15,10 @@ void main() {
     for (final required in [
       'brace.literal.cold',
       'brace.int.large_decimal.hot',
-      'brace.double.fixed_large.hot',
+      'brace.double.fixed.dart.hot',
+      'brace.double.fixed.compatible.hot',
+      'brace.double.fixed_large.dart.hot',
+      'brace.double.fixed_large.compatible.hot',
       'brace.mixed_named.hot.10',
       'brace.graphemes.hot',
       'brace.nested_precision.hot',
@@ -48,9 +51,9 @@ void main() {
     expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
   });
 
-  test('large fixed double is a key Format 2 comparison', () {
+  test('large compatible fixed double is a key Format 2 comparison', () {
     final scenario = benchmarkScenarios.singleWhere(
-      (value) => value.id == 'brace.double.fixed_large.hot',
+      (value) => value.id == 'brace.double.fixed_large.compatible.hot',
     );
 
     expect(scenario.keyScenario, isTrue);
@@ -66,6 +69,26 @@ void main() {
     );
     expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
     expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
+  });
+
+  test('Dart and compatible half ties remain separate scenarios', () {
+    final dart = benchmarkScenarios.singleWhere(
+      (value) => value.id == 'brace.double.half_tie.dart.hot',
+    );
+    final compatible = benchmarkScenarios.singleWhere(
+      (value) => value.id == 'brace.double.half_tie.compatible.hot',
+    );
+
+    expect(
+      dart.expected,
+      isA<TextOutcome>().having((value) => value.value, 'value', '3'),
+    );
+    expect(
+      compatible.expected,
+      isA<TextOutcome>().having((value) => value.value, 'value', '2'),
+    );
+    expect(outcomesEqual(dart.candidate(0), dart.expected), isTrue);
+    expect(outcomesEqual(compatible.candidate(0), compatible.expected), isTrue);
   });
 
   test(
@@ -140,7 +163,7 @@ void main() {
     'gateable JIT measurements use batches large enough to suppress noise',
     () {
       final scenario = benchmarkScenarios.singleWhere(
-        (value) => value.id == 'brace.double.fixed.hot',
+        (value) => value.id == 'brace.double.fixed.compatible.hot',
       );
       final report = runBenchmark(
         const BenchmarkRunOptions(
