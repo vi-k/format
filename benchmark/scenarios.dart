@@ -109,6 +109,13 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     key: true,
   ),
   _braceComparable(
+    'brace.double.fixed_large',
+    template: '{:.2f}',
+    values: const [12345678901234.568],
+    expected: '12345678901234.57',
+    key: true,
+  ),
+  _braceComparable(
     'brace.grouping',
     template: '{:,d}',
     values: const [1234567],

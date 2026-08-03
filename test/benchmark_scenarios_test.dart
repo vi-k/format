@@ -15,6 +15,7 @@ void main() {
     for (final required in [
       'brace.literal.cold',
       'brace.int.large_decimal.hot',
+      'brace.double.fixed_large.hot',
       'brace.mixed_named.hot.10',
       'brace.graphemes.hot',
       'brace.nested_precision.hot',
@@ -41,6 +42,26 @@ void main() {
         (outcome) => outcome.value,
         'value',
         '9007199254740991',
+      ),
+    );
+    expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
+    expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
+  });
+
+  test('large fixed double is a key Format 2 comparison', () {
+    final scenario = benchmarkScenarios.singleWhere(
+      (value) => value.id == 'brace.double.fixed_large.hot',
+    );
+
+    expect(scenario.keyScenario, isTrue);
+    expect(scenario.comparisonKind, BenchmarkComparisonKind.performance);
+    expect(scenario.templates, const ['{:.2f}']);
+    expect(
+      scenario.expected,
+      isA<TextOutcome>().having(
+        (outcome) => outcome.value,
+        'value',
+        '12345678901234.57',
       ),
     );
     expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
