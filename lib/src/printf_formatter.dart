@@ -171,7 +171,7 @@ String _formatPrintfDouble(
     final precision = conversion.precision ?? 6;
     final alternate = conversion.flags.contains(_PrintfFlag.alternate);
     formatted = switch (type) {
-      'f' || 'F' => _formatFixed(binary, precision, alternate),
+      'f' || 'F' => _formatFixed(value, binary, precision, alternate),
       'e' || 'E' => _formatScientific(binary, precision, alternate, type),
       'g' || 'G' => _formatGeneral(
         binary,

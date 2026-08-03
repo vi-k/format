@@ -224,7 +224,7 @@ String formatBraceDouble(
   } else {
     final precision = spec.precision ?? 6;
     formatted = switch (type) {
-      'f' || 'F' => _formatFixed(binary, precision, spec.alternate),
+      'f' || 'F' => _formatFixed(converted, binary, precision, spec.alternate),
       'e' || 'E' => _formatScientific(binary, precision, spec.alternate, type!),
       'g' || 'G' || 'n' => _formatGeneral(
         binary,
@@ -232,7 +232,12 @@ String formatBraceDouble(
         spec.alternate,
         type == 'G' ? 'E' : 'e',
       ),
-      '%' => _formatFixed(formattingBinary, precision, spec.alternate),
+      '%' => _formatFixed(
+        converted * 100,
+        formattingBinary,
+        precision,
+        spec.alternate,
+      ),
       null => _formatGeneral(
         binary,
         precision == 0 ? 1 : precision,
@@ -273,12 +278,62 @@ final class _AsciiFloat {
   const _AsciiFloat(this.body, this.roundedZero, {this.special = false});
 }
 
-_AsciiFloat _formatFixed(Binary64 value, int precision, bool alternate) {
-  final rounded = value.roundDecimal(precision);
+const _fixedDecimalScales = <double>[
+  1,
+  10,
+  100,
+  1000,
+  10000,
+  100000,
+  1000000,
+  10000000,
+  100000000,
+  1000000000,
+  10000000000,
+  100000000000,
+  1000000000000,
+  10000000000000,
+  100000000000000,
+  1000000000000000,
+  10000000000000000,
+  100000000000000000,
+  1000000000000000000,
+  10000000000000000000,
+  100000000000000000000,
+];
+
+const _maximumExactDoubleInteger = 4503599627370496.0;
+
+_AsciiFloat _formatFixed(
+  double source,
+  Binary64 binary,
+  int precision,
+  bool alternate,
+) {
+  final fast = _formatFixedFast(source, precision, alternate);
+  if (fast != null) return fast;
+
+  final rounded = binary.roundDecimal(precision);
   return _AsciiFloat(
     _fixedFromRounded(rounded, precision, alternate),
     rounded == BigInt.zero,
   );
+}
+
+_AsciiFloat? _formatFixedFast(double source, int precision, bool alternate) {
+  if (precision < 0 || precision >= _fixedDecimalScales.length) return null;
+  final magnitude = source.abs();
+  if (magnitude >= 1e21) return null;
+
+  final scaled = magnitude * _fixedDecimalScales[precision];
+  if (scaled >= _maximumExactDoubleInteger) return null;
+  final integer = scaled.truncateToDouble();
+  final evenHalfTie = scaled - integer == 0.5 && integer.toInt().isEven;
+  if (evenHalfTie) return null;
+
+  var body = magnitude.toStringAsFixed(precision);
+  if (alternate && precision == 0) body += '.';
+  return _AsciiFloat(body, scaled < 0.5);
 }
 
 _AsciiFloat _formatScientific(
