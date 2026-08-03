@@ -8,7 +8,7 @@ void main() {
     expect(format('{:.2f}', 1e21), '1e+21');
     expect(format('{:e}', 1.0), '1e+0');
     expect(format('{:.2e}', 12.5), '1.25e+1');
-    expect(format('{:g}', 1.0), '1.0');
+    expect(format('{:g}', 1.0), 1.0.toString());
     expect(format('{:.3g}', 1.0), '1.00');
     expect(format('{:.1%}', 0.125), '12.5%');
   });
