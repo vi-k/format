@@ -37,6 +37,7 @@ void expectBraceParity(
   );
   if (irError is FormattingException && legacyError is FormattingException) {
     expect(irError.toString(), legacyError.toString(), reason: template);
+    expectContextParity(irError.context, legacyError.context, template);
   }
 }
 
@@ -68,7 +69,37 @@ void expectPrintfParity(
   );
   if (irError is FormattingException && legacyError is FormattingException) {
     expect(irError.toString(), legacyError.toString(), reason: template);
+    expectContextParity(irError.context, legacyError.context, template);
   }
+}
+
+/// Compares every FormatExceptionContext field between the IR and legacy
+/// paths. FormattingException does not override toString(), so without this
+/// the toString() comparison above only ever compares runtimeType — it adds
+/// nothing on its own. These fields are what error consumers actually read.
+void expectContextParity(
+  FormatExceptionContext ir,
+  FormatExceptionContext legacy,
+  String template,
+) {
+  expect(ir.template, legacy.template, reason: '$template context.template');
+  expect(ir.offset, legacy.offset, reason: '$template context.offset');
+  expect(ir.fragment, legacy.fragment, reason: '$template context.fragment');
+  expect(
+    ir.specifier,
+    legacy.specifier,
+    reason: '$template context.specifier',
+  );
+  expect(
+    ir.conversion,
+    legacy.conversion,
+    reason: '$template context.conversion',
+  );
+  expect(
+    ir.argumentIndex,
+    legacy.argumentIndex,
+    reason: '$template context.argumentIndex',
+  );
 }
 
 void main() {

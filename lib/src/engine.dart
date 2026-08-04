@@ -6,9 +6,12 @@ import 'extensions.dart';
 import 'number_locale.dart';
 import 'text_unit.dart';
 
-// FormattingException is needed by the template-IR differential tests
-// accessed via `package:format/src/engine.dart`.
-export 'errors.dart' show FormattingException;
+// FormattingException and FormatExceptionContext are needed by the
+// template-IR differential tests accessed via `package:format/src/engine.dart`:
+// the parity helpers compare exception context fields (offset, fragment,
+// specifier, conversion, argumentIndex) between the IR and legacy paths, not
+// just runtimeType.
+export 'errors.dart' show FormatExceptionContext, FormattingException;
 
 // TextUnit is part of the internal template-IR test seam surface: seam
 // tests reach it via `package:format/src/engine.dart` alone, so it must be
