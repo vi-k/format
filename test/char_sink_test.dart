@@ -69,4 +69,29 @@ void main() {
     expect(sink.length, 41);
     expect(sink.toString(), 'start${'0' * 20}-${'1' * 15}');
   });
+
+  test('a single writeString is returned by reference', () {
+    const text = 'hello world';
+    final sink = CharSink(1)..writeString(text);
+    expect(sink.length, text.length);
+    expect(identical(sink.toString(), text), isTrue);
+  });
+
+  test('writeString followed by other writes materializes correctly', () {
+    final sink =
+        CharSink(1)
+          ..writeString('hello')
+          ..writeCharCode(0x2d)
+          ..writeString('world')
+          ..fill(0x21, 2);
+    expect(sink.length, 13);
+    expect(sink.toString(), 'hello-world!!');
+  });
+
+  test('empty first string then another string keeps single-string mode '
+      'consistent', () {
+    final sink = CharSink(1)..writeString('')..writeString('x');
+    expect(sink.length, 1);
+    expect(sink.toString(), 'x');
+  });
 }

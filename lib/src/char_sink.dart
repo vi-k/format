@@ -10,10 +10,21 @@ final class CharSink {
   Uint16List _buffer;
   int _length = 0;
 
+  // Lazy single-string mode. Many programs resolve to exactly one string
+  // (e.g. '{:s}', '%s', or any one-op fallback program): if that string is
+  // the sink's only write, it must not pay the copy-in (setRange into
+  // `_buffer`) + copy-out (`String.fromCharCodes`) tax that a buffer-first
+  // design always pays, even when there is nothing to accumulate. Instead
+  // the first `writeString` on an empty sink is held here by reference and
+  // returned as-is from `toString`; any other write (a second string, a
+  // char code, a fill, digits) materializes it into `_buffer` first and
+  // falls back to normal accumulation.
+  String? _single;
+
   CharSink(int initialCapacity)
     : _buffer = Uint16List(initialCapacity < 16 ? 16 : initialCapacity);
 
-  int get length => _length;
+  int get length => _single?.length ?? _length;
 
   void _ensure(int extra) {
     final required = _length + extra;
@@ -25,12 +36,31 @@ final class CharSink {
     _buffer = Uint16List(capacity)..setRange(0, _length, _buffer);
   }
 
+  /// Copies a pending single-string value into `_buffer` (via the same
+  /// setRange path `writeString` would have used) and clears single-string
+  /// mode. A no-op when the sink is not holding a single string.
+  void _materialize() {
+    final text = _single;
+    if (text == null) return;
+    _single = null;
+    final units = text.codeUnits;
+    _ensure(units.length);
+    _buffer.setRange(_length, _length + units.length, units);
+    _length += units.length;
+  }
+
   void writeCharCode(int codeUnit) {
+    _materialize();
     _ensure(1);
     _buffer[_length++] = codeUnit;
   }
 
   void writeString(String text) {
+    if (_single == null && _length == 0) {
+      _single = text;
+      return;
+    }
+    _materialize();
     final units = text.codeUnits;
     _ensure(units.length);
     _buffer.setRange(_length, _length + units.length, units);
@@ -38,12 +68,14 @@ final class CharSink {
   }
 
   void writeCodeUnits(Uint16List units) {
+    _materialize();
     _ensure(units.length);
     _buffer.setRange(_length, _length + units.length, units);
     _length += units.length;
   }
 
   void fill(int codeUnit, int count) {
+    _materialize();
     if (count <= 0) return;
     _ensure(count);
     _buffer.fillRange(_length, _length + count, codeUnit);
@@ -65,6 +97,7 @@ final class CharSink {
 
   /// Writes the digits of |value| in [radix] without allocating.
   void writeMagnitude(int value, int radix, {bool uppercase = false}) {
+    _materialize();
     var negative = value <= 0 ? value : -value;
     final count = digitCount(value, radix);
     _ensure(count);
@@ -79,5 +112,5 @@ final class CharSink {
   }
 
   @override
-  String toString() => String.fromCharCodes(_buffer, 0, _length);
+  String toString() => _single ?? String.fromCharCodes(_buffer, 0, _length);
 }
