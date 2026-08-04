@@ -89,26 +89,42 @@ String _formatPrintfInteger(
   Format engine,
   FormatExceptionContext context,
 ) {
-  final integer = switch (value) {
-    int() when _isIntegerValue(value) => BigInt.from(value),
-    BigInt() => value,
-    _ => throw UnsupportedFormatValueException(context, value),
-  };
   final type = conversion.node.type;
   final signed = type == 'd' || type == 'i';
-  if (!signed && integer.isNegative) {
-    throw UnsupportedFormatValueException(context, value);
-  }
-
-  final negative = signed && integer.isNegative;
-  final magnitude = negative ? -integer : integer;
   final radix = switch (type) {
     'o' => 8,
     'x' || 'X' => 16,
     _ => 10,
   };
-  var digits = formatMagnitude(magnitude, radix, uppercase: type == 'X');
-  if (magnitude == BigInt.zero && conversion.precision == 0) digits = '';
+  late final bool negative;
+  late final bool isZero;
+  late final String magnitudeDigits;
+  switch (value) {
+    case int() when _isIntegerValue(value):
+      negative = value.isNegative;
+      isZero = value == 0;
+      magnitudeDigits = _formatIntMagnitude(
+        value,
+        radix,
+        uppercase: type == 'X',
+      );
+    case BigInt():
+      negative = value.isNegative;
+      isZero = value == BigInt.zero;
+      magnitudeDigits = formatMagnitude(
+        negative ? -value : value,
+        radix,
+        uppercase: type == 'X',
+      );
+    default:
+      throw UnsupportedFormatValueException(context, value);
+  }
+  if (!signed && negative) {
+    throw UnsupportedFormatValueException(context, value);
+  }
+
+  var digits = magnitudeDigits;
+  if (isZero && conversion.precision == 0) digits = '';
   final precision = conversion.precision;
   if (precision != null && precision > digits.length) {
     digits = '0' * (precision - digits.length) + digits;
@@ -117,12 +133,12 @@ String _formatPrintfInteger(
   final alternate = conversion.flags.contains(_PrintfFlag.alternate);
   final prefix = switch (type) {
     'o' when alternate && !digits.startsWith('0') => '0',
-    'x' when alternate && magnitude != BigInt.zero => '0x',
-    'X' when alternate && magnitude != BigInt.zero => '0X',
+    'x' when alternate && !isZero => '0x',
+    'X' when alternate && !isZero => '0X',
     _ => '',
   };
   final sign =
-      negative
+      signed && negative
           ? '-'
           : conversion.flags.contains(_PrintfFlag.sign)
           ? '+'
