@@ -69,7 +69,7 @@ template-cache — актуальны реализации.
 ```text
 dart test (корень): 342 прошли
 dart test (example): 13 прошли
-dart test -p node (fast path, format, template_cache): 16 прошли
+dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart test/template_ir_diff_test.dart: 27 прошли
 dart analyze lib test example: 3 pre-existing info в
   test/benchmark_scenarios_test.dart, больше ничего
 Бенчмарк quick: 42.5 с, ERROR ровно 1 (намеренный)

@@ -253,4 +253,31 @@ void main() {
     }
     expectPrintfParity('%*.*d', [10, 4, -42]);
   });
+
+  test('mixed templates with hot and fallback ops stay identical', () {
+    expectBraceParity(
+      'id={:08d} name={:<12s} score={:+.2f} raw={} hex={:#x}',
+      positional: [77, 'Ann', 12.5, true, 255],
+    );
+    expectBraceParity(
+      '{0} {1:>6s} {0:d} {value:^9d} {2:.1f}',
+      positional: [1, 'x', 2.5],
+      named: {'value': 42},
+    );
+    expectBraceParity(
+      'auto {} then {:{}d} then {}',
+      positional: [1, 2, 5, 'tail'],
+    );
+    expectPrintfParity(
+      '[%s] %05.1f%% (%d of %d, %#x) %-8s|',
+      ['run', 99.95, 3, 10, 255, 'ok'],
+    );
+    expectPrintfParity('%0*d/%.*s/%%', [6, 42, 2, 'abcdef']);
+  });
+
+  test('cache clearing does not change IR results', () {
+    final before = format('{:10d}|{:<6s}', 42, 'ab');
+    debugClearTemplateCaches();
+    expect(format('{:10d}|{:<6s}', 42, 'ab'), before);
+  });
 }
