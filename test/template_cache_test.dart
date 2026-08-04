@@ -1,14 +1,11 @@
+// The engine is imported via its package URI: this is the same canonical
+// library instance the public package:format export resolves to, so the
+// debug seams observe the same static template caches that format() and
+// sprintf() populate. A relative ../lib/src import would create a second
+// library instance with its own independent caches and types.
+import 'package:format/format.dart' show FormattingException, TextUnit;
+import 'package:format/src/engine.dart' as engine;
 import 'package:test/test.dart';
-
-// The engine is imported ONLY via this relative URI: mixing it with
-// package:format imports would create two library instances with two
-// independent template caches, and the seams would observe the wrong one.
-// ignore: avoid_relative_lib_imports
-import '../lib/src/engine.dart' as engine;
-// ignore: avoid_relative_lib_imports
-import '../lib/src/errors.dart';
-// ignore: avoid_relative_lib_imports
-import '../lib/src/text_unit.dart';
 
 void main() {
   setUp(engine.debugClearTemplateCaches);

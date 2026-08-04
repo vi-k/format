@@ -1,8 +1,8 @@
 import 'package:format/format.dart';
+// The package URI resolves to the same library instance as the public
+// export above; a relative ../lib/src import would duplicate the library.
+import 'package:format/src/engine.dart' as engine;
 import 'package:test/test.dart';
-
-// ignore: avoid_relative_lib_imports
-import '../lib/src/engine.dart' as engine;
 
 void main() {
   test('recognizes single ASCII built-in format specifications', () {
