@@ -2,6 +2,7 @@ export 'src/benchmark_format2_format.dart';
 export 'src/benchmark_format3_format.dart';
 export 'src/benchmark_format3_sprintf.dart';
 export 'src/benchmark_sprintf7.dart';
+export 'src/comparison_benchmark.dart';
 export 'src/double_modes_benchmark.dart';
 export 'src/my_benchmark_base.dart';
 export 'src/tests/tests.dart';

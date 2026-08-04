@@ -97,4 +97,14 @@ void main() {
     benchmark.durations = BenchmarkDurations.full;
     expect(benchmark.durations, BenchmarkDurations.full);
   });
+
+  test('benchmark arguments select measurement durations', () {
+    expect(parseBenchmarkArgs([]), BenchmarkDurations.quick);
+    expect(parseBenchmarkArgs(['--full']), BenchmarkDurations.full);
+    expect(() => parseBenchmarkArgs(['--fast']), throwsFormatException);
+    expect(
+      () => parseBenchmarkArgs(['--full', 'x']),
+      throwsFormatException,
+    );
+  });
 }
