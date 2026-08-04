@@ -78,10 +78,16 @@
 
 ## Модель данных
 
-Строка матрицы — record:
+Строка матрицы — класс (record не может нести необязательное поле
+с значением по умолчанию):
 
 ```dart
-(String? brace, String? sprintf, List<(List<Object?>, String)> cases)
+final class BenchmarkScenario {
+  final String? brace;
+  final String? sprintf;
+  final bool skipLegacy; // default false
+  final List<(List<Object?>, String)> cases;
+}
 ```
 
 - Раннер участвует, только если его шаблон задан (`brace` — для
