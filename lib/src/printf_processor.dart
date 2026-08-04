@@ -14,6 +14,18 @@ final class _PrintfProcessor {
   _PrintfProcessor(this.template, this.values, this.engine);
 
   String format() {
+    final program = _cachedPrintfTemplate(template).programFor(engine.textUnit);
+    final output = CharSink(program.estimatedCapacity);
+    for (final op in program.ops) {
+      op.write(output, this);
+    }
+    return output.toString();
+  }
+
+  /// Legacy string-assembly path. Kept as the baseline for differential
+  /// tests and the IR A/B benchmark; reachable via
+  /// debugFormatPrintfWithoutIr.
+  String formatWithoutIr() {
     final parsed = _cachedPrintfTemplate(template);
     final output = StringBuffer();
     for (final node in parsed.nodes) {
@@ -121,6 +133,25 @@ final class _PrintfProcessor {
       );
     }
     return value;
+  }
+
+  Object? _argumentAt(
+    int index,
+    _PrintfConversionNode node, {
+    String? specifier,
+  }) {
+    if (index >= values.length) {
+      throw MissingFormatArgumentException(
+        _printfContext(
+          template,
+          node,
+          specifier: specifier,
+          argumentIndex: index,
+        ),
+        index,
+      );
+    }
+    return values[index];
   }
 }
 

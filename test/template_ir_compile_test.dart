@@ -39,4 +39,27 @@ void main() {
     );
     expect(ir, legacy);
   });
+
+  test('printf skeleton: literals merge, %% folds into literal', () {
+    // %f stays on fallback even after Tasks 7-8 (doubles are out of the
+    // v1 hot core), so this expectation survives the whole plan.
+    expect(
+      debugCompiledProgramDescription(
+        'x=%f, done 100%%',
+        printf: true,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['literal', 'fallback', 'literal'],
+    );
+  });
+
+  test('printf IR path agrees with the legacy path', () {
+    const template = '%s scored %05.1f%%';
+    final ir = sprintf(template, 'Ann', 97.5);
+    final legacy = debugFormatPrintfWithoutIr(template, defaultFormat, [
+      'Ann',
+      97.5,
+    ]);
+    expect(ir, legacy);
+  });
 }

@@ -23,6 +23,19 @@ final class _PrintfTemplate {
   final List<_PrintfNode> nodes;
 
   _PrintfTemplate(List<_PrintfNode> nodes) : nodes = _sealedInDebug(nodes);
+
+  // Lazily memoized IR programs, one slot per TextUnit. Shared through the
+  // template cache; compilation is total and never throws, so a slot is
+  // written at most once per unit.
+  _PrintfProgram? _scalarProgram;
+  _PrintfProgram? _graphemeProgram;
+
+  _PrintfProgram programFor(TextUnit textUnit) => switch (textUnit) {
+    TextUnit.unicodeScalars =>
+      _scalarProgram ??= _compilePrintfProgram(this, textUnit),
+    TextUnit.graphemeClusters =>
+      _graphemeProgram ??= _compilePrintfProgram(this, textUnit),
+  };
 }
 
 final class _PrintfLiteralNode extends _PrintfNode {
