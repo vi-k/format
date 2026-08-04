@@ -14,7 +14,7 @@ final class _PrintfProcessor {
   _PrintfProcessor(this.template, this.values, this.engine);
 
   String format() {
-    final parsed = _parsePrintfTemplate(template);
+    final parsed = _cachedPrintfTemplate(template);
     final output = StringBuffer();
     for (final node in parsed.nodes) {
       if (node case _PrintfLiteralNode(:final text)) {

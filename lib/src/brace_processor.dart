@@ -21,7 +21,7 @@ final class _BraceProcessor {
       engine: engine,
     );
     final output = StringBuffer();
-    for (final node in _parseBraceTemplate(template).nodes) {
+    for (final node in _cachedBraceTemplate(template).nodes) {
       if (node case _LiteralNode(:final text)) {
         output.write(text);
       } else {
