@@ -206,6 +206,77 @@ final class _BraceIntOp extends _BraceOp {
   String describe() => width < 0 ? 'int:$type' : 'int:$type:w$width';
 }
 
+final class _BraceTextOp extends _BraceOp {
+  final _FieldNode field;
+  final int argumentIndex;
+  final String? argumentName;
+  final String specifierText;
+  final _FormatSpec spec; // for the slow non-String branch
+  final int width; // -1 none
+  final int fillChar;
+  final int align; // '<' '>' '^'
+  final int precision; // -1 none
+  final TextUnit textUnit;
+
+  const _BraceTextOp({
+    required this.field,
+    required this.argumentIndex,
+    required this.argumentName,
+    required this.specifierText,
+    required this.spec,
+    required this.width,
+    required this.fillChar,
+    required this.align,
+    required this.precision,
+    required this.textUnit,
+  });
+
+  @override
+  void write(CharSink sink, _BraceProcessor frame) {
+    final value = frame._argument(argumentIndex, argumentName, field);
+    if (value is! String) {
+      // The generic path throws exactly today's errors for non-strings.
+      sink.writeString(
+        formatParsedValue(value, spec, frame.engine, _context(frame)),
+      );
+      return;
+    }
+    final text = precision < 0 ? value : textUnit.take(value, precision);
+    if (width < 0) {
+      sink.writeString(text);
+      return;
+    }
+    final padding = width - textUnit.length(text);
+    if (align == 0x3e) {
+      sink.fill(fillChar, padding);
+    } else if (align == 0x5e) {
+      sink.fill(fillChar, padding ~/ 2);
+    }
+    sink.writeString(text);
+    if (align == 0x3c) {
+      sink.fill(fillChar, padding);
+    } else if (align == 0x5e) {
+      sink.fill(fillChar, padding - padding ~/ 2);
+    }
+  }
+
+  FormatExceptionContext _context(_BraceProcessor frame) =>
+      FormatExceptionContext(
+        template: frame.template,
+        offset: field.offset,
+        fragment: field.fragment,
+        specifier: specifierText,
+      );
+
+  @override
+  String describe() {
+    final buffer = StringBuffer('text:s');
+    if (width >= 0) buffer.write(':w$width');
+    if (precision >= 0) buffer.write(':p$precision');
+    return buffer.toString();
+  }
+}
+
 int _automaticFieldCount(_FieldNode field) {
   var count = field.root is _AutomaticRoot ? 1 : 0;
   for (final node in field.specification) {
@@ -279,6 +350,28 @@ _BraceOp? _classifyBraceField(
         fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
         align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
         type: type,
+      );
+    case 's':
+      if (spec.sign != null ||
+          spec.normalizeNegativeZero ||
+          spec.alternate ||
+          spec.zero ||
+          spec.grouping != null ||
+          spec.fractionalGrouping != null ||
+          spec.align == '=') {
+        return null; // Invalid-for-text specs keep today's errors.
+      }
+      return _BraceTextOp(
+        field: field,
+        argumentIndex: argumentIndex,
+        argumentName: argumentName,
+        specifierText: specText,
+        spec: spec,
+        width: spec.width ?? -1,
+        fillChar: (spec.fill ?? ' ').codeUnitAt(0),
+        align: (spec.align ?? '<').codeUnitAt(0),
+        precision: spec.precision ?? -1,
+        textUnit: textUnit,
       );
     default:
       return null;

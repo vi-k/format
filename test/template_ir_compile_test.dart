@@ -67,6 +67,36 @@ void main() {
     }
   });
 
+  test('static text specs compile to text ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:s}|{:<10s}|{:^7.3s}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['text:s', 'literal', 'text:s:w10', 'literal', 'text:s:w7:p3'],
+    );
+  });
+
+  test('text specs with numeric options stay on fallback', () {
+    // The combining fill (e + U+0301) is written as an explicit escape so
+    // it stays two code units regardless of editor/source normalization;
+    // a precomposed 'é' is one code unit and would compile hot instead.
+    for (final spec in [
+      '{:=10s}', '{:+s}', '{:#s}', '{:,s}', '{:e\u0301^10s}',
+    ]) {
+      expect(
+        debugCompiledProgramDescription(
+          spec,
+          printf: false,
+          textUnit: TextUnit.unicodeScalars,
+        ),
+        ['fallback'],
+        reason: spec,
+      );
+    }
+  });
+
   test('IR path and legacy path agree on a mixed template', () {
     const template = '{} + {} = {answer:>6}';
     final ir = formatWith(template, positional: [2, 3], named: {'answer': 5});

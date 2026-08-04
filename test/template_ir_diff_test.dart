@@ -92,4 +92,21 @@ void main() {
       }
     }
   });
+
+  test('text op matches the legacy path across specs and values', () {
+    const specs = [
+      '{:s}', '{:10s}', '{:<10s}', '{:>10s}', '{:^10s}', '{:.3s}',
+      '{:10.3s}', '{:*^10s}', '{:.0s}', '{:2s}',
+    ];
+    final values = <Object?>[
+      'hello', '', 'ab', 'ééé', '\u{1F600}\u{1F600}',
+      'exactly10!', 42, null,
+    ];
+    for (final spec in specs) {
+      for (final value in values) {
+        expectBraceParity(spec, positional: [value]);
+        expectBraceParity(spec, positional: [value], engine: graphemeFormat);
+      }
+    }
+  });
 }
