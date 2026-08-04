@@ -1,8 +1,12 @@
 part of 'engine.dart';
 
-final class _PrintfProcessor {
-  static const _maximumSafeOption = 100000;
+/// Upper bound for a resolved printf width/precision (and lower bound,
+/// negated, for width). Shared by the legacy per-call resolver and the
+/// hot-op classifier, which gates static literal options against it at
+/// compile time.
+const _maximumSafePrintfOption = 100000;
 
+final class _PrintfProcessor {
   final String template;
   final List<Object?> values;
   final Format engine;
@@ -119,8 +123,9 @@ final class _PrintfProcessor {
   }) {
     final unsafe =
         role == 'width'
-            ? value < -_maximumSafeOption || value > _maximumSafeOption
-            : value > _maximumSafeOption;
+            ? value < -_maximumSafePrintfOption ||
+                value > _maximumSafePrintfOption
+            : value > _maximumSafePrintfOption;
     if (unsafe) {
       throw InvalidSpecifierException(
         _printfContext(

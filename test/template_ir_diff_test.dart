@@ -35,8 +35,38 @@ void expectBraceParity(
     legacyError.runtimeType,
     reason: '$template errors',
   );
-  if (irError is FormattingException &&
-      legacyError is FormattingException) {
+  if (irError is FormattingException && legacyError is FormattingException) {
+    expect(irError.toString(), legacyError.toString(), reason: template);
+  }
+}
+
+void expectPrintfParity(
+  String template,
+  List<Object?> values, {
+  Format? engine,
+}) {
+  final format = engine ?? defaultFormat;
+  Object? irError;
+  String? ir;
+  try {
+    ir = format.vsprintf(template, values);
+  } on FormattingException catch (error) {
+    irError = error;
+  }
+  Object? legacyError;
+  String? legacy;
+  try {
+    legacy = debugFormatPrintfWithoutIr(template, format, values);
+  } on FormattingException catch (error) {
+    legacyError = error;
+  }
+  expect(ir, legacy, reason: template);
+  expect(
+    irError.runtimeType,
+    legacyError.runtimeType,
+    reason: '$template errors',
+  );
+  if (irError is FormattingException && legacyError is FormattingException) {
     expect(irError.toString(), legacyError.toString(), reason: template);
   }
 }
@@ -74,16 +104,41 @@ void main() {
 
   test('int op matches the legacy path across specs and values', () {
     const specs = [
-      '{:d}', '{:10d}', '{:<10d}', '{:>10d}', '{:^10d}', '{:=10d}',
-      '{:010d}', '{:+d}', '{: d}', '{:-d}', '{:*<8d}', '{:x}', '{:X}',
-      '{:#x}', '{:#X}', '{:o}', '{:#o}', '{:b}', '{:#b}', '{:#010x}',
+      '{:d}',
+      '{:10d}',
+      '{:<10d}',
+      '{:>10d}',
+      '{:^10d}',
+      '{:=10d}',
+      '{:010d}',
+      '{:+d}',
+      '{: d}',
+      '{:-d}',
+      '{:*<8d}',
+      '{:x}',
+      '{:X}',
+      '{:#x}',
+      '{:#X}',
+      '{:o}',
+      '{:#o}',
+      '{:b}',
+      '{:#b}',
+      '{:#010x}',
       '{:1d}',
     ];
     final values = <Object?>[
-      0, 1, -1, 42, -42, 9007199254740991, -9007199254740991,
+      0,
+      1,
+      -1,
+      42,
+      -42,
+      9007199254740991,
+      -9007199254740991,
       BigInt.parse('-340282366920938463463374607431768211456'),
       BigInt.zero,
-      'not a number', 3.5, null,
+      'not a number',
+      3.5,
+      null,
     ];
     for (final spec in specs) {
       for (final value in values) {
@@ -95,12 +150,26 @@ void main() {
 
   test('text op matches the legacy path across specs and values', () {
     const specs = [
-      '{:s}', '{:10s}', '{:<10s}', '{:>10s}', '{:^10s}', '{:.3s}',
-      '{:10.3s}', '{:*^10s}', '{:.0s}', '{:2s}',
+      '{:s}',
+      '{:10s}',
+      '{:<10s}',
+      '{:>10s}',
+      '{:^10s}',
+      '{:.3s}',
+      '{:10.3s}',
+      '{:*^10s}',
+      '{:.0s}',
+      '{:2s}',
     ];
     final values = <Object?>[
-      'hello', '', 'ab', 'ééé', '\u{1F600}\u{1F600}',
-      'exactly10!', 42, null,
+      'hello',
+      '',
+      'ab',
+      'ééé',
+      '\u{1F600}\u{1F600}',
+      'exactly10!',
+      42,
+      null,
     ];
     for (final spec in specs) {
       for (final value in values) {
@@ -108,5 +177,26 @@ void main() {
         expectBraceParity(spec, positional: [value], engine: graphemeFormat);
       }
     }
+  });
+
+  test('%s op matches the legacy path', () {
+    const templates = ['%s', '%10s', '%-10s', '%.3s', '%10.3s', '%-10.3s'];
+    final values = <Object?>['hello', '', 'éé', 42, null, 3.5, true];
+    for (final template in templates) {
+      for (final value in values) {
+        expectPrintfParity(template, [value]);
+        expectPrintfParity(template, [value], engine: graphemeFormat);
+      }
+    }
+    // Dynamic options, including negative width and negative precision.
+    for (final width in [0, 3, 12, -12, 100001]) {
+      expectPrintfParity('%*s', [width, 'dyn']);
+    }
+    for (final precision in [0, 2, -1, 100001]) {
+      expectPrintfParity('%.*s', [precision, 'dyn']);
+    }
+    expectPrintfParity('%*.*s', [8, 2, 'dynamic']);
+    expectPrintfParity('%*s', ['not int', 'dyn']);
+    expectPrintfParity('%s', []);
   });
 }

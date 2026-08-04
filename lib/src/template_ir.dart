@@ -535,15 +535,139 @@ final class _PrintfFallbackOp extends _PrintfOp {
   String describe() => 'fallback';
 }
 
-// Hot classification lands in Tasks 7-8; the skeleton sends every
-// conversion through the legacy string path.
+/// Hot op for `%s`. Width/precision are resolved to plain ints at compile
+/// time when static; -1 argument indices mean "no dynamic lookup needed" —
+/// `hasWidth`/`hasPrecision` carry presence separately since 0 is a legal
+/// width/precision and can't double as an absence sentinel.
+final class _PrintfStringOp extends _PrintfOp {
+  final _PrintfConversionNode node;
+  final int valueArgIndex;
+  final bool left;
+  final bool hasWidth;
+  final int staticWidth; // meaningful when hasWidth && widthArgIndex < 0
+  final int widthArgIndex; // -1 static
+  final bool hasPrecision;
+  final int staticPrecision;
+  final int precisionArgIndex; // -1 static
+  final TextUnit textUnit;
+
+  const _PrintfStringOp({
+    required this.node,
+    required this.valueArgIndex,
+    required this.left,
+    required this.hasWidth,
+    required this.staticWidth,
+    required this.widthArgIndex,
+    required this.hasPrecision,
+    required this.staticPrecision,
+    required this.precisionArgIndex,
+    required this.textUnit,
+  });
+
+  @override
+  void write(CharSink sink, _PrintfProcessor frame) {
+    var effectiveLeft = left;
+    int? width;
+    if (hasWidth) {
+      var resolved =
+          widthArgIndex < 0
+              ? staticWidth
+              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
+      if (resolved < 0) {
+        effectiveLeft = true;
+        resolved = -resolved;
+      }
+      width = resolved;
+    }
+    int? precision;
+    if (hasPrecision) {
+      final resolved =
+          precisionArgIndex < 0
+              ? staticPrecision
+              : _resolveIrPrintfOption(
+                frame,
+                node,
+                precisionArgIndex,
+                'precision',
+              );
+      if (resolved >= 0) precision = resolved;
+    }
+    final argument = frame._argumentAt(valueArgIndex, node);
+    late final String text;
+    try {
+      text = argument.toString();
+    } on FormattingException {
+      rethrow;
+    } on Object catch (_) {
+      throw UnsupportedConversionException(
+        _printfContext(frame.template, node, argumentIndex: valueArgIndex),
+        argument,
+      );
+    }
+    final truncated = precision == null ? text : textUnit.take(text, precision);
+    if (width == null) {
+      sink.writeString(truncated);
+      return;
+    }
+    final padding = width - textUnit.length(truncated);
+    if (!effectiveLeft) sink.fill(0x20, padding);
+    sink.writeString(truncated);
+    if (effectiveLeft) sink.fill(0x20, padding);
+  }
+
+  @override
+  String describe() {
+    final buffer = StringBuffer('str');
+    if (hasWidth) buffer.write(widthArgIndex < 0 ? ':w$staticWidth' : ':w*');
+    if (hasPrecision) {
+      buffer.write(precisionArgIndex < 0 ? ':p$staticPrecision' : ':p*');
+    }
+    return buffer.toString();
+  }
+}
+
 _PrintfOp? _classifyPrintfConversion(
   _PrintfConversionNode node,
   int widthArgIndex,
   int precisionArgIndex,
   int valueArgIndex,
   TextUnit textUnit,
-) => null;
+) {
+  if (node.type == 's') {
+    final width = node.width;
+    final precision = node.precision;
+    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
+    var staticWidth = 0;
+    if (width case _LiteralPrintfOption(:final value)) {
+      if (value < -_maximumSafePrintfOption ||
+          value > _maximumSafePrintfOption) {
+        return null; // Unsafe static width keeps today's per-call error.
+      }
+      staticWidth = value < 0 ? -value : value;
+      if (value < 0) left = true;
+    }
+    var staticPrecision = 0;
+    var hasPrecision = precision != null;
+    if (precision case _LiteralPrintfOption(:final value)) {
+      if (value > _maximumSafePrintfOption) return null;
+      if (value < 0) hasPrecision = false;
+      staticPrecision = value < 0 ? 0 : value;
+    }
+    return _PrintfStringOp(
+      node: node,
+      valueArgIndex: valueArgIndex,
+      left: left,
+      hasWidth: width != null,
+      staticWidth: staticWidth,
+      widthArgIndex: widthArgIndex,
+      hasPrecision: hasPrecision,
+      staticPrecision: staticPrecision,
+      precisionArgIndex: precisionArgIndex,
+      textUnit: textUnit,
+    );
+  }
+  return null;
+}
 
 _PrintfProgram _compilePrintfProgram(
   _PrintfTemplate template,
@@ -600,23 +724,16 @@ _PrintfProgram _compilePrintfProgram(
   return _PrintfProgram(ops, capacity);
 }
 
-// General width/precision resolver for the hot ops landing in Tasks 7-8,
-// which compile width/precision down to plain ints instead of keeping
-// _PrintfOption nodes around. Sentinels: staticValue -1 means "the option
-// was absent" when argumentIndex is also -1 ("static"/no dynamic lookup);
-// when argumentIndex is not -1 the option is dynamic and staticValue is
-// unused. Unused until Tasks 7-8 wire it up.
-// ignore: unused_element
-int? _resolveIrPrintfOption(
+/// Resolves a dynamic printf width/precision for a hot op, mirroring
+/// _PrintfProcessor._resolveOption including error contexts. Static
+/// options never pass through here: they are baked into ops at compile
+/// time.
+int _resolveIrPrintfOption(
   _PrintfProcessor frame,
   _PrintfConversionNode node,
-  int staticValue,
   int argumentIndex,
   String role,
 ) {
-  if (argumentIndex == -1) {
-    return staticValue == -1 ? null : staticValue;
-  }
   final argument = frame._argumentAt(argumentIndex, node, specifier: role);
   if (argument is! int || !_isIntegerValue(argument)) {
     throw UnsupportedFormatValueException(

@@ -46,8 +46,17 @@ void main() {
         printf: false,
         textUnit: TextUnit.unicodeScalars,
       ),
-      ['int:d:w10', 'literal', 'int:x', 'literal', 'int:b:w5', 'literal',
-          'int:o', 'literal', 'int:d:w3'],
+      [
+        'int:d:w10',
+        'literal',
+        'int:x',
+        'literal',
+        'int:b:w5',
+        'literal',
+        'int:o',
+        'literal',
+        'int:d:w3',
+      ],
     );
   });
 
@@ -83,7 +92,11 @@ void main() {
     // it stays two code units regardless of editor/source normalization;
     // a precomposed 'é' is one code unit and would compile hot instead.
     for (final spec in [
-      '{:=10s}', '{:+s}', '{:#s}', '{:,s}', '{:e\u0301^10s}',
+      '{:=10s}',
+      '{:+s}',
+      '{:#s}',
+      '{:,s}',
+      '{:e\u0301^10s}',
     ]) {
       expect(
         debugCompiledProgramDescription(
@@ -130,5 +143,28 @@ void main() {
       97.5,
     ]);
     expect(ir, legacy);
+  });
+
+  test('%s compiles to the string op, static and dynamic', () {
+    expect(
+      debugCompiledProgramDescription(
+        '%s|%10s|%-10s|%.3s|%*s|%.*s',
+        printf: true,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'str',
+        'literal',
+        'str:w10',
+        'literal',
+        'str:w10',
+        'literal',
+        'str:p3',
+        'literal',
+        'str:w*',
+        'literal',
+        'str:p*',
+      ],
+    );
   });
 }
