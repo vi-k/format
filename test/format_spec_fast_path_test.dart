@@ -41,6 +41,17 @@ void main() {
         '+d',
         '10s',
         '10%',
+        '>10s',
+        '<10s',
+        '^10s',
+        '*^10s',
+        '=10d',
+        '0<5d',
+        '1<5d',
+        '<5d',
+        '>+#010X',
+        '<<',
+        's<5s',
       ];
       for (final source in sources) {
         expect(
@@ -56,12 +67,11 @@ void main() {
       'parser', () {
     const sources = [
       '10q', // custom format name
-      '1<5d', // fill and align
-      '<5d', // align
       '8.2f', // width with precision
       '10,d', // grouping
       '1234567d', // width beyond the fast path digit limit
       'é<5d', // Unicode fill
+      'é^10s', // Unicode fill before caret align
       '#é', // Unicode after a flag
       '10д', // Unicode in place of a type
     ];

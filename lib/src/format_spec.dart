@@ -243,18 +243,33 @@ _FormatSpec? _simpleBuiltinFormatSpec(String source) {
       : _simpleFixedUpperSpecs[precision];
 }
 
-/// Parses `sign? z? #? 0? width? type?` specifications made of ASCII code
-/// units only. Fill, align, grouping, precision, custom formats and anything
-/// non-ASCII stay on the general parser.
+/// Parses `fill? align? sign? z? #? 0? width? type?` specifications made of
+/// ASCII code units only. A fill is recognized exactly like in the general
+/// parser: only when the next unit is an align. Grouping, precision, custom
+/// formats and anything non-ASCII stay on the general parser.
 _FormatSpec? _simpleAsciiFlagWidthSpec(String source, int length) {
   var index = 0;
-  final sign = switch (source.codeUnitAt(0)) {
-    0x2b => '+',
-    0x2d => '-',
-    0x20 => ' ',
-    _ => null,
-  };
-  if (sign != null) index++;
+  String? fill;
+  String? align;
+  if (_isAsciiAlignCodeUnit(source.codeUnitAt(1))) {
+    if (source.codeUnitAt(0) > 0x7f) return null;
+    fill = source[0];
+    align = source[1];
+    index = 2;
+  } else if (_isAsciiAlignCodeUnit(source.codeUnitAt(0))) {
+    align = source[0];
+    index = 1;
+  }
+  String? sign;
+  if (index < length) {
+    sign = switch (source.codeUnitAt(index)) {
+      0x2b => '+',
+      0x2d => '-',
+      0x20 => ' ',
+      _ => null,
+    };
+    if (sign != null) index++;
+  }
   var normalizeNegativeZero = false;
   if (index < length && source.codeUnitAt(index) == 0x7a) {
     normalizeNegativeZero = true;
@@ -288,6 +303,8 @@ _FormatSpec? _simpleAsciiFlagWidthSpec(String source, int length) {
     if (type == null) return null;
   }
   return _FormatSpec(
+    fill: fill,
+    align: align,
     sign: sign,
     normalizeNegativeZero: normalizeNegativeZero,
     alternate: alternate,
@@ -296,6 +313,12 @@ _FormatSpec? _simpleAsciiFlagWidthSpec(String source, int length) {
     type: type,
   );
 }
+
+bool _isAsciiAlignCodeUnit(int codeUnit) =>
+    codeUnit == 0x3c ||
+    codeUnit == 0x3e ||
+    codeUnit == 0x3d ||
+    codeUnit == 0x5e;
 
 String? _builtInTypeFromCodeUnit(int codeUnit) => switch (codeUnit) {
   0x62 => 'b',
