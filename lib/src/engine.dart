@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'binary64.dart';
 import 'double_format.dart';
 import 'errors.dart';
@@ -20,5 +21,6 @@ part 'python_identifier.dart';
 part 'brace_parser.dart';
 part 'format_spec.dart';
 part 'template_cache.dart';
+part 'char_sink.dart';
 part 'number_format.dart';
 part 'value_formatter.dart';
