@@ -182,10 +182,9 @@ void main() {
   );
 
   test('runner records detected JIT provenance and rejects a false label', () {
-    final options = const BenchmarkRunOptions(
+    const options = BenchmarkRunOptions(
       dialect: BenchmarkDialect.braces,
       phase: BenchmarkPhase.hot,
-      runtime: 'jit',
       run: 1,
       samples: 1,
       smoke: true,
@@ -321,7 +320,8 @@ void main() {
   );
 
   test(
-    'report rejects gateable smoke, short gateable rounds, and forbidden ratios',
+    'report rejects gateable smoke, short gateable rounds, and '
+    'forbidden ratios',
     () {
       final valid =
           runBenchmark(
