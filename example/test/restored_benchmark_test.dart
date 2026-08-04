@@ -107,4 +107,19 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('comparison benchmark reports scores and total time', () {
+    final lines = <String>[];
+
+    runComparisonBenchmark(
+      writeLine: lines.add,
+      durations: const BenchmarkDurations(warmupMillis: 1, measureMillis: 1),
+    );
+
+    final output = lines.join('\n');
+    expect(output, contains('Format template:'));
+    expect(output, contains('OK'));
+    expect(output, contains('Mode: quick'));
+    expect(output, contains('Total:'));
+  });
 }
