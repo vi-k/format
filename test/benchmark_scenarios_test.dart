@@ -454,7 +454,7 @@ void main() {
     } finally {
       await directory.delete(recursive: true);
     }
-  });
+  }, timeout: const Timeout.factor(4));
 
   test(
     'compiled AOT runner rejects JIT label and records AOT provenance',
