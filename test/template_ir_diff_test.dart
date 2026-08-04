@@ -71,4 +71,25 @@ void main() {
     expectBraceParity('{} {}', positional: ['only one']);
     expectBraceParity('{name}', named: {});
   });
+
+  test('int op matches the legacy path across specs and values', () {
+    const specs = [
+      '{:d}', '{:10d}', '{:<10d}', '{:>10d}', '{:^10d}', '{:=10d}',
+      '{:010d}', '{:+d}', '{: d}', '{:-d}', '{:*<8d}', '{:x}', '{:X}',
+      '{:#x}', '{:#X}', '{:o}', '{:#o}', '{:b}', '{:#b}', '{:#010x}',
+      '{:1d}',
+    ];
+    final values = <Object?>[
+      0, 1, -1, 42, -42, 9007199254740991, -9007199254740991,
+      BigInt.parse('-340282366920938463463374607431768211456'),
+      BigInt.zero,
+      'not a number', 3.5, null,
+    ];
+    for (final spec in specs) {
+      for (final value in values) {
+        expectBraceParity(spec, positional: [value]);
+        expectBraceParity(spec, positional: [value], engine: graphemeFormat);
+      }
+    }
+  });
 }

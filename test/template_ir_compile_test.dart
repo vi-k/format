@@ -39,6 +39,34 @@ void main() {
     );
   });
 
+  test('static integer specs compile to int ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:10d}|{:x}|{:<5b}|{:#o}|{:+03d}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['int:d:w10', 'literal', 'int:x', 'literal', 'int:b:w5', 'literal',
+          'int:o', 'literal', 'int:d:w3'],
+    );
+  });
+
+  test('non-hot integer specs stay on fallback', () {
+    // NB: single-code-unit fills (including precomposed 'é') compile hot;
+    // only multi-unit fills fall back — that case is covered in Task 6.
+    for (final spec in ['{:,d}', '{:n}', '{:.2d}', '{:{}d}']) {
+      expect(
+        debugCompiledProgramDescription(
+          spec,
+          printf: false,
+          textUnit: TextUnit.unicodeScalars,
+        ),
+        ['fallback'],
+        reason: spec,
+      );
+    }
+  });
+
   test('IR path and legacy path agree on a mixed template', () {
     const template = '{} + {} = {answer:>6}';
     final ir = formatWith(template, positional: [2, 3], named: {'answer': 5});

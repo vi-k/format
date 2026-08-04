@@ -91,6 +91,121 @@ final class _BraceDynamicValueOp extends _BraceOp {
   String describe() => 'dynamic';
 }
 
+final class _BraceIntOp extends _BraceOp {
+  final _FieldNode field;
+  final int argumentIndex;
+  final String? argumentName;
+  final String specifierText;
+  final int radix;
+  final bool uppercase;
+  final String prefix; // '', '0b', '0o', '0x', '0X'
+  final int requestedSign; // 0x2b '+', 0x20 ' ', 0 none
+  final int width; // -1 none
+  final int fillChar;
+  final int align; // code unit of '<' '>' '^' '='
+  final String type;
+
+  const _BraceIntOp({
+    required this.field,
+    required this.argumentIndex,
+    required this.argumentName,
+    required this.specifierText,
+    required this.radix,
+    required this.uppercase,
+    required this.prefix,
+    required this.requestedSign,
+    required this.width,
+    required this.fillChar,
+    required this.align,
+    required this.type,
+  });
+
+  @override
+  void write(CharSink sink, _BraceProcessor frame) {
+    final value = frame._argument(argumentIndex, argumentName, field);
+    if (value is int && _isIntegerValue(value)) {
+      final signChar = value.isNegative ? 0x2d : requestedSign;
+      final digits = CharSink.digitCount(value, radix);
+      final padding =
+          width < 0
+              ? 0
+              : width - digits - prefix.length - (signChar == 0 ? 0 : 1);
+      _writeLeading(sink, padding, signChar);
+      sink.writeMagnitude(value, radix, uppercase: uppercase);
+      _writeTrailing(sink, padding);
+      return;
+    }
+    if (value is BigInt) {
+      final magnitude = formatMagnitude(
+        value.isNegative ? -value : value,
+        radix,
+        uppercase: uppercase,
+      );
+      final signChar = value.isNegative ? 0x2d : requestedSign;
+      final padding =
+          width < 0
+              ? 0
+              : width -
+                  magnitude.length -
+                  prefix.length -
+                  (signChar == 0 ? 0 : 1);
+      _writeLeading(sink, padding, signChar);
+      sink.writeString(magnitude);
+      _writeTrailing(sink, padding);
+      return;
+    }
+    // Mirrors formatParsedValue's dispatch order for the value types it
+    // routes elsewhere before falling back to UnsupportedFormatValueException:
+    // strings always go through _formatText, which rejects any non-'s' type;
+    // doubles always go through formatBraceDouble, whose _validateDoubleSpec
+    // rejects every integer presentation type. Both raise
+    // InvalidSpecifierException rather than UnsupportedFormatValueException.
+    if (value is String) {
+      throw InvalidSpecifierException(
+        _context(frame),
+        'This specification is not valid for text.',
+      );
+    }
+    if (value is double) {
+      throw InvalidSpecifierException(
+        _context(frame),
+        'This floating-point presentation type is not supported.',
+      );
+    }
+    throw UnsupportedFormatValueException(_context(frame), value);
+  }
+
+  void _writeLeading(CharSink sink, int padding, int signChar) {
+    if (align == 0x3e) {
+      sink.fill(fillChar, padding);
+    } else if (align == 0x5e) {
+      sink.fill(fillChar, padding ~/ 2);
+    }
+    if (signChar != 0) sink.writeCharCode(signChar);
+    if (prefix.isNotEmpty) sink.writeString(prefix);
+    if (align == 0x3d) sink.fill(fillChar, padding);
+  }
+
+  void _writeTrailing(CharSink sink, int padding) {
+    if (align == 0x3c) {
+      sink.fill(fillChar, padding);
+    } else if (align == 0x5e) {
+      sink.fill(fillChar, padding - padding ~/ 2);
+    }
+  }
+
+  FormatExceptionContext _context(_BraceProcessor frame) =>
+      FormatExceptionContext(
+        template: frame.template,
+        offset: field.offset,
+        fragment: field.fragment,
+        specifier: specifierText,
+      );
+
+  @override
+  String describe() => width < 0 ? 'int:$type' : 'int:$type:w$width';
+}
+
 int _automaticFieldCount(_FieldNode field) {
   var count = field.root is _AutomaticRoot ? 1 : 0;
   for (final node in field.specification) {
@@ -117,7 +232,57 @@ _BraceOp? _classifyBraceField(
   if (specText.isEmpty) {
     return _BraceDynamicValueOp(field, argumentIndex, argumentName);
   }
-  return null; // Typed hot ops land in Tasks 5-6.
+  var spec = field.memoizedSpec(textUnit);
+  if (spec == null) {
+    try {
+      spec = parseFormatSpec(
+        specText,
+        textUnit,
+        const FormatExceptionContext(),
+      );
+    } on FormattingException {
+      return null; // Invalid static specs keep today's per-call errors.
+    }
+    field.memoizeSpec(textUnit, spec);
+  }
+  if (spec.customName != null || spec.payload != null) return null;
+  final fill = spec.fill;
+  if (fill != null && fill.length != 1) return null; // multi-unit fill
+  switch (spec.type) {
+    case 'd' || 'b' || 'o' || 'x' || 'X':
+      if (spec.grouping != null ||
+          spec.precision != null ||
+          spec.fractionalGrouping != null ||
+          spec.normalizeNegativeZero) {
+        return null;
+      }
+      final type = spec.type!;
+      return _BraceIntOp(
+        field: field,
+        argumentIndex: argumentIndex,
+        argumentName: argumentName,
+        specifierText: specText,
+        radix: switch (type) {
+          'b' => 2,
+          'o' => 8,
+          'd' => 10,
+          _ => 16,
+        },
+        uppercase: type == 'X',
+        prefix: _integerPrefix(type, spec.alternate),
+        requestedSign: switch (spec.sign) {
+          '+' => 0x2b,
+          ' ' => 0x20,
+          _ => 0,
+        },
+        width: spec.width ?? -1,
+        fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
+        align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
+        type: type,
+      );
+    default:
+      return null;
+  }
 }
 
 _BraceProgram _compileBraceProgram(_BraceTemplate template, TextUnit textUnit) {
