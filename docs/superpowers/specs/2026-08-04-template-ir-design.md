@@ -142,6 +142,34 @@ seam'ы). Публичный путь переключается на IR. Уда
 
 ## Бенчмарк и performance-гейт
 
+### Отдельный A/B-прогон (по образцу `double_modes_benchmark.dart`)
+
+Новая пара файлов: `example/bin/template_ir_benchmark.dart` (тонкая
+обёртка с `ansi.runZonedPrinter`) и
+`example/lib/src/template_ir_benchmark.dart`
+(`runTemplateIrBenchmark({writeLine, warmupOperations, operations,
+samples, equivalenceThresholdPercent})`, testable через `writeLine`).
+Запуск после работы показывает результат сразу:
+
+- сценарии — ключевые горячие формы (`{:10d}`, `{:s}`, `{:<10s}`,
+  `{}`, `%s`, `%10d`, `%0*d` с динамикой) плюс пара
+  fallback-контрольных (`{:.2f}`, `{:é^10s}` на графемах) — они
+  обязаны показать EQUAL, а не регрессию;
+- A/B: публичный путь (IR) против старого строкового пути через
+  seam'ы `debugFormatBraceWithoutIr`/`debugFormatPrintfWithoutIr`
+  (импорт `package:format/src/engine.dart`);
+- методика как в double_modes: сверка результатов A и B перед
+  замером, warmup, чередование сторон по сэмплам, медиана, µs/op на
+  сценарий и вердикт `IR FASTER: N%` / `PERFORMANCE EQUAL` /
+  `RESULTS DIFFER`;
+- интеграционный тест по образцу существующих: прогон с малыми
+  операциями через `writeLine`, ноль `RESULTS DIFFER`.
+
+Это ещё одна причина держать старые процессоры под seam'ом всю
+итерацию: они — baseline этого прогона.
+
+### Гейт на общей матрице
+
 - RED: перед реализацией зафиксировать текущие числа
   `example/bin/benchmark.dart` quick на тихой машине (проверка
   `sysctl -n vm.loadavg`).
@@ -202,5 +230,8 @@ Timing-ассертов в unit-тестах нет; performance — тольк�
 - `dart analyze lib test example` — без новых замечаний.
 - Seam-тесты пиннят состав программ; дифф-тест зелёный на обоих
   `TextUnit`.
+- `dart run example/bin/template_ir_benchmark.dart` — итоговый
+  A/B-отчёт: горячие сценарии `IR FASTER`, fallback-контрольные не
+  хуже EQUAL, ни одного `RESULTS DIFFER`.
 - Бенчмарк: GREEN по критерию выше, единственный ERROR — намеренный
   sprintf 7.0 на минимальном int.
