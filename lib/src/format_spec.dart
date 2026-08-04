@@ -40,6 +40,14 @@ _FormatSpec parseFormatSpec(
 ) {
   final simple = _simpleBuiltinFormatSpec(source);
   if (simple != null) return simple;
+  return _parseFormatSpecGeneral(source, textUnit, context);
+}
+
+_FormatSpec _parseFormatSpecGeneral(
+  String source,
+  TextUnit textUnit,
+  FormatExceptionContext context,
+) {
   final units = textUnit.split(source);
   var index = 0;
   String? fill;
@@ -177,16 +185,54 @@ const _builtInTypes = {
 bool debugUsesSimpleBuiltinFormatSpec(String source) =>
     _simpleBuiltinFormatSpec(source) != null;
 
-_FormatSpec? _simpleBuiltinFormatSpec(String source) {
-  if (source.length == 1 && source.codeUnitAt(0) <= 0x7f) {
-    return _builtInTypes.contains(source) ? _FormatSpec(type: source) : null;
-  }
-  if (source.length < 3 || source.codeUnitAt(0) != 0x2e) return null;
+/// Test seam companion to [debugUsesSimpleBuiltinFormatSpec]: true only when
+/// the fast path recognizes [source] and produces the same specification as
+/// the general parser for both text units. It is deliberately not exported by
+/// `format.dart`.
+bool debugSimpleBuiltinFormatSpecMatchesGeneralParser(String source) {
+  final fast = _simpleBuiltinFormatSpec(source);
+  if (fast == null) return false;
+  const context = FormatExceptionContext();
+  return TextUnit.values.every(
+    (textUnit) => _debugFormatSpecEquals(
+      fast,
+      _parseFormatSpecGeneral(source, textUnit, context),
+    ),
+  );
+}
 
-  final type = source.codeUnitAt(source.length - 1);
+bool _debugFormatSpecEquals(_FormatSpec a, _FormatSpec b) =>
+    a.fill == b.fill &&
+    a.align == b.align &&
+    a.sign == b.sign &&
+    a.normalizeNegativeZero == b.normalizeNegativeZero &&
+    a.alternate == b.alternate &&
+    a.zero == b.zero &&
+    a.width == b.width &&
+    a.grouping == b.grouping &&
+    a.precision == b.precision &&
+    a.fractionalGrouping == b.fractionalGrouping &&
+    a.type == b.type &&
+    a.customName == b.customName &&
+    a.payload == b.payload;
+
+_FormatSpec? _simpleBuiltinFormatSpec(String source) {
+  final length = source.length;
+  if (length == 0) return null;
+  if (length == 1) {
+    return source.codeUnitAt(0) <= 0x7f && _builtInTypes.contains(source)
+        ? _FormatSpec(type: source)
+        : null;
+  }
+  if (source.codeUnitAt(0) != 0x2e) {
+    return _simpleAsciiFlagWidthSpec(source, length);
+  }
+  if (length < 3) return null;
+
+  final type = source.codeUnitAt(length - 1);
   if (type != 0x46 && type != 0x66) return null;
   var precision = 0;
-  for (var index = 1; index < source.length - 1; index++) {
+  for (var index = 1; index < length - 1; index++) {
     final digit = source.codeUnitAt(index) - 0x30;
     if (digit < 0 || digit > 9) return null;
     precision = precision * 10 + digit;
@@ -196,6 +242,79 @@ _FormatSpec? _simpleBuiltinFormatSpec(String source) {
       ? _simpleFixedLowerSpecs[precision]
       : _simpleFixedUpperSpecs[precision];
 }
+
+/// Parses `sign? z? #? 0? width? type?` specifications made of ASCII code
+/// units only. Fill, align, grouping, precision, custom formats and anything
+/// non-ASCII stay on the general parser.
+_FormatSpec? _simpleAsciiFlagWidthSpec(String source, int length) {
+  var index = 0;
+  final sign = switch (source.codeUnitAt(0)) {
+    0x2b => '+',
+    0x2d => '-',
+    0x20 => ' ',
+    _ => null,
+  };
+  if (sign != null) index++;
+  var normalizeNegativeZero = false;
+  if (index < length && source.codeUnitAt(index) == 0x7a) {
+    normalizeNegativeZero = true;
+    index++;
+  }
+  var alternate = false;
+  if (index < length && source.codeUnitAt(index) == 0x23) {
+    alternate = true;
+    index++;
+  }
+  var zero = false;
+  if (index < length && source.codeUnitAt(index) == 0x30) {
+    zero = true;
+    index++;
+  }
+  int? width;
+  var digits = 0;
+  var value = 0;
+  while (index < length) {
+    final digit = source.codeUnitAt(index) - 0x30;
+    if (digit < 0 || digit > 9) break;
+    value = value * 10 + digit;
+    if (++digits > 6) return null;
+    index++;
+  }
+  if (digits > 0) width = value;
+  String? type;
+  if (index < length) {
+    if (index != length - 1) return null;
+    type = _builtInTypeFromCodeUnit(source.codeUnitAt(index));
+    if (type == null) return null;
+  }
+  return _FormatSpec(
+    sign: sign,
+    normalizeNegativeZero: normalizeNegativeZero,
+    alternate: alternate,
+    zero: zero,
+    width: width,
+    type: type,
+  );
+}
+
+String? _builtInTypeFromCodeUnit(int codeUnit) => switch (codeUnit) {
+  0x62 => 'b',
+  0x63 => 'c',
+  0x64 => 'd',
+  0x65 => 'e',
+  0x45 => 'E',
+  0x66 => 'f',
+  0x46 => 'F',
+  0x67 => 'g',
+  0x47 => 'G',
+  0x6e => 'n',
+  0x6f => 'o',
+  0x73 => 's',
+  0x78 => 'x',
+  0x58 => 'X',
+  0x25 => '%',
+  _ => null,
+};
 
 final _simpleFixedLowerSpecs = List<_FormatSpec>.unmodifiable(
   List.generate(
