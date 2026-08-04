@@ -10,7 +10,20 @@ sealed class _BraceNode {
 final class _BraceTemplate {
   final List<_BraceNode> nodes;
 
-  _BraceTemplate(Iterable<_BraceNode> nodes) : nodes = List.unmodifiable(nodes);
+  _BraceTemplate(List<_BraceNode> nodes) : nodes = _sealedInDebug(nodes);
+}
+
+/// Returns [list] as-is in production; under asserts it is replaced with an
+/// unmodifiable copy so tests can pin that AST collections never mutate.
+/// Parsers are the only producers and always hand over freshly built lists,
+/// so skipping the per-call defensive copy on the hot path is safe.
+List<T> _sealedInDebug<T>(List<T> list) {
+  var sealed = list;
+  assert(() {
+    sealed = List.unmodifiable(list);
+    return true;
+  }());
+  return sealed;
 }
 
 final class _LiteralNode extends _BraceNode {
@@ -29,11 +42,11 @@ final class _FieldNode extends _BraceNode {
     required int offset,
     required String fragment,
     required this.root,
-    required Iterable<_FieldAccess> accesses,
+    required List<_FieldAccess> accesses,
     required this.conversion,
-    required Iterable<_BraceNode> specification,
-  }) : accesses = List.unmodifiable(accesses),
-       specification = List.unmodifiable(specification),
+    required List<_BraceNode> specification,
+  }) : accesses = _sealedInDebug(accesses),
+       specification = _sealedInDebug(specification),
        super(offset, fragment);
 }
 

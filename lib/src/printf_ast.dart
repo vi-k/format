@@ -22,8 +22,7 @@ sealed class _PrintfNode {
 final class _PrintfTemplate {
   final List<_PrintfNode> nodes;
 
-  _PrintfTemplate(Iterable<_PrintfNode> nodes)
-    : nodes = List.unmodifiable(nodes);
+  _PrintfTemplate(List<_PrintfNode> nodes) : nodes = _sealedInDebug(nodes);
 }
 
 final class _PrintfLiteralNode extends _PrintfNode {
