@@ -10,7 +10,7 @@ final class BenchmarkDurations {
   });
 
   static const quick =
-      BenchmarkDurations(warmupMillis: 60, measureMillis: 250);
+      BenchmarkDurations(warmupMillis: 50, measureMillis: 180);
   static const full =
       BenchmarkDurations(warmupMillis: 100, measureMillis: 2000);
 }

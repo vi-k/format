@@ -98,8 +98,8 @@ void main() {
   }
 
   test('benchmark durations default to quick and switch to full', () {
-    expect(BenchmarkDurations.quick.warmupMillis, 60);
-    expect(BenchmarkDurations.quick.measureMillis, 250);
+    expect(BenchmarkDurations.quick.warmupMillis, 50);
+    expect(BenchmarkDurations.quick.measureMillis, 180);
     expect(BenchmarkDurations.full.warmupMillis, 100);
     expect(BenchmarkDurations.full.measureMillis, 2000);
 

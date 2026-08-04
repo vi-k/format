@@ -3,7 +3,7 @@
 This package contains runnable, ANSI-colored examples and performance checks
 for `format`.
 
-Run the restored original user benchmark (quick mode, ~35 s):
+Run the restored original user benchmark (quick mode, ~45 s):
 
 ```console
 dart run bin/benchmark.dart
