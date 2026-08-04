@@ -3,10 +3,16 @@
 This package contains runnable, ANSI-colored examples and performance checks
 for `format`.
 
-Run the restored original user benchmark:
+Run the restored original user benchmark (quick mode, ~35 s):
 
 ```console
 dart run bin/benchmark.dart
+```
+
+Precise measurements with the benchmark_harness defaults (~4 min):
+
+```console
+dart run bin/benchmark.dart --full
 ```
 
 Compare Format 3 against the frozen Format 2 baseline:
