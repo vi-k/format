@@ -38,20 +38,26 @@ final class _BraceProcessor {
     _FieldNode field,
     Object? value,
   ) {
-    final converted = applyConversion(
-      field.conversion,
-      value,
-      engine,
-      _context(field, ''),
-    );
+    final converted =
+        field.conversion == null
+            ? value
+            : applyConversion(
+              field.conversion,
+              value,
+              engine,
+              _context(field, ''),
+            );
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);
     return formatValue(converted, specification, engine, context);
   }
 
   String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {
+    final specification = field.specification;
+    if (specification.isEmpty) return '';
+    if (specification case [_LiteralNode(:final text)]) return text;
     final output = StringBuffer();
-    for (final node in field.specification) {
+    for (final node in specification) {
       if (node case _LiteralNode(:final text)) {
         output.write(text);
       } else {
