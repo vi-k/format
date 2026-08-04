@@ -94,4 +94,14 @@ void main() {
     expect(sink.length, 1);
     expect(sink.toString(), 'x');
   });
+
+  test('a second writeString materializes the first before appending', () {
+    // Both writes carry real content and both go through writeString, so
+    // this pins the materialize-then-copy order directly: a copy-then-
+    // materialize bug (or one that drops/reorders the pending string)
+    // would produce something other than the straight concatenation.
+    final sink = CharSink(1)..writeString('hello')..writeString('world');
+    expect(sink.length, 10);
+    expect(sink.toString(), 'helloworld');
+  });
 }
