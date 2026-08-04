@@ -1,5 +1,17 @@
 part of 'engine.dart';
 
+/// True when running on the web, where int is a JS double.
+const bool _isWebInt = identical(1, 1.0);
+
+/// True when |value| exceeds the largest integer magnitude a JS double can
+/// represent exactly (2^53 - 1). Runs in negative space so `minInt` (which
+/// has no positive counterpart) never overflows, and uses only comparison,
+/// which stays exact at this magnitude even on dart2js.
+bool _exceedsWebSafeInt(int value) {
+  final negative = value <= 0 ? value : -value;
+  return negative < -9007199254740991;
+}
+
 sealed class _BraceOp {
   const _BraceOp();
 
@@ -63,7 +75,15 @@ final class _BraceDynamicValueOp extends _BraceOp {
     }
     if (value is int && _isIntegerValue(value)) {
       if (value.isNegative) sink.writeCharCode(0x2d);
-      sink.writeMagnitude(value, 10);
+      if (_isWebInt && _exceedsWebSafeInt(value)) {
+        // On the web, int is a JS double, so the digit-by-digit `~/ 10`
+        // extraction below is inexact above 2^53-1. value.toString() (used
+        // by _formatIntMagnitude) prints exactly, mirroring the legacy
+        // formatBraceInteger path for '{}' on an int.
+        sink.writeString(_formatIntMagnitude(value, 10));
+      } else {
+        sink.writeMagnitude(value, 10);
+      }
       return;
     }
     if (value is bool || value == null) {
@@ -125,6 +145,27 @@ final class _BraceIntOp extends _BraceOp {
     final value = frame._argument(argumentIndex, argumentName, field);
     if (value is int && _isIntegerValue(value)) {
       final signChar = value.isNegative ? 0x2d : requestedSign;
+      if (_isWebInt && _exceedsWebSafeInt(value)) {
+        // Same reasoning as _BraceDynamicValueOp: digit-by-digit extraction
+        // is inexact above 2^53-1 on the web, so mirror the BigInt branch
+        // below and write pre-materialized, exact digits instead.
+        final digitsText = _formatIntMagnitude(
+          value,
+          radix,
+          uppercase: uppercase,
+        );
+        final padding =
+            width < 0
+                ? 0
+                : width -
+                    digitsText.length -
+                    prefix.length -
+                    (signChar == 0 ? 0 : 1);
+        _writeLeading(sink, padding, signChar);
+        sink.writeString(digitsText);
+        _writeTrailing(sink, padding);
+        return;
+      }
       final digits = CharSink.digitCount(value, radix);
       final padding =
           width < 0
@@ -700,17 +741,33 @@ final class _PrintfIntOp extends _PrintfOp {
     final argument = frame._argumentAt(valueArgIndex, node);
     late final bool negative;
     late final bool isZero;
-    var magnitudeString = ''; // BigInt branch only
+    var magnitudeString = ''; // used when digits are pre-materialized below
     var digitCount = 0;
-    var bigInt = false;
+    // BigInt, and web-unsafe int, write pre-materialized digit strings
+    // instead of going through sink.writeMagnitude.
+    var digitsAsString = false;
     var intValue = 0; // int branch only; avoids re-casting argument below
     if (argument is int && _isIntegerValue(argument)) {
-      intValue = argument;
       negative = argument.isNegative;
       isZero = argument == 0;
-      digitCount = CharSink.digitCount(argument, radix);
+      if (_isWebInt && _exceedsWebSafeInt(argument)) {
+        // Same reasoning as the brace int ops: digit-by-digit extraction is
+        // inexact above 2^53-1 on the web, so mirror the BigInt branch and
+        // materialize exact digits via _formatIntMagnitude (value.toString()
+        // /toRadixString() print exactly on JS doubles).
+        digitsAsString = true;
+        magnitudeString = _formatIntMagnitude(
+          argument,
+          radix,
+          uppercase: uppercase,
+        );
+        digitCount = magnitudeString.length;
+      } else {
+        intValue = argument;
+        digitCount = CharSink.digitCount(argument, radix);
+      }
     } else if (argument is BigInt) {
-      bigInt = true;
+      digitsAsString = true;
       negative = argument.isNegative;
       isZero = argument == BigInt.zero;
       magnitudeString = formatMagnitude(
@@ -768,7 +825,7 @@ final class _PrintfIntOp extends _PrintfOp {
     if (align == 0x3d) sink.fill(fillChar, padding);
     sink.fill(0x30, zeroPad);
     if (effectiveDigits > 0) {
-      if (bigInt) {
+      if (digitsAsString) {
         sink.writeString(magnitudeString);
       } else {
         sink.writeMagnitude(intValue, radix, uppercase: uppercase);

@@ -254,6 +254,23 @@ void main() {
     expectPrintfParity('%*.*d', [10, 4, -42]);
   });
 
+  test('integers beyond 2^53 keep legacy digits on every platform', () {
+    final values = <Object?>[
+      int.parse('9007199254740993'),
+      int.parse('-9007199254740993'),
+      int.parse('1234567890123456789'),
+      int.parse('-1234567890123456789'),
+      int.parse('1000000000000000000'),
+    ];
+    for (final value in values) {
+      for (final spec in ['{}', '{:d}', '{:30d}', '{:x}', '{:o}', '{:b}']) {
+        expectBraceParity(spec, positional: [value]);
+      }
+      expectPrintfParity('%d', [value]);
+      expectPrintfParity('%20d', [value]);
+    }
+  });
+
   test('mixed templates with hot and fallback ops stay identical', () {
     expectBraceParity(
       'id={:08d} name={:<12s} score={:+.2f} raw={} hex={:#x}',
