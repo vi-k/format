@@ -11,6 +11,19 @@ final class _BraceTemplate {
   final List<_BraceNode> nodes;
 
   _BraceTemplate(List<_BraceNode> nodes) : nodes = _sealedInDebug(nodes);
+
+  // Lazily memoized IR programs, one slot per TextUnit. Shared through the
+  // template cache; compilation is total and never throws, so a slot is
+  // written at most once per unit.
+  _BraceProgram? _scalarProgram;
+  _BraceProgram? _graphemeProgram;
+
+  _BraceProgram programFor(TextUnit textUnit) => switch (textUnit) {
+    TextUnit.unicodeScalars =>
+      _scalarProgram ??= _compileBraceProgram(this, textUnit),
+    TextUnit.graphemeClusters =>
+      _graphemeProgram ??= _compileBraceProgram(this, textUnit),
+  };
 }
 
 /// Returns [list] as-is in production; under asserts it is replaced with an

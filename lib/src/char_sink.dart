@@ -37,6 +37,12 @@ final class CharSink {
     _length += units.length;
   }
 
+  void writeCodeUnits(Uint16List units) {
+    _ensure(units.length);
+    _buffer.setRange(_length, _length + units.length, units);
+    _length += units.length;
+  }
+
   void fill(int codeUnit, int count) {
     if (count <= 0) return;
     _ensure(count);

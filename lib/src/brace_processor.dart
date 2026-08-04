@@ -14,6 +14,17 @@ final class _BraceProcessor {
   });
 
   String format() {
+    final program = _cachedBraceTemplate(template).programFor(engine.textUnit);
+    final output = CharSink(program.estimatedCapacity);
+    for (final op in program.ops) {
+      op.write(output, this);
+    }
+    return output.toString();
+  }
+
+  /// Legacy string-assembly path. Kept as the baseline for differential
+  /// tests and the IR A/B benchmark; reachable via debugFormatBraceWithoutIr.
+  String formatWithoutIr() {
     final resolver = _FieldResolver(
       template: template,
       positional: positional,
@@ -32,6 +43,38 @@ final class _BraceProcessor {
     }
     return output.toString();
   }
+
+  _FieldResolver? _lazyResolver;
+
+  _FieldResolver get resolver =>
+      _lazyResolver ??= _FieldResolver(
+        template: template,
+        positional: positional,
+        named: named,
+        engine: engine,
+      );
+
+  // Wired up by the hot brace ops landing in Tasks 4-6; unused until then.
+  // ignore: unused_element
+  Object? _argument(int index, String? name, _FieldNode field) {
+    if (name != null) {
+      if (!named.containsKey(name)) {
+        throw MissingFormatArgumentException(_resolveContext(field), name);
+      }
+      return named[name];
+    }
+    if (index >= positional.length) {
+      throw MissingFormatArgumentException(_resolveContext(field), index);
+    }
+    return positional[index];
+  }
+
+  FormatExceptionContext _resolveContext(_FieldNode field) =>
+      FormatExceptionContext(
+        template: template,
+        offset: field.offset,
+        fragment: field.fragment,
+      );
 
   String _formatField(
     _FieldResolver resolver,
