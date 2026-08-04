@@ -23,9 +23,8 @@ sealed class _BraceOp {
 final class _BraceProgram {
   final List<_BraceOp> ops;
   final int estimatedCapacity;
-  final bool needsResolver;
 
-  const _BraceProgram(this.ops, this.estimatedCapacity, this.needsResolver);
+  const _BraceProgram(this.ops, this.estimatedCapacity);
 }
 
 final class _BraceLiteralOp extends _BraceOp {
@@ -423,7 +422,6 @@ _BraceProgram _compileBraceProgram(_BraceTemplate template, TextUnit textUnit) {
   final ops = <_BraceOp>[];
   var automatic = 0;
   var capacity = 0;
-  var needsResolver = false;
   for (final node in template.nodes) {
     if (node case _LiteralNode(:final text)) {
       ops.add(_BraceLiteralOp(text));
@@ -445,12 +443,11 @@ _BraceProgram _compileBraceProgram(_BraceTemplate template, TextUnit textUnit) {
             : null;
     if (op == null) {
       ops.add(_BraceFallbackOp(field, automaticBase));
-      needsResolver = true;
     } else {
       ops.add(op);
     }
   }
-  return _BraceProgram(ops, capacity, needsResolver);
+  return _BraceProgram(ops, capacity);
 }
 
 sealed class _PrintfOp {

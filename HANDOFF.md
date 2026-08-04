@@ -164,11 +164,11 @@ single-string путь (они не вызывают `writeString` для сам
 ## Проверки на HEAD
 
 ```text
-dart test (корень): 373 прошли
+dart test (корень): 376 прошли
 dart test (example): 15 прошли
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart
-  test/template_ir_diff_test.dart: 30 прошли (9 char_sink + 12 compile/diff
-  + 9 остальных diff-кейсов)
+  test/template_ir_diff_test.dart: 33 прошли (12 char_sink + 12
+  template_ir_compile + 9 template_ir_diff)
 dart analyze lib test example: No issues found!
 A/B (template_ir_benchmark.dart): 3 живых прогона, 0 RESULTS DIFFER, 0
   LEGACY FASTER

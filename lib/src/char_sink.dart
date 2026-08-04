@@ -75,8 +75,8 @@ final class CharSink {
   }
 
   void fill(int codeUnit, int count) {
-    _materialize();
     if (count <= 0) return;
+    _materialize();
     _ensure(count);
     _buffer.fillRange(_length, _length + count, codeUnit);
     _length += count;

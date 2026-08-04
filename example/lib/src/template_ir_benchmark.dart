@@ -164,7 +164,10 @@ void runTemplateIrBenchmark({
   double equivalenceThresholdPercent = 5.0,
 }) {
   if (warmupOperations < 0 || operations <= 0 || samples <= 0) {
-    throw ArgumentError('Benchmark operation counts must be positive.');
+    throw ArgumentError(
+      'operations and samples must be positive; '
+      'warmupOperations must be non-negative.',
+    );
   }
   if (!equivalenceThresholdPercent.isFinite ||
       equivalenceThresholdPercent < 0) {

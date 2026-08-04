@@ -77,6 +77,20 @@ void main() {
     expect(identical(sink.toString(), text), isTrue);
   });
 
+  test('a non-positive fill after writeString keeps single-string mode', () {
+    // e.g. `{:<10s}` when content.length >= width: padding is 0 or
+    // negative, so this fill call must stay a true no-op and not force the
+    // pending single string into the buffer.
+    const text = 'hello world';
+    final sink =
+        CharSink(1)
+          ..writeString(text)
+          ..fill(0x20, 0)
+          ..fill(0x20, -3);
+    expect(sink.length, text.length);
+    expect(identical(sink.toString(), text), isTrue);
+  });
+
   test('writeString followed by other writes materializes correctly', () {
     final sink =
         CharSink(1)
