@@ -13,9 +13,10 @@ void main(List<String> arguments) {
 
 void _run() {
   final benchmarks = [
-    SprintfBenchmark(),
-    Format2Benchmark(),
-    Format3Benchmark(),
+    BenchmarkSprintf7(),
+    BenchmarkFormat2Format(),
+    BenchmarkFormat3Format(),
+    BenchmarkFormat3Sprintf(),
   ];
 
   for (final template in testData) {

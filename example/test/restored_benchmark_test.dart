@@ -3,9 +3,9 @@ import 'package:test/test.dart';
 
 void main() {
   test('restored benchmark exposes Format 3, Format 2 and sprintf engines', () {
-    final format3 = Format3Benchmark();
-    final format2 = Format2Benchmark();
-    final printf = SprintfBenchmark();
+    final format3 = BenchmarkFormat3Format();
+    final format2 = BenchmarkFormat2Format();
+    final printf = BenchmarkSprintf7();
 
     format3.go('{:d}', [42]);
     format2.go('{:d}', [42]);

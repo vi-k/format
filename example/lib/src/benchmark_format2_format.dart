@@ -1,8 +1,8 @@
 import 'legacy_format_baseline.dart';
 import 'my_benchmark_base.dart';
 
-final class Format2Benchmark extends MyBenchmarkBase {
-  Format2Benchmark() : super(name: 'format::format2');
+final class BenchmarkFormat2Format extends MyBenchmarkBase {
+  BenchmarkFormat2Format() : super(name: 'format 2.0 → format');
 
   @override
   bool get isSprintf => false;

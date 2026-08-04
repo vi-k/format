@@ -2,8 +2,8 @@ import 'package:sprintf7_baseline/sprintf.dart' as sprintf7;
 
 import 'my_benchmark_base.dart';
 
-final class SprintfBenchmark extends MyBenchmarkBase {
-  SprintfBenchmark() : super(name: 'sprintf::sprintf');
+final class BenchmarkSprintf7 extends MyBenchmarkBase {
+  BenchmarkSprintf7() : super(name: 'sprintf 7.0 → sprintf');
 
   @override
   bool get isSprintf => true;
