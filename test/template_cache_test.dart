@@ -79,6 +79,31 @@ void main() {
     expect(engine.format('{:{}d}', 42, 8), '      42');
   });
 
+  test('printf reuses static conversions across calls', () {
+    expect(engine.sprintf('%+08.2f|%s', 3.5, 'x'), '+0003.50|x');
+    expect(engine.sprintf('%+08.2f|%s', -3.5, 'y'), '-0003.50|y');
+  });
+
+  test('printf dynamic options resolve on every call', () {
+    expect(engine.sprintf('%*d', 6, 42), '    42');
+    expect(engine.sprintf('%*d', 8, 42), '      42');
+    // A negative dynamic width turns on left alignment for THIS call only;
+    // the flag must not stick to the shared cached node.
+    expect(engine.sprintf('%*d', -6, 42), '42    ');
+    expect(engine.sprintf('%*d', 6, 42), '    42');
+  });
+
+  test('invalid printf values throw on every call', () {
+    expect(
+      () => engine.sprintf('%d', 'oops'),
+      throwsA(isA<FormattingException>()),
+    );
+    expect(
+      () => engine.sprintf('%d', 'oops'),
+      throwsA(isA<FormattingException>()),
+    );
+  });
+
   test('invalid static specification throws on every call', () {
     expect(
       () => engine.format('{:.d}', 1),

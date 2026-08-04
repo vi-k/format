@@ -51,7 +51,7 @@ final class _PrintfConversionNode extends _PrintfNode {
   final _PrintfOption? precision;
   final String type;
 
-  const _PrintfConversionNode({
+  _PrintfConversionNode({
     required int offset,
     required String fragment,
     required this.flags,
@@ -59,4 +59,15 @@ final class _PrintfConversionNode extends _PrintfNode {
     required this.precision,
     required this.type,
   }) : super(offset, fragment);
+
+  // Lazily memoized resolution and error context for conversions without
+  // dynamic `*` options. Nodes are shared through the template cache, and
+  // for a static conversion both values are deterministic per node (the
+  // argument index only depends on the template), so repeated calls skip
+  // the per-call allocations. Dynamic conversions are never memoized.
+  _ResolvedPrintfConversion? _staticResolved;
+  FormatExceptionContext? _staticContext;
+
+  bool get hasDynamicOptions =>
+      width is _DynamicPrintfOption || precision is _DynamicPrintfOption;
 }

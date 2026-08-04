@@ -30,11 +30,17 @@ final class _PrintfProcessor {
       }
 
       final argument = _arguments.take(conversion);
-      final context = _printfContext(
-        template,
-        conversion,
-        argumentIndex: argument.index,
-      );
+      var context = conversion._staticContext;
+      if (context == null) {
+        context = _printfContext(
+          template,
+          conversion,
+          argumentIndex: argument.index,
+        );
+        if (!conversion.hasDynamicOptions) {
+          conversion._staticContext = context;
+        }
+      }
       final formatted = _formatPrintfValue(
         argument.value,
         resolved,
@@ -47,6 +53,8 @@ final class _PrintfProcessor {
   }
 
   _ResolvedPrintfConversion _resolve(_PrintfConversionNode node) {
+    final memoized = node._staticResolved;
+    if (memoized != null) return memoized;
     var flags = node.flags;
     var width = _resolveOption(node, node.width, 'width');
     var precision = _resolveOption(node, node.precision, 'precision');
@@ -55,12 +63,14 @@ final class _PrintfProcessor {
       width = -value;
     }
     if (precision case final value? when value < 0) precision = null;
-    return _ResolvedPrintfConversion(
+    final resolved = _ResolvedPrintfConversion(
       node: node,
       flags: flags,
       width: width,
       precision: precision,
     );
+    if (!node.hasDynamicOptions) node._staticResolved = resolved;
+    return resolved;
   }
 
   int? _resolveOption(
