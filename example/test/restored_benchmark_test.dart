@@ -85,4 +85,16 @@ void main() {
       );
     });
   }
+
+  test('benchmark durations default to quick and switch to full', () {
+    expect(BenchmarkDurations.quick.warmupMillis, 60);
+    expect(BenchmarkDurations.quick.measureMillis, 250);
+    expect(BenchmarkDurations.full.warmupMillis, 100);
+    expect(BenchmarkDurations.full.measureMillis, 2000);
+
+    final benchmark = BenchmarkFormat3Format();
+    expect(benchmark.durations, BenchmarkDurations.quick);
+    benchmark.durations = BenchmarkDurations.full;
+    expect(benchmark.durations, BenchmarkDurations.full);
+  });
 }
