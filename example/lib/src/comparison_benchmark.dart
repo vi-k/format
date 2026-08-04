@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:format/format.dart';
 
+import 'benchmark_cold.dart';
 import 'benchmark_format2_format.dart';
 import 'benchmark_format3_format.dart';
 import 'benchmark_format3_sprintf.dart';
@@ -87,6 +88,20 @@ void runComparisonBenchmark({
         }
       }
     }
+  }
+
+  emit('');
+  emit(h1('----------------------------------------'));
+  emit('Cold: unique template per call (no cache hits)');
+  emit('');
+  final coldBenchmarks = [
+    BenchmarkFormat3ColdFormat(),
+    BenchmarkFormat3ColdSprintf(),
+  ];
+  for (final benchmark in coldBenchmarks) {
+    benchmark.durations = resolved;
+    final score = benchmark.go('{:10d}', [12345]);
+    emit('${accent(benchmark.name)}: ${format('{:.3f}', score)} µs');
   }
 
   emit('');

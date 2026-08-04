@@ -153,5 +153,8 @@ void main() {
     final plain = errors.single.replaceAll(RegExp('\x1B\\[[0-9;]*m'), '');
     expect(plain, contains('sprintf 7.0'));
     expect(plain, contains('--9223372036854775808'));
+
+    expect(output, contains('Cold: unique template per call'));
+    expect(output, contains('(cold)'));
   });
 }

@@ -1,3 +1,4 @@
+export 'src/benchmark_cold.dart';
 export 'src/benchmark_format2_format.dart';
 export 'src/benchmark_format3_format.dart';
 export 'src/benchmark_format3_sprintf.dart';
