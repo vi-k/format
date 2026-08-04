@@ -6,6 +6,10 @@ import 'extensions.dart';
 import 'number_locale.dart';
 import 'text_unit.dart';
 
+// FormattingException is needed by the template-IR differential tests
+// accessed via `package:format/src/engine.dart`.
+export 'errors.dart' show FormattingException;
+
 // TextUnit is part of the internal template-IR test seam surface: seam
 // tests reach it via `package:format/src/engine.dart` alone, so it must be
 // re-exported here (it is also separately exported by the public

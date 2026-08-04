@@ -54,8 +54,6 @@ final class _BraceProcessor {
         engine: engine,
       );
 
-  // Wired up by the hot brace ops landing in Tasks 4-6; unused until then.
-  // ignore: unused_element
   Object? _argument(int index, String? name, _FieldNode field) {
     if (name != null) {
       if (!named.containsKey(name)) {

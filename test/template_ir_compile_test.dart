@@ -15,6 +15,17 @@ void main() {
     );
   });
 
+  test('empty spec compiles to the dynamic value op', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{} {name}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['dynamic', 'literal', 'dynamic'],
+    );
+  });
+
   test('fields compile to fallback ops in the skeleton', () {
     // Both fields stay on fallback even after Tasks 4-8: a floating spec
     // and a dynamic nested spec are outside the v1 hot core.

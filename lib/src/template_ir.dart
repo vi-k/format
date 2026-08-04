@@ -47,6 +47,50 @@ final class _BraceFallbackOp extends _BraceOp {
   String describe() => 'fallback';
 }
 
+final class _BraceDynamicValueOp extends _BraceOp {
+  final _FieldNode field;
+  final int argumentIndex;
+  final String? argumentName;
+
+  const _BraceDynamicValueOp(this.field, this.argumentIndex, this.argumentName);
+
+  @override
+  void write(CharSink sink, _BraceProcessor frame) {
+    final value = frame._argument(argumentIndex, argumentName, field);
+    if (value is String) {
+      sink.writeString(value);
+      return;
+    }
+    if (value is int && _isIntegerValue(value)) {
+      if (value.isNegative) sink.writeCharCode(0x2d);
+      sink.writeMagnitude(value, 10);
+      return;
+    }
+    if (value is bool || value == null) {
+      sink.writeString(value.toString());
+      return;
+    }
+    // BigInt, double, custom formatters, unsupported values: the generic
+    // dispatch reproduces today's behavior and errors exactly.
+    sink.writeString(
+      formatParsedValue(
+        value,
+        const _FormatSpec(),
+        frame.engine,
+        FormatExceptionContext(
+          template: frame.template,
+          offset: field.offset,
+          fragment: field.fragment,
+          specifier: '',
+        ),
+      ),
+    );
+  }
+
+  @override
+  String describe() => 'dynamic';
+}
+
 int _automaticFieldCount(_FieldNode field) {
   var count = field.root is _AutomaticRoot ? 1 : 0;
   for (final node in field.specification) {
@@ -55,9 +99,6 @@ int _automaticFieldCount(_FieldNode field) {
   return count;
 }
 
-// Consumed by _classifyBraceField once the hot ops land in Tasks 4-6;
-// unused until then.
-// ignore: unused_element
 String? _staticBraceSpecification(_FieldNode field) {
   final specification = field.specification;
   if (specification.isEmpty) return '';
@@ -65,14 +106,19 @@ String? _staticBraceSpecification(_FieldNode field) {
   return null;
 }
 
-// Hot classification lands in Tasks 4-6; the skeleton sends every field
-// through the legacy string path.
 _BraceOp? _classifyBraceField(
   _FieldNode field,
   int argumentIndex,
   String? argumentName,
   TextUnit textUnit,
-) => null;
+) {
+  final specText = _staticBraceSpecification(field);
+  if (specText == null) return null;
+  if (specText.isEmpty) {
+    return _BraceDynamicValueOp(field, argumentIndex, argumentName);
+  }
+  return null; // Typed hot ops land in Tasks 5-6.
+}
 
 _BraceProgram _compileBraceProgram(_BraceTemplate template, TextUnit textUnit) {
   final ops = <_BraceOp>[];
