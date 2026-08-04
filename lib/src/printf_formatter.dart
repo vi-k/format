@@ -2,16 +2,16 @@ part of 'engine.dart';
 
 final class _ResolvedPrintfConversion {
   final _PrintfConversionNode node;
-  final Set<_PrintfFlag> flags;
+  final int flags;
   final int? width;
   final int? precision;
 
-  _ResolvedPrintfConversion({
+  const _ResolvedPrintfConversion({
     required this.node,
-    required Iterable<_PrintfFlag> flags,
+    required this.flags,
     required this.width,
     required this.precision,
-  }) : flags = Set.unmodifiable(flags);
+  });
 }
 
 String _formatPrintfValue(
@@ -65,7 +65,7 @@ String _formatPrintfString(
     truncated,
     width: conversion.width,
     fill: null,
-    align: conversion.flags.contains(_PrintfFlag.left) ? '<' : '>',
+    align: _hasPrintfFlag(conversion.flags, _PrintfFlags.left) ? '<' : '>',
     textUnit: engine.textUnit,
   );
 }
@@ -79,7 +79,7 @@ String _formatPrintfCharacter(
   String.fromCharCode(_unicodeScalar(value, context)),
   width: conversion.width,
   fill: null,
-  align: conversion.flags.contains(_PrintfFlag.left) ? '<' : '>',
+  align: _hasPrintfFlag(conversion.flags, _PrintfFlags.left) ? '<' : '>',
   textUnit: engine.textUnit,
 );
 
@@ -130,7 +130,7 @@ String _formatPrintfInteger(
     digits = '0' * (precision - digits.length) + digits;
   }
 
-  final alternate = conversion.flags.contains(_PrintfFlag.alternate);
+  final alternate = _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate);
   final prefix = switch (type) {
     'o' when alternate && !digits.startsWith('0') => '0',
     'x' when alternate && !isZero => '0x',
@@ -140,14 +140,14 @@ String _formatPrintfInteger(
   final sign =
       signed && negative
           ? '-'
-          : conversion.flags.contains(_PrintfFlag.sign)
+          : _hasPrintfFlag(conversion.flags, _PrintfFlags.sign)
           ? '+'
-          : conversion.flags.contains(_PrintfFlag.space)
+          : _hasPrintfFlag(conversion.flags, _PrintfFlags.space)
           ? ' '
           : '';
-  final left = conversion.flags.contains(_PrintfFlag.left);
+  final left = _hasPrintfFlag(conversion.flags, _PrintfFlags.left);
   final zero =
-      conversion.flags.contains(_PrintfFlag.zero) &&
+      _hasPrintfFlag(conversion.flags, _PrintfFlags.zero) &&
       !left &&
       conversion.precision == null;
   return applyNumericWidth(
@@ -189,12 +189,12 @@ String _formatPrintfDouble(
       value,
       type,
       conversion.precision,
-      conversion.flags.contains(_PrintfFlag.alternate),
+      _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate),
       context,
     );
   } else {
     final precision = conversion.precision ?? 6;
-    final alternate = conversion.flags.contains(_PrintfFlag.alternate);
+    final alternate = _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate);
     formatted = switch (type) {
       'f' || 'F' => _formatFixed(value, precision, alternate),
       'e' || 'E' => _formatScientific(
@@ -222,20 +222,20 @@ String _formatPrintfDouble(
   final locale = engine.numberLocale;
   final negative = !value.isNaN && value.isNegative;
   final requestedSign =
-      conversion.flags.contains(_PrintfFlag.sign)
+      _hasPrintfFlag(conversion.flags, _PrintfFlags.sign)
           ? '+'
-          : conversion.flags.contains(_PrintfFlag.space)
+          : _hasPrintfFlag(conversion.flags, _PrintfFlags.space)
           ? ' '
           : null;
   final sign = _localizedSign(negative, requestedSign, locale, context);
-  final left = conversion.flags.contains(_PrintfFlag.left);
+  final left = _hasPrintfFlag(conversion.flags, _PrintfFlags.left);
   final zero =
-      conversion.flags.contains(_PrintfFlag.zero) &&
+      _hasPrintfFlag(conversion.flags, _PrintfFlags.zero) &&
       !left &&
       !formatted.special;
   final spec = _FormatSpec(
     align: left ? '<' : null,
-    alternate: conversion.flags.contains(_PrintfFlag.alternate),
+    alternate: _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate),
     zero: zero,
     width: conversion.width,
     precision: conversion.precision,

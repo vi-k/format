@@ -47,11 +47,11 @@ final class _PrintfProcessor {
   }
 
   _ResolvedPrintfConversion _resolve(_PrintfConversionNode node) {
-    final flags = Set<_PrintfFlag>.of(node.flags);
+    var flags = node.flags;
     var width = _resolveOption(node, node.width, 'width');
     var precision = _resolveOption(node, node.precision, 'precision');
     if (width case final value? when value < 0) {
-      flags.add(_PrintfFlag.left);
+      flags |= _PrintfFlags.left;
       width = -value;
     }
     if (precision case final value? when value < 0) precision = null;

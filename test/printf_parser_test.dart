@@ -67,13 +67,11 @@ void main() {
     expect(debug, contains('type=d'));
   });
 
+  // Conversion flags are an immutable int bitmask by construction, so only
+  // the node list needs a mutation seam.
   test('keeps AST collections immutable', () {
     expect(
       () => debugClearPrintfTemplateNodes('%--d'),
-      throwsA(isA<UnsupportedError>()),
-    );
-    expect(
-      () => debugClearPrintfConversionFlags('%--d'),
       throwsA(isA<UnsupportedError>()),
     );
   });

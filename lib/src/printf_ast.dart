@@ -1,6 +1,16 @@
 part of 'engine.dart';
 
-enum _PrintfFlag { left, sign, space, alternate, zero }
+/// Printf flag bits. A conversion's flags travel as one immutable int so the
+/// hot path allocates no sets and tests membership with a mask.
+abstract final class _PrintfFlags {
+  static const int left = 1 << 0;
+  static const int sign = 1 << 1;
+  static const int space = 1 << 2;
+  static const int alternate = 1 << 3;
+  static const int zero = 1 << 4;
+}
+
+bool _hasPrintfFlag(int flags, int flag) => (flags & flag) != 0;
 
 sealed class _PrintfNode {
   final int offset;
@@ -37,18 +47,17 @@ final class _DynamicPrintfOption extends _PrintfOption {
 }
 
 final class _PrintfConversionNode extends _PrintfNode {
-  final Set<_PrintfFlag> flags;
+  final int flags;
   final _PrintfOption? width;
   final _PrintfOption? precision;
   final String type;
 
-  _PrintfConversionNode({
+  const _PrintfConversionNode({
     required int offset,
     required String fragment,
-    required Iterable<_PrintfFlag> flags,
+    required this.flags,
     required this.width,
     required this.precision,
     required this.type,
-  }) : flags = Set.unmodifiable(flags),
-       super(offset, fragment);
+  }) : super(offset, fragment);
 }

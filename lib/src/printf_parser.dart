@@ -7,14 +7,9 @@ _PrintfTemplate _parsePrintfTemplate(String template) =>
 String debugParsePrintfTemplate(String template) =>
     _parsePrintfTemplate(template).debugDescription();
 
-/// Mutation test seams. They are deliberately not exported by `format.dart`.
+/// Mutation test seam. It is deliberately not exported by `format.dart`.
 void debugClearPrintfTemplateNodes(String template) =>
     _parsePrintfTemplate(template).nodes.clear();
-
-void debugClearPrintfConversionFlags(String template) =>
-    _parsePrintfTemplate(
-      template,
-    ).nodes.whereType<_PrintfConversionNode>().first.flags.clear();
 
 final class _PrintfParser {
   final String template;
@@ -52,11 +47,11 @@ final class _PrintfParser {
       throw _invalid(offset, _index, 'A percent token must have a type.');
     }
 
-    final flags = <_PrintfFlag>{};
+    var flags = 0;
     while (_index < template.length) {
-      final flag = _flagFor(template.codeUnitAt(_index));
-      if (flag == null) break;
-      flags.add(flag);
+      final flag = _flagBitFor(template.codeUnitAt(_index));
+      if (flag == 0) break;
+      flags |= flag;
       _index++;
     }
 
@@ -135,31 +130,27 @@ final class _PrintfParser {
 
   void _validate(_PrintfConversionNode node) {
     final allowedFlags = switch (node.type) {
-      'c' || 's' => const {_PrintfFlag.left},
-      'd' || 'i' => const {
-        _PrintfFlag.left,
-        _PrintfFlag.sign,
-        _PrintfFlag.space,
-        _PrintfFlag.zero,
-      },
-      'u' => const {_PrintfFlag.left, _PrintfFlag.zero},
+      'c' || 's' => _PrintfFlags.left,
+      'd' || 'i' =>
+        _PrintfFlags.left |
+            _PrintfFlags.sign |
+            _PrintfFlags.space |
+            _PrintfFlags.zero,
+      'u' => _PrintfFlags.left | _PrintfFlags.zero,
       'o' ||
       'x' ||
-      'X' => const {_PrintfFlag.left, _PrintfFlag.alternate, _PrintfFlag.zero},
-      'a' || 'A' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' => const {
-        _PrintfFlag.left,
-        _PrintfFlag.sign,
-        _PrintfFlag.space,
-        _PrintfFlag.alternate,
-        _PrintfFlag.zero,
-      },
-      '%' => const <_PrintfFlag>{},
+      'X' => _PrintfFlags.left | _PrintfFlags.alternate | _PrintfFlags.zero,
+      'a' || 'A' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' =>
+        _PrintfFlags.left |
+            _PrintfFlags.sign |
+            _PrintfFlags.space |
+            _PrintfFlags.alternate |
+            _PrintfFlags.zero,
+      '%' => 0,
       _ => throw StateError('Unsupported printf conversion ${node.type}.'),
     };
 
-    final hasInvalidFlag = node.flags.any(
-      (flag) => !allowedFlags.contains(flag),
-    );
+    final hasInvalidFlag = (node.flags & ~allowedFlags) != 0;
     final invalidWidth = node.type == '%' && node.width != null;
     final invalidPrecision =
         (node.type == 'c' || node.type == '%') && node.precision != null;
@@ -184,13 +175,13 @@ final class _PrintfParser {
     return codeUnit >= 0x30 && codeUnit <= 0x39;
   }
 
-  _PrintfFlag? _flagFor(int codeUnit) => switch (codeUnit) {
-    0x2d => _PrintfFlag.left,
-    0x2b => _PrintfFlag.sign,
-    0x20 => _PrintfFlag.space,
-    0x23 => _PrintfFlag.alternate,
-    0x30 => _PrintfFlag.zero,
-    _ => null,
+  int _flagBitFor(int codeUnit) => switch (codeUnit) {
+    0x2d => _PrintfFlags.left,
+    0x2b => _PrintfFlags.sign,
+    0x20 => _PrintfFlags.space,
+    0x23 => _PrintfFlags.alternate,
+    0x30 => _PrintfFlags.zero,
+    _ => 0,
   };
 
   bool _isLengthModifier(String value) =>
@@ -311,17 +302,17 @@ extension on _PrintfTemplate {
           'precision=${_debugOption(precision)},type=$type)',
   };
 
-  String _debugFlags(Set<_PrintfFlag> flags) {
+  String _debugFlags(int flags) {
     const ordered = [
-      (_PrintfFlag.left, '-'),
-      (_PrintfFlag.sign, '+'),
-      (_PrintfFlag.space, ' '),
-      (_PrintfFlag.alternate, '#'),
-      (_PrintfFlag.zero, '0'),
+      (_PrintfFlags.left, '-'),
+      (_PrintfFlags.sign, '+'),
+      (_PrintfFlags.space, ' '),
+      (_PrintfFlags.alternate, '#'),
+      (_PrintfFlags.zero, '0'),
     ];
     return [
       for (final (flag, symbol) in ordered)
-        if (flags.contains(flag)) symbol,
+        if (_hasPrintfFlag(flags, flag)) symbol,
     ].join();
   }
 
