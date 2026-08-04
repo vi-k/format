@@ -111,8 +111,8 @@ BenchmarkDurations? durations})` — по образцу
 
 ```dart
 final class BenchmarkDurations {
-  final int warmupMillis;   // quick: 60,  full: 100
-  final int measureMillis;  // quick: 250, full: 2000
+  final int warmupMillis;   // quick: 50,  full: 100
+  final int measureMillis;  // quick: 180, full: 2000
 }
 ```
 
@@ -123,8 +123,8 @@ harness, другие минимумы.
 CLI: без флагов — quick; `--full` — точный режим. Другие аргументы —
 ошибка с подсказкой.
 
-Оценка: 30 строк значений; полные строки — 4 раннера, brace-only — 2,
-итого ~106 измерений × ~0.31 с ≈ 33 с (quick); `--full` ≈ 3.7 мин.
+Оценка: 26 строк сценариев; полные строки — 4 раннера, brace-only — 2,
+итого ~106 измерений; с константами quick 50/180 ms — 44.2 с; `--full` ≈ 4 мин.
 
 ## Вывод
 
