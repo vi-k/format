@@ -167,4 +167,39 @@ void main() {
       ],
     );
   });
+
+  test('printf integers compile to int ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '%d|%10d|%-10d|%010d|%+d|% d|%#x|%#o|%.3d|%*d|%u|%X',
+        printf: true,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'int:d',
+        'literal',
+        'int:d:w10',
+        'literal',
+        'int:d:w10',
+        'literal',
+        'int:d:w10',
+        'literal',
+        'int:d',
+        'literal',
+        'int:d',
+        'literal',
+        'int:x',
+        'literal',
+        'int:o',
+        'literal',
+        'int:d:p3',
+        'literal',
+        'int:d:w*',
+        'literal',
+        'int:u',
+        'literal',
+        'int:X',
+      ],
+    );
+  });
 }

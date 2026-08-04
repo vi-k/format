@@ -199,4 +199,58 @@ void main() {
     expectPrintfParity('%*s', ['not int', 'dyn']);
     expectPrintfParity('%s', []);
   });
+
+  test('printf int op matches the legacy path', () {
+    const templates = [
+      '%d',
+      '%i',
+      '%10d',
+      '%-10d',
+      '%010d',
+      '%+d',
+      '% d',
+      '%+010d',
+      '%u',
+      '%o',
+      '%#o',
+      '%x',
+      '%#x',
+      '%X',
+      '%#X',
+      '%.5d',
+      '%10.5d',
+      '%-10.5d',
+      '%.0d',
+      '%#.0o',
+      '%#o',
+      '%08x',
+    ];
+    final values = <Object?>[
+      0,
+      1,
+      -1,
+      42,
+      -42,
+      9007199254740991,
+      -9007199254740991,
+      BigInt.parse('123456789012345678901234567890'),
+      BigInt.parse('-123456789012345678901234567890'),
+      'nope',
+      3.5,
+      null,
+    ];
+    for (final template in templates) {
+      for (final value in values) {
+        expectPrintfParity(template, [value]);
+      }
+    }
+    for (final width in [0, 5, -5, 100001]) {
+      expectPrintfParity('%*d', [width, 42]);
+      expectPrintfParity('%0*d', [width, 42]);
+    }
+    for (final precision in [0, 5, -1, 100001]) {
+      expectPrintfParity('%.*d', [precision, 42]);
+    }
+    expectPrintfParity('%*.*d', [10, 4, -42]);
+  });
 }

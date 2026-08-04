@@ -626,6 +626,171 @@ final class _PrintfStringOp extends _PrintfOp {
   }
 }
 
+/// Hot op for `d/i/u/o/x/X`. Width/precision resolution mirrors
+/// `_PrintfStringOp`; the value branch (int vs. BigInt) mirrors
+/// `_formatPrintfInteger`, writing digits straight into the sink instead of
+/// building an intermediate string.
+final class _PrintfIntOp extends _PrintfOp {
+  final _PrintfConversionNode node;
+  final int valueArgIndex;
+  final bool left;
+  final bool hasWidth;
+  final int staticWidth; // meaningful when hasWidth && widthArgIndex < 0
+  final int widthArgIndex; // -1 static
+  final bool hasPrecision;
+  final int staticPrecision;
+  final int precisionArgIndex; // -1 static
+  final String type; // d i u o x X
+  final int radix;
+  final bool uppercase;
+  final bool signed; // false for 'u'
+  final bool alternate;
+  final bool spaceFlag;
+  final bool signFlag;
+  final bool zeroFlag;
+
+  const _PrintfIntOp({
+    required this.node,
+    required this.valueArgIndex,
+    required this.left,
+    required this.hasWidth,
+    required this.staticWidth,
+    required this.widthArgIndex,
+    required this.hasPrecision,
+    required this.staticPrecision,
+    required this.precisionArgIndex,
+    required this.type,
+    required this.radix,
+    required this.uppercase,
+    required this.signed,
+    required this.alternate,
+    required this.spaceFlag,
+    required this.signFlag,
+    required this.zeroFlag,
+  });
+
+  @override
+  void write(CharSink sink, _PrintfProcessor frame) {
+    var effectiveLeft = left;
+    int? width;
+    if (hasWidth) {
+      var resolved =
+          widthArgIndex < 0
+              ? staticWidth
+              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
+      if (resolved < 0) {
+        effectiveLeft = true;
+        resolved = -resolved;
+      }
+      width = resolved;
+    }
+    int? precision;
+    if (hasPrecision) {
+      final resolved =
+          precisionArgIndex < 0
+              ? staticPrecision
+              : _resolveIrPrintfOption(
+                frame,
+                node,
+                precisionArgIndex,
+                'precision',
+              );
+      if (resolved >= 0) precision = resolved;
+    }
+    final argument = frame._argumentAt(valueArgIndex, node);
+    late final bool negative;
+    late final bool isZero;
+    var magnitudeString = ''; // BigInt branch only
+    var digitCount = 0;
+    var bigInt = false;
+    var intValue = 0; // int branch only; avoids re-casting argument below
+    if (argument is int && _isIntegerValue(argument)) {
+      intValue = argument;
+      negative = argument.isNegative;
+      isZero = argument == 0;
+      digitCount = CharSink.digitCount(argument, radix);
+    } else if (argument is BigInt) {
+      bigInt = true;
+      negative = argument.isNegative;
+      isZero = argument == BigInt.zero;
+      magnitudeString = formatMagnitude(
+        negative ? -argument : argument,
+        radix,
+        uppercase: uppercase,
+      );
+      digitCount = magnitudeString.length;
+    } else {
+      throw UnsupportedFormatValueException(_valueContext(frame), argument);
+    }
+    if (!signed && negative) {
+      throw UnsupportedFormatValueException(_valueContext(frame), argument);
+    }
+
+    // digits='' for zero with precision 0, as in _formatPrintfInteger.
+    var effectiveDigits = digitCount;
+    if (isZero && precision == 0) effectiveDigits = 0;
+    final zeroPad =
+        precision != null && precision > effectiveDigits
+            ? precision - effectiveDigits
+            : 0;
+    // Alternate prefix rules from _formatPrintfInteger: octal adds '0'
+    // unless the digits already start with '0'; hex adds 0x/0X unless zero.
+    final digitsStartWithZero = zeroPad > 0 || (isZero && effectiveDigits > 0);
+    final prefix = switch (type) {
+      'o' when alternate && !digitsStartWithZero => '0',
+      'x' when alternate && !isZero => '0x',
+      'X' when alternate && !isZero => '0X',
+      _ => '',
+    };
+    final signChar =
+        signed && negative
+            ? 0x2d
+            : signFlag
+            ? 0x2b
+            : spaceFlag
+            ? 0x20
+            : 0;
+    final zero = zeroFlag && !effectiveLeft && precision == null;
+    final content =
+        effectiveDigits + zeroPad + prefix.length + (signChar == 0 ? 0 : 1);
+    final padding = width == null ? 0 : width - content;
+    final fillChar = zero ? 0x30 : 0x20;
+    final align =
+        effectiveLeft
+            ? 0x3c
+            : zero
+            ? 0x3d
+            : 0x3e;
+
+    if (align == 0x3e) sink.fill(fillChar, padding);
+    if (signChar != 0) sink.writeCharCode(signChar);
+    if (prefix.isNotEmpty) sink.writeString(prefix);
+    if (align == 0x3d) sink.fill(fillChar, padding);
+    sink.fill(0x30, zeroPad);
+    if (effectiveDigits > 0) {
+      if (bigInt) {
+        sink.writeString(magnitudeString);
+      } else {
+        sink.writeMagnitude(intValue, radix, uppercase: uppercase);
+      }
+    }
+    if (align == 0x3c) sink.fill(fillChar, padding);
+  }
+
+  FormatExceptionContext _valueContext(_PrintfProcessor frame) =>
+      _printfContext(frame.template, node, argumentIndex: valueArgIndex);
+
+  @override
+  String describe() {
+    final buffer = StringBuffer('int:$type');
+    if (hasWidth) buffer.write(widthArgIndex < 0 ? ':w$staticWidth' : ':w*');
+    if (hasPrecision) {
+      buffer.write(precisionArgIndex < 0 ? ':p$staticPrecision' : ':p*');
+    }
+    return buffer.toString();
+  }
+}
+
 _PrintfOp? _classifyPrintfConversion(
   _PrintfConversionNode node,
   int widthArgIndex,
@@ -664,6 +829,51 @@ _PrintfOp? _classifyPrintfConversion(
       staticPrecision: staticPrecision,
       precisionArgIndex: precisionArgIndex,
       textUnit: textUnit,
+    );
+  }
+  if (const {'d', 'i', 'u', 'o', 'x', 'X'}.contains(node.type)) {
+    final width = node.width;
+    final precision = node.precision;
+    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
+    var staticWidth = 0;
+    if (width case _LiteralPrintfOption(:final value)) {
+      if (value < -_maximumSafePrintfOption ||
+          value > _maximumSafePrintfOption) {
+        return null; // Unsafe static width keeps today's per-call error.
+      }
+      staticWidth = value < 0 ? -value : value;
+      if (value < 0) left = true;
+    }
+    var staticPrecision = 0;
+    var hasPrecision = precision != null;
+    if (precision case _LiteralPrintfOption(:final value)) {
+      if (value > _maximumSafePrintfOption) return null;
+      if (value < 0) hasPrecision = false;
+      staticPrecision = value < 0 ? 0 : value;
+    }
+    final type = node.type;
+    return _PrintfIntOp(
+      node: node,
+      valueArgIndex: valueArgIndex,
+      left: left,
+      hasWidth: width != null,
+      staticWidth: staticWidth,
+      widthArgIndex: widthArgIndex,
+      hasPrecision: hasPrecision,
+      staticPrecision: staticPrecision,
+      precisionArgIndex: precisionArgIndex,
+      type: type,
+      radix: switch (type) {
+        'o' => 8,
+        'x' || 'X' => 16,
+        _ => 10,
+      },
+      uppercase: type == 'X',
+      signed: type == 'd' || type == 'i',
+      alternate: _hasPrintfFlag(node.flags, _PrintfFlags.alternate),
+      spaceFlag: _hasPrintfFlag(node.flags, _PrintfFlags.space),
+      signFlag: _hasPrintfFlag(node.flags, _PrintfFlags.sign),
+      zeroFlag: _hasPrintfFlag(node.flags, _PrintfFlags.zero),
     );
   }
   return null;
