@@ -33,6 +33,19 @@ void main() {
     expect(first.brace, '{}');
     expect(first.sprintf, '%d');
     expect(first.cases.first.$2, '0');
+
+    final char = benchmarkScenarios.singleWhere((s) => s.brace == '{:c}');
+    expect(char.sprintf, '%c');
+    expect(char.skipSprintf7, isTrue);
+
+    final scientific = benchmarkScenarios.singleWhere((s) => s.brace == '{:e}');
+    expect(scientific.sprintf, '%e');
+    expect(scientific.skipSprintf7, isTrue);
+    expect(scientific.skipLegacy, isTrue);
+
+    final integer = benchmarkScenarios.singleWhere((s) => s.brace == '{:d}');
+    expect(integer.cases.last.$1, [-9223372036854775808]);
+    expect(integer.cases.last.$2, '-9223372036854775808');
   });
 
   test('double modes benchmark prints results and timing for both modes', () {
@@ -98,8 +111,8 @@ void main() {
   }
 
   test('benchmark durations default to quick and switch to full', () {
-    expect(BenchmarkDurations.quick.warmupMillis, 50);
-    expect(BenchmarkDurations.quick.measureMillis, 180);
+    expect(BenchmarkDurations.quick.warmupMillis, 45);
+    expect(BenchmarkDurations.quick.measureMillis, 165);
     expect(BenchmarkDurations.full.warmupMillis, 100);
     expect(BenchmarkDurations.full.measureMillis, 2000);
 
@@ -119,7 +132,8 @@ void main() {
     );
   });
 
-  test('comparison benchmark skips missing runners and stays clean', () {
+  test('comparison benchmark skips unsupported runners and shows only the '
+      'known sprintf7 error', () {
     final lines = <String>[];
 
     runComparisonBenchmark(
@@ -131,8 +145,13 @@ void main() {
     expect(output, contains('{:b}'));
     expect(output, contains(': —'));
     expect(output, contains('OK'));
-    expect(output, isNot(contains('ERROR')));
     expect(output, contains('Mode: quick'));
     expect(output, contains('Total:'));
+
+    final errors = lines.where((line) => line.contains('ERROR')).toList();
+    expect(errors, hasLength(1));
+    final plain = errors.single.replaceAll(RegExp('\x1B\\[[0-9;]*m'), '');
+    expect(plain, contains('sprintf 7.0'));
+    expect(plain, contains('--9223372036854775808'));
   });
 }

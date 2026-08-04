@@ -9,6 +9,9 @@ final class BenchmarkSprintf7 extends MyBenchmarkBase {
   bool get isSprintf => true;
 
   @override
+  bool get isSprintf7 => true;
+
+  @override
   void run() {
     sprintf7.sprintf(template, values); // 1
     sprintf7.sprintf(template, values); // 2

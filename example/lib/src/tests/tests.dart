@@ -2,12 +2,14 @@ final class BenchmarkScenario {
   final String? brace;
   final String? sprintf;
   final bool skipLegacy;
+  final bool skipSprintf7;
   final List<(List<Object?>, String)> cases;
 
   const BenchmarkScenario({
     required this.brace,
     required this.sprintf,
     this.skipLegacy = false,
+    this.skipSprintf7 = false,
     required this.cases,
   });
 }
@@ -21,12 +23,16 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([9223372036854775807], '9223372036854775807'),
     ],
   ),
+  // The minimum int case deliberately stays on all four runners: sprintf7
+  // prints a double minus ("--9223372036854775808"), and the benchmark
+  // shows that ERROR so users can see the competitor's incorrect output.
   BenchmarkScenario(
     brace: '{:d}',
     sprintf: '%d',
     cases: [
       ([9223372036854775807], '9223372036854775807'),
       ([-12345], '-12345'),
+      ([-9223372036854775808], '-9223372036854775808'),
     ],
   ),
   BenchmarkScenario(
@@ -94,11 +100,11 @@ final benchmarkScenarios = <BenchmarkScenario>[
     ],
   ),
   // Oracle: sprintf7_baseline throws "Unknown format type c" for %c, while
-  // format3's own printf3 engine supports it. Only sprintf7 disagrees among
-  // printf engines, so the sprintf template is nulled per the spec rule.
+  // format3's own printf engine supports it and agrees ("A").
   BenchmarkScenario(
     brace: '{:c}',
-    sprintf: null,
+    sprintf: '%c',
+    skipSprintf7: true,
     cases: [
       ([65], 'A'),
     ],
@@ -120,17 +126,18 @@ final benchmarkScenarios = <BenchmarkScenario>[
   ),
   // Oracle: with no explicit precision, format3's default DoubleFormatMode
   // (dartSdk) renders 'e' with the shortest round-tripping mantissa and an
-  // unpadded exponent ("1.23456789e+4"), while legacy 2.0 and sprintf7 both
-  // default to a fixed 6-digit mantissa with sprintf7 also zero-padding the
-  // exponent ("1.234568e+4" / "1.234568e+04"). This is a systematic default
-  // policy difference (confirmed by brute-force search: no replacement
-  // value makes all four engines agree), so legacy 2.0 is skipped and the
-  // sprintf template is nulled, leaving format3's own output as the
+  // unpadded exponent ("1.23456789e+4") in both syntaxes, while legacy 2.0
+  // and sprintf7 both default to a fixed 6-digit mantissa with sprintf7
+  // also zero-padding the exponent ("1.234568e+4" / "1.234568e+04"). This
+  // is a systematic default policy difference (confirmed by brute-force
+  // search: no replacement value makes all four engines agree), so legacy
+  // 2.0 and sprintf7 are skipped, leaving format3's own output as the
   // expected value.
   BenchmarkScenario(
     brace: '{:e}',
-    sprintf: null,
+    sprintf: '%e',
     skipLegacy: true,
+    skipSprintf7: true,
     cases: [
       ([12345.6789], '1.23456789e+4'),
     ],

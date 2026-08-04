@@ -53,7 +53,10 @@ void runComparisonBenchmark({
       for (final benchmark in benchmarks) {
         final template =
             benchmark.isSprintf ? scenario.sprintf : scenario.brace;
-        if (template == null || (benchmark.isLegacy && scenario.skipLegacy)) {
+        final skipped = template == null ||
+            (benchmark.isLegacy && scenario.skipLegacy) ||
+            (benchmark.isSprintf7 && scenario.skipSprintf7);
+        if (skipped) {
           emit('${accent(benchmark.name)}: —');
           continue;
         }

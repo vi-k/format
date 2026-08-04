@@ -10,7 +10,7 @@ final class BenchmarkDurations {
   });
 
   static const quick =
-      BenchmarkDurations(warmupMillis: 50, measureMillis: 180);
+      BenchmarkDurations(warmupMillis: 45, measureMillis: 165);
   static const full =
       BenchmarkDurations(warmupMillis: 100, measureMillis: 2000);
 }
@@ -26,6 +26,8 @@ abstract base class MyBenchmarkBase extends BenchmarkBase {
   bool get isSprintf;
 
   bool get isLegacy => false;
+
+  bool get isSprintf7 => false;
 
   @override
   double measure() {
