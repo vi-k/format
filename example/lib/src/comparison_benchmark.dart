@@ -40,34 +40,31 @@ void runComparisonBenchmark({
   }
 
   final stopwatch = Stopwatch()..start();
-  for (final template in testData) {
-    final formatTemplate = template.$1;
-    final sprintfTemplate = template.$2;
-
+  for (final scenario in benchmarkScenarios) {
     emit('');
     emit(h1('----------------------------------------'));
-    emit('Format template: ${h1(formatTemplate)}');
-    emit('Sprintf template: ${h1(sprintfTemplate)}');
+    emit('Format template: ${h1(scenario.brace ?? '—')}');
+    emit('Sprintf template: ${h1(scenario.sprintf ?? '—')}');
 
-    for (final test in template.$3) {
-      final values = test.$1;
-      final result = test.$2;
-
+    for (final (values, expected) in scenario.cases) {
       emit('');
       emit('Values: ${h2(values.join(', '))}');
 
       for (final benchmark in benchmarks) {
+        final template =
+            benchmark.isSprintf ? scenario.sprintf : scenario.brace;
+        if (template == null || (benchmark.isLegacy && scenario.skipLegacy)) {
+          emit('${accent(benchmark.name)}: —');
+          continue;
+        }
         try {
-          final score = benchmark.go(
-            benchmark.isSprintf ? sprintfTemplate : formatTemplate,
-            values,
-          );
+          final score = benchmark.go(template, values);
 
           String message;
-          if (benchmark.output == result) {
+          if (benchmark.output == expected) {
             message = ok('OK');
           } else {
-            final difference = _diff(result, benchmark.output);
+            final difference = _diff(expected, benchmark.output);
             message =
                 '${accentError('ERROR')}'
                 '\n  expected: ${difference.$1}'

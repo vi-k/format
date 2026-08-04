@@ -25,6 +25,8 @@ abstract base class MyBenchmarkBase extends BenchmarkBase {
 
   bool get isSprintf;
 
+  bool get isLegacy => false;
+
   @override
   double measure() {
     setup();

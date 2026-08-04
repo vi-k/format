@@ -16,12 +16,23 @@ void main() {
     expect(printf.output, '42');
   });
 
-  test('restored matrix keeps separate brace and printf templates', () {
-    final scenario = testData.first;
+  test('comparison matrix covers common builtin scenarios', () {
+    expect(benchmarkScenarios, hasLength(26));
 
-    expect(scenario.$1, '{}');
-    expect(scenario.$2, '%d');
-    expect(scenario.$3.first.$2, '0');
+    final braces = benchmarkScenarios.map((s) => s.brace).toList();
+    expect(braces, contains('{:b}'));
+    expect(braces, contains('{:,d}'));
+    expect(braces, contains('{:é^10s}'));
+    expect(braces, contains('{:d} ' * 10));
+    expect(braces, isNot(contains('{:10d} ' * 10)));
+
+    final binary = benchmarkScenarios.singleWhere((s) => s.brace == '{:b}');
+    expect(binary.sprintf, isNull);
+
+    final first = benchmarkScenarios.first;
+    expect(first.brace, '{}');
+    expect(first.sprintf, '%d');
+    expect(first.cases.first.$2, '0');
   });
 
   test('double modes benchmark prints results and timing for both modes', () {
@@ -108,7 +119,7 @@ void main() {
     );
   });
 
-  test('comparison benchmark reports scores and total time', () {
+  test('comparison benchmark skips missing runners and stays clean', () {
     final lines = <String>[];
 
     runComparisonBenchmark(
@@ -117,8 +128,10 @@ void main() {
     );
 
     final output = lines.join('\n');
-    expect(output, contains('Format template:'));
+    expect(output, contains('{:b}'));
+    expect(output, contains(': —'));
     expect(output, contains('OK'));
+    expect(output, isNot(contains('ERROR')));
     expect(output, contains('Mode: quick'));
     expect(output, contains('Total:'));
   });

@@ -8,6 +8,9 @@ final class BenchmarkFormat2Format extends MyBenchmarkBase {
   bool get isSprintf => false;
 
   @override
+  bool get isLegacy => true;
+
+  @override
   void run() {
     legacyFormat(template, values); // 1
     legacyFormat(template, values); // 2
