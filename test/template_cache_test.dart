@@ -7,6 +7,8 @@ import 'package:test/test.dart';
 import '../lib/src/engine.dart' as engine;
 // ignore: avoid_relative_lib_imports
 import '../lib/src/errors.dart';
+// ignore: avoid_relative_lib_imports
+import '../lib/src/text_unit.dart';
 
 void main() {
   setUp(engine.debugClearTemplateCaches);
@@ -52,5 +54,42 @@ void main() {
     expect(engine.sprintf('%10d', 1), '         1');
     expect(engine.sprintf('%10d', 1), '         1');
     expect(engine.debugPrintfTemplateCacheSize(), 1);
+  });
+
+  test('memoizes static specifications per text unit', () {
+    final graphemes = engine.Format(textUnit: TextUnit.graphemeClusters);
+    final scalars = engine.Format(); // default: TextUnit.unicodeScalars
+    // 'e' + combining U+0301: one grapheme cluster but two scalars, so the
+    // specification is valid with grapheme fill and invalid with scalars.
+    // A precomposed U+00E9 literal would be valid in both modes and could
+    // not tell the two memo slots apart.
+    const template = '{:e\u0301^6s}';
+
+    expect(graphemes.format(template, 'ab'), 'e\u0301e\u0301abe\u0301e\u0301');
+    expect(
+      () => scalars.format(template, 'ab'),
+      throwsA(isA<FormattingException>()),
+    );
+    expect(graphemes.format(template, 'ab'), 'e\u0301e\u0301abe\u0301e\u0301');
+    expect(
+      () => scalars.format(template, 'ab'),
+      throwsA(isA<FormattingException>()),
+    );
+  });
+
+  test('resolves dynamic specifications on every call', () {
+    expect(engine.format('{:{}d}', 42, 6), '    42');
+    expect(engine.format('{:{}d}', 42, 8), '      42');
+  });
+
+  test('invalid static specification throws on every call', () {
+    expect(
+      () => engine.format('{:.d}', 1),
+      throwsA(isA<FormattingException>()),
+    );
+    expect(
+      () => engine.format('{:.d}', 1),
+      throwsA(isA<FormattingException>()),
+    );
   });
 }

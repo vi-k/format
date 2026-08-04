@@ -47,17 +47,31 @@ final class _BraceProcessor {
               engine,
               _context(field, ''),
             );
+    final staticSpecification = _staticSpecificationText(field);
+    if (staticSpecification != null) {
+      final context = _context(field, staticSpecification);
+      var spec = field.memoizedSpec(engine.textUnit);
+      if (spec == null) {
+        spec = parseFormatSpec(staticSpecification, engine.textUnit, context);
+        field.memoizeSpec(engine.textUnit, spec);
+      }
+      return formatParsedValue(converted, spec, engine, context);
+    }
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);
     return formatValue(converted, specification, engine, context);
   }
 
-  String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {
+  String? _staticSpecificationText(_FieldNode field) {
     final specification = field.specification;
     if (specification.isEmpty) return '';
     if (specification case [_LiteralNode(:final text)]) return text;
+    return null;
+  }
+
+  String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {
     final output = StringBuffer();
-    for (final node in specification) {
+    for (final node in field.specification) {
       if (node case _LiteralNode(:final text)) {
         output.write(text);
       } else {

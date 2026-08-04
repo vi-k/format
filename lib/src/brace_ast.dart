@@ -48,6 +48,26 @@ final class _FieldNode extends _BraceNode {
   }) : accesses = _sealedInDebug(accesses),
        specification = _sealedInDebug(specification),
        super(offset, fragment);
+
+  // Lazily memoized parse of a static specification, one slot per TextUnit.
+  // Nodes are shared through the template cache, so the slots make repeated
+  // calls skip parseFormatSpec entirely. Failed parses are never memoized.
+  _FormatSpec? _scalarSpec;
+  _FormatSpec? _graphemeSpec;
+
+  _FormatSpec? memoizedSpec(TextUnit textUnit) => switch (textUnit) {
+    TextUnit.unicodeScalars => _scalarSpec,
+    TextUnit.graphemeClusters => _graphemeSpec,
+  };
+
+  void memoizeSpec(TextUnit textUnit, _FormatSpec spec) {
+    switch (textUnit) {
+      case TextUnit.unicodeScalars:
+        _scalarSpec = spec;
+      case TextUnit.graphemeClusters:
+        _graphemeSpec = spec;
+    }
+  }
 }
 
 sealed class _FieldRoot {

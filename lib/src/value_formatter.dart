@@ -5,9 +5,20 @@ String formatValue(
   String specification,
   Format engine,
   FormatExceptionContext context,
-) {
-  final spec = parseFormatSpec(specification, engine.textUnit, context);
+) => formatParsedValue(
+  value,
+  parseFormatSpec(specification, engine.textUnit, context),
+  engine,
+  context,
+);
 
+String formatParsedValue(
+  Object? value,
+  // ignore: library_private_types_in_public_api
+  _FormatSpec spec,
+  Format engine,
+  FormatExceptionContext context,
+) {
   if (spec.customName case final name?) {
     _validateCustomLayout(spec, context);
     return _formatExplicitCustom(value, name, spec, engine, context);
