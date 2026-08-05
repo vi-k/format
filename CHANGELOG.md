@@ -26,6 +26,9 @@
 * Replaced `formatNamed` with `formatWith`; direct `format` and `sprintf` calls
   now accept up to ten values, while their collection-based counterparts are
   `formatWith` and `vsprintf`.
+* Formatting exceptions render their type, payload, and full template context
+  in `toString()`, and a value whose own `toString()` throws is reported
+  safely.
 
 ## 2.0.0
 
