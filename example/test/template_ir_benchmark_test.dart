@@ -18,6 +18,8 @@ void main() {
     expect(output, contains('compatible'));
     // Grouping keeps doubles on the legacy tail: the new fallback control.
     expect(output, contains('{:,.2f}'));
+    // Zero padding fitted to the grouped width stays on the legacy tail too.
+    expect(output, contains('{:010,d}'));
     expect(output, isNot(contains('RESULTS DIFFER')));
     final verdicts =
         lines.where(
@@ -26,7 +28,7 @@ void main() {
               line.contains('LEGACY FASTER') ||
               line.contains('PERFORMANCE EQUAL'),
         );
-    expect(verdicts.length, 15);
+    expect(verdicts.length, 16);
   });
 
   test('template IR benchmark validates its options', () {

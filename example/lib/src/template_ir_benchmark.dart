@@ -196,6 +196,19 @@ final _scenarios = <_IrScenario>[
       positional: const [1234567.891],
     ),
   ),
+  // --- fallback-control: zero padding fitted to the grouped width keeps an
+  // integer on the legacy tail; both sides share formatBraceInteger with the
+  // fitRegroupedZeroPadding binary search, so the A/B must stay EQUAL.
+  _IrScenario(
+    label: '{:010,d}',
+    kind: 'fallback-control',
+    ir: () => formatWith('{:010,d}', positional: const [1234]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{:010,d}',
+      defaultFormat,
+      positional: const [1234],
+    ),
+  ),
   // --- fallback-control: multi-code-unit fill on a grapheme-cluster engine.
   // The fill is 'e' + combining U+0301, written as an explicit escape so it
   // stays two code units regardless of source normalization; a precomposed

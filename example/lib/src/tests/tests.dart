@@ -99,6 +99,16 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([1234567], '1,234,567'),
     ],
   ),
+  // Zero padding fitted to the grouped width (Python semantics): the
+  // regression scenario for the fitRegroupedZeroPadding integer fix.
+  // Format 2.0 produces the same output, so the legacy runner stays on.
+  BenchmarkScenario(
+    brace: '{:010,d}',
+    sprintf: null,
+    cases: [
+      ([1234], '00,001,234'),
+    ],
+  ),
   // Oracle: sprintf7_baseline throws "Unknown format type c" for %c, while
   // format3's own printf engine supports it and agrees ("A").
   BenchmarkScenario(

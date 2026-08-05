@@ -17,17 +17,28 @@ void main() {
   });
 
   test('comparison matrix covers common builtin scenarios', () {
-    expect(benchmarkScenarios, hasLength(27));
+    expect(benchmarkScenarios, hasLength(28));
 
     final braces = benchmarkScenarios.map((s) => s.brace).toList();
     expect(braces, contains('{:b}'));
     expect(braces, contains('{:,d}'));
+    expect(braces, contains('{:010,d}'));
     expect(braces, contains('{:é^10s}'));
     expect(braces, contains('{:d} ' * 10));
     expect(braces, isNot(contains('{:10d} ' * 10)));
 
     final binary = benchmarkScenarios.singleWhere((s) => s.brace == '{:b}');
     expect(binary.sprintf, isNull);
+
+    // Zero padding fitted to the grouped width: the regression scenario for
+    // the fitRegroupedZeroPadding fix; format 2.0 agrees on the output.
+    final groupedZero = benchmarkScenarios.singleWhere(
+      (s) => s.brace == '{:010,d}',
+    );
+    expect(groupedZero.sprintf, isNull);
+    expect(groupedZero.skipLegacy, isFalse);
+    expect(groupedZero.cases.single.$1, [1234]);
+    expect(groupedZero.cases.single.$2, '00,001,234');
 
     final first = benchmarkScenarios.first;
     expect(first.brace, '{}');
