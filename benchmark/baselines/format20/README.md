@@ -22,7 +22,7 @@ git show 86febb4:lib/src/utils/utils.dart
 
 ## Scope and mechanical namespacing
 
-`format2.dart` exposes only `legacyFormat(String, List<Object?>)`. The copied
+`format20.dart` exposes only `legacyFormat(String, List<Object?>)`. The copied
 implementation keeps the Format 2 positional parser and its string, character,
 integer, and double built-ins used by the benchmark scenarios. Named arguments,
 formatter registration, and the `n` formatter are omitted because they are not

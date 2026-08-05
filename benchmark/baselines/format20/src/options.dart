@@ -1,4 +1,4 @@
-part of '../format2.dart';
+part of '../format20.dart';
 
 final class _Format2Options {
   String? all;

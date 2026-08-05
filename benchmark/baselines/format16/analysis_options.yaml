@@ -1,0 +1,5 @@
+# The materialized 1.6.0 source predates the current lints and must
+# stay exactly as published, so it is excluded from analysis.
+analyzer:
+  exclude:
+    - 'lib/src/format_base.dart'

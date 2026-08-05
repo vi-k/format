@@ -1,9 +1,9 @@
 import 'package:format/format.dart';
-import 'package:sprintf/sprintf.dart' as sprintf7;
+import 'package:sprintf/sprintf.dart' as sprintf70;
 
 // ignore: avoid_relative_lib_imports
 import '../packages/format_intl/lib/format_intl.dart';
-import 'baselines/format2/format2.dart';
+import 'baselines/format20/format20.dart';
 import 'model.dart';
 
 const _braceScalarTemplate = '{:.1s}';
@@ -606,8 +606,10 @@ BenchmarkScenario _printfComparable(
         ),
     baseline:
         (iteration) => _capture(
-          () =>
-              sprintf7.sprintf(templates[iteration % templates.length], values),
+          () => sprintf70.sprintf(
+            templates[iteration % templates.length],
+            values,
+          ),
         ),
   );
 }

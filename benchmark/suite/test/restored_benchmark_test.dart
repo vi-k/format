@@ -2,17 +2,21 @@ import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('restored benchmark exposes Format 3, Format 2 and sprintf engines', () {
-    final format3 = BenchmarkFormat3Format();
-    final format2 = BenchmarkFormat2Format();
-    final printf = BenchmarkSprintf7();
+  test('restored benchmark exposes Format 3, Format 2, Format 1.6 and '
+      'sprintf engines', () {
+    final format3 = BenchmarkFormat30Format();
+    final format2 = BenchmarkFormat20Format();
+    final format16 = BenchmarkFormat16Format();
+    final printf = BenchmarkSprintf70();
 
     format3.go('{:d}', [42]);
     format2.go('{:d}', [42]);
+    format16.go('{:d}', [42]);
     printf.go('%d', [42]);
 
     expect(format3.output, '42');
     expect(format2.output, '42');
+    expect(format16.output, '42');
     expect(printf.output, '42');
   });
 
@@ -36,7 +40,7 @@ void main() {
       (s) => s.brace == '{:010,d}',
     );
     expect(groupedZero.sprintf, isNull);
-    expect(groupedZero.skipLegacy, isFalse);
+    expect(groupedZero.skipFormat20, isFalse);
     expect(groupedZero.cases.single.$1, [1234]);
     expect(groupedZero.cases.single.$2, '00,001,234');
 
@@ -47,12 +51,12 @@ void main() {
 
     final char = benchmarkScenarios.singleWhere((s) => s.brace == '{:c}');
     expect(char.sprintf, '%c');
-    expect(char.skipSprintf7, isTrue);
+    expect(char.skipSprintf70, isTrue);
 
     final scientific = benchmarkScenarios.singleWhere((s) => s.brace == '{:e}');
     expect(scientific.sprintf, '%e');
-    expect(scientific.skipSprintf7, isTrue);
-    expect(scientific.skipLegacy, isTrue);
+    expect(scientific.skipSprintf70, isTrue);
+    expect(scientific.skipFormat20, isTrue);
 
     final integer = benchmarkScenarios.singleWhere((s) => s.brace == '{:d}');
     expect(integer.cases.last.$1, [-9223372036854775808]);
@@ -65,8 +69,8 @@ void main() {
     );
 
     expect(wide.sprintf, List.filled(50, '%d').join('|'));
-    expect(wide.skipLegacy, isFalse);
-    expect(wide.skipSprintf7, isFalse);
+    expect(wide.skipFormat20, isFalse);
+    expect(wide.skipSprintf70, isFalse);
     expect(wide.cases, hasLength(1));
     expect(wide.cases.single.$1, List<Object?>.generate(50, (index) => index));
     expect(
@@ -143,7 +147,7 @@ void main() {
     expect(BenchmarkDurations.full.warmupMillis, 100);
     expect(BenchmarkDurations.full.measureMillis, 2000);
 
-    final benchmark = BenchmarkFormat3Format();
+    final benchmark = BenchmarkFormat30Format();
     expect(benchmark.durations, BenchmarkDurations.quick);
     benchmark.durations = BenchmarkDurations.full;
     expect(benchmark.durations, BenchmarkDurations.full);

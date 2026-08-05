@@ -3,10 +3,11 @@ import 'dart:math';
 import 'package:format/format.dart';
 
 import 'benchmark_cold.dart';
-import 'benchmark_format2_format.dart';
-import 'benchmark_format3_format.dart';
-import 'benchmark_format3_sprintf.dart';
-import 'benchmark_sprintf7.dart';
+import 'benchmark_format16_format.dart';
+import 'benchmark_format20_format.dart';
+import 'benchmark_format30_format.dart';
+import 'benchmark_format30_sprintf.dart';
+import 'benchmark_sprintf70.dart';
 import 'double_modes_benchmark.dart' show BenchmarkLineWriter;
 import 'my_benchmark_base.dart';
 import 'tests/tests.dart';
@@ -32,10 +33,11 @@ void runComparisonBenchmark({
   final resolved = durations ?? parseBenchmarkArgs(args);
   final emit = writeLine ?? print;
   final benchmarks = [
-    BenchmarkSprintf7(),
-    BenchmarkFormat2Format(),
-    BenchmarkFormat3Format(),
-    BenchmarkFormat3Sprintf(),
+    BenchmarkSprintf70(),
+    BenchmarkFormat16Format(),
+    BenchmarkFormat20Format(),
+    BenchmarkFormat30Format(),
+    BenchmarkFormat30Sprintf(),
   ];
   for (final benchmark in benchmarks) {
     benchmark.durations = resolved;
@@ -57,8 +59,9 @@ void runComparisonBenchmark({
             benchmark.isSprintf ? scenario.sprintf : scenario.brace;
         final skipped =
             template == null ||
-            (benchmark.isLegacy && scenario.skipLegacy) ||
-            (benchmark.isSprintf7 && scenario.skipSprintf7);
+            (benchmark.isFormat20 && scenario.skipFormat20) ||
+            (benchmark.isSprintf70 && scenario.skipSprintf70) ||
+            (benchmark.isFormat16 && scenario.skipFormat16);
         if (skipped) {
           emit('${accent(benchmark.name)}: —');
           continue;
@@ -97,8 +100,8 @@ void runComparisonBenchmark({
   emit('Cold: unique template per call (no cache hits)');
   emit('');
   final coldBenchmarks = [
-    BenchmarkFormat3ColdFormat(),
-    BenchmarkFormat3ColdSprintf(),
+    BenchmarkFormat30ColdFormat(),
+    BenchmarkFormat30ColdSprintf(),
   ];
   for (final benchmark in coldBenchmarks) {
     benchmark.durations = resolved;

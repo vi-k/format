@@ -1,14 +1,14 @@
-import 'legacy_format_baseline.dart';
+import 'format20_baseline.dart';
 import 'my_benchmark_base.dart';
 
-final class BenchmarkFormat2Format extends MyBenchmarkBase {
-  BenchmarkFormat2Format() : super(name: 'format 2.0 → format');
+final class BenchmarkFormat20Format extends MyBenchmarkBase {
+  BenchmarkFormat20Format() : super(name: 'format 2.0 → format');
 
   @override
   bool get isSprintf => false;
 
   @override
-  bool get isLegacy => true;
+  bool get isFormat20 => true;
 
   @override
   void run() {

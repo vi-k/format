@@ -1,15 +1,17 @@
 final class BenchmarkScenario {
   final String? brace;
   final String? sprintf;
-  final bool skipLegacy;
-  final bool skipSprintf7;
+  final bool skipFormat20;
+  final bool skipSprintf70;
+  final bool skipFormat16;
   final List<(List<Object?>, String)> cases;
 
   const BenchmarkScenario({
     required this.brace,
     required this.sprintf,
-    this.skipLegacy = false,
-    this.skipSprintf7 = false,
+    this.skipFormat20 = false,
+    this.skipSprintf70 = false,
+    this.skipFormat16 = false,
     required this.cases,
   });
 }
@@ -114,7 +116,7 @@ final benchmarkScenarios = <BenchmarkScenario>[
   BenchmarkScenario(
     brace: '{:c}',
     sprintf: '%c',
-    skipSprintf7: true,
+    skipSprintf70: true,
     cases: [
       ([65], 'A'),
     ],
@@ -136,18 +138,19 @@ final benchmarkScenarios = <BenchmarkScenario>[
   ),
   // Oracle: with no explicit precision, format3's default DoubleFormatMode
   // (dartSdk) renders 'e' with the shortest round-tripping mantissa and an
-  // unpadded exponent ("1.23456789e+4") in both syntaxes, while legacy 2.0
-  // and sprintf7 both default to a fixed 6-digit mantissa with sprintf7
-  // also zero-padding the exponent ("1.234568e+4" / "1.234568e+04"). This
-  // is a systematic default policy difference (confirmed by brute-force
-  // search: no replacement value makes all four engines agree), so legacy
-  // 2.0 and sprintf7 are skipped, leaving format3's own output as the
-  // expected value.
+  // unpadded exponent ("1.23456789e+4") in both syntaxes, while pub 1.6,
+  // legacy 2.0 and sprintf7 all default to a fixed 6-digit mantissa with
+  // sprintf7 also zero-padding the exponent ("1.234568e+4" /
+  // "1.234568e+04"). This is a systematic default policy difference
+  // (confirmed by brute-force search: no replacement value makes the
+  // engines agree), so the competitors are skipped, leaving format3's own
+  // output as the expected value.
   BenchmarkScenario(
     brace: '{:e}',
     sprintf: '%e',
-    skipLegacy: true,
-    skipSprintf7: true,
+    skipFormat20: true,
+    skipSprintf70: true,
+    skipFormat16: true,
     cases: [
       ([12345.6789], '1.23456789e+4'),
     ],
@@ -171,13 +174,15 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([1234567890123.0], '1.23e+12'),
     ],
   ),
-  // Oracle: legacy 2.0's format spec regex has no '%' presentation type, so
-  // '{:%}' fails to match and is left untouched ("{:%}" literal) instead of
-  // being formatted. Only legacy 2.0 disagrees, so it is skipped.
+  // Oracle: the 1.6/2.0 format spec regex has no '%' presentation type, so
+  // '{:%}' fails to match and is left untouched ("{:%}" literal) instead
+  // of being formatted. Both older engines disagree identically, so both
+  // are skipped.
   BenchmarkScenario(
     brace: '{:%}',
     sprintf: null,
-    skipLegacy: true,
+    skipFormat20: true,
+    skipFormat16: true,
     cases: [
       ([0.756], '75.600000%'),
     ],

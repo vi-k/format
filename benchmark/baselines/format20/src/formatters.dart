@@ -1,4 +1,4 @@
-part of '../format2.dart';
+part of '../format20.dart';
 
 String _format2Cut(String source, int width) {
   if (source.characters.length <= width) return source;

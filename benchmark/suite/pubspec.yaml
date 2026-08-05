@@ -12,6 +12,8 @@ dependencies:
   characters: ^1.4.0
   format:
     path: ../..
+  format16_baseline:
+    path: ../baselines/format16
   intl: ^0.20.2
   meta: ^1.16.0
   # Exact pin: the frozen competitor baseline. Bumping it invalidates

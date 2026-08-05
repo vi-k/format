@@ -1,0 +1,11 @@
+name: format16_baseline
+description: Frozen format 1.6.0 baseline used by format benchmarks.
+version: 1.6.0
+publish_to: none
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  characters: ^1.4.0
+  intl: ^0.20.2

@@ -8,10 +8,10 @@ final _format3Cold = Format(textUnit: TextUnit.graphemeClusters);
 /// been seen before, so the template cache never hits and the parser stays
 /// on the measured path. Only format 3.0 has a cache; the baselines' cold
 /// numbers equal their hot numbers from the main matrix.
-final class BenchmarkFormat3ColdFormat extends MyBenchmarkBase {
+final class BenchmarkFormat30ColdFormat extends MyBenchmarkBase {
   var _counter = 0;
 
-  BenchmarkFormat3ColdFormat() : super(name: 'format 3.0 → format (cold)');
+  BenchmarkFormat30ColdFormat() : super(name: 'format 3.0 → format (cold)');
 
   @override
   bool get isSprintf => false;
@@ -27,10 +27,10 @@ final class BenchmarkFormat3ColdFormat extends MyBenchmarkBase {
   }
 }
 
-final class BenchmarkFormat3ColdSprintf extends MyBenchmarkBase {
+final class BenchmarkFormat30ColdSprintf extends MyBenchmarkBase {
   var _counter = 0;
 
-  BenchmarkFormat3ColdSprintf() : super(name: 'format 3.0 → sprintf (cold)');
+  BenchmarkFormat30ColdSprintf() : super(name: 'format 3.0 → sprintf (cold)');
 
   @override
   bool get isSprintf => true;

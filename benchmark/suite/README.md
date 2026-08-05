@@ -3,6 +3,15 @@
 This package contains runnable, ANSI-colored examples and performance checks
 for `format`.
 
+One-time setup per clone: materialize the pub `format 1.6.0` competitor
+(its source is not committed; pub is the source of truth):
+
+```console
+dart run benchmark/baselines/format16/fetch.dart
+```
+
+(from the repository root).
+
 Run the restored original user benchmark (quick mode, ~40 s):
 
 ```console
