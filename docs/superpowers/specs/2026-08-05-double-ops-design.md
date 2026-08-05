@@ -79,9 +79,11 @@ normalizeNegativeZero, percent.
 Рантайм `write()`:
 1. значение: `double` — как есть; `int`/`BigInt` — `toDouble()` с
    legacy-проверкой конечности (`_isIntegerValue` + `!isFinite` →
-   Unsupported); `String` и прочее — делегирование в
-   `formatParsedValue` (идентичные InvalidSpecifier/Unsupported,
-   по образцу `_BraceTextOp`);
+   Unsupported); прочее — делегирование в `formatParsedValue`,
+   которое воспроизводит legacy целиком: для явных типов f/e/g это
+   те же InvalidSpecifier/Unsupported, а для null-типа `String`
+   легально форматируется как текст (спека `{:10.3}` полиморфна) —
+   делегирование покрывает оба случая по построению;
 2. percent → `value * 100` (как legacy);
 3. генератор по `frame.engine.doubleFormatMode`: dartSdk →
    `_validateDartDoublePrecision` + `_formatDartDouble`; compatible
