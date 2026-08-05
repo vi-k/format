@@ -26,14 +26,14 @@ import 'package:format/format.dart';
 import 'package:format_intl/format_intl.dart';
 
 void main() {
-  final ukrainian = Format(
-    numberLocale: IntlNumberLocale('uk_UA'),
+  final kazakh = Format(
+    numberLocale: IntlNumberLocale('kk_KZ'),
   );
-  final formatUk = ukrainian.format;
-  final sprintfUk = ukrainian.sprintf;
+  final formatKk = kazakh.format;
+  final sprintfKk = kazakh.sprintf;
 
-  print(formatUk('{:n}', 1234567.5));
-  print(sprintfUk('%.2f', 12.5));
+  print(formatKk('{:n}', 1234567.5));
+  print(sprintfKk('%.2f', 12.5));
 }
 ```
 
@@ -58,8 +58,8 @@ applied after that conversion. Select the compatible profile when Python brace
 or C++ printf rounding and exponent layout are required:
 
 ```dart
-final compatibleUkrainian = Format(
-  numberLocale: IntlNumberLocale('uk_UA'),
+final compatibleKazakh = Format(
+  numberLocale: IntlNumberLocale('kk_KZ'),
   doubleFormatMode: DoubleFormatMode.compatible,
 );
 ```

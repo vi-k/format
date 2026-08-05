@@ -248,7 +248,7 @@ void main() {
       (scenario) => scenario.id == 'brace.format_intl.hot',
     );
     expect(scenario.referenceKind, BenchmarkReferenceKind.golden);
-    expect(scenario.referenceLabel, 'golden-intl:uk_UA:1234');
+    expect(scenario.referenceLabel, 'golden-intl:kk_KZ:1234');
     final outcome = scenario.baseline!(0);
     expect((outcome as TextOutcome).value, '1\u00a0234');
   });

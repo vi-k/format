@@ -61,7 +61,9 @@ void main() {
   // Grapheme clusters: emoji and combined characters align as one visible
   // character.
   final graphemes = Format(textUnit: TextUnit.graphemeClusters);
-  print(graphemes.format('[{:🇺🇦^8}]', 'peace')); // [🇺🇦peace🇺🇦🇺🇦]
+  print(
+    graphemes.format('[{:🇰🇿^13}]', 'Қазақстан'),
+  ); // [🇰🇿🇰🇿Қазақстан🇰🇿🇰🇿]
 
   // A custom formatter joins the mini-language under its own specifier.
   final jsonFormat = Format(formatters: [JsonFormatter()]);

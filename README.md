@@ -48,7 +48,7 @@ character:
 
 ```dart
 final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
-graphemeFormat.format('{:🇺🇦^10s}', 'peace');
+graphemeFormat.format('{:🇰🇿^13s}', 'Қазақстан');
 ```
 
 The optional [`format_intl`](https://pub.dev/packages/format_intl) package
@@ -57,8 +57,8 @@ adapts `intl` locale data without adding `intl` to this package's dependencies:
 ```dart
 import 'package:format_intl/format_intl.dart';
 
-final ukrainian = Format(numberLocale: IntlNumberLocale('uk_UA'));
-ukrainian.format('{:.8n}', 123456.789);
+final kazakh = Format(numberLocale: IntlNumberLocale('kk_KZ'));
+kazakh.format('{:.8n}', 123456.789);
 ```
 
 ## Double formatting profiles

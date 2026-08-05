@@ -5,16 +5,16 @@ import 'package:test/test.dart';
 
 void main() {
   test('one configured Format localizes both dialects', () {
-    final engine = Format(numberLocale: IntlNumberLocale('uk_UA'));
-    final formatUk = engine.format;
-    final sprintfUk = engine.sprintf;
+    final engine = Format(numberLocale: IntlNumberLocale('kk_KZ'));
+    final formatKk = engine.format;
+    final sprintfKk = engine.sprintf;
 
-    expect(formatUk('{:n}', 1234), '1\u00A0234');
-    expect(sprintfUk('%.1f', 1234.5), '1234,5');
+    expect(formatKk('{:n}', 1234), '1\u00A0234');
+    expect(sprintfKk('%.1f', 1234.5), '1234,5');
   });
 
   test('one locale supports Dart and compatible double profiles', () {
-    final locale = IntlNumberLocale('uk_UA');
+    final locale = IntlNumberLocale('kk_KZ');
     final dartFormat = Format(numberLocale: locale);
     final compatibleFormat = Format(
       numberLocale: locale,
@@ -32,7 +32,7 @@ void main() {
     addTearDown(() => Intl.defaultLocale = previousDefaultLocale);
     Intl.defaultLocale = 'en_US';
     final locale = IntlNumberLocale.fromDefault();
-    Intl.defaultLocale = 'uk_UA';
+    Intl.defaultLocale = 'kk_KZ';
 
     expect(locale.decimalSeparator, '.');
   });
