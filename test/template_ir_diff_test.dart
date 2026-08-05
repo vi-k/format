@@ -49,6 +49,25 @@ final compatibleGraphemes = Format(
   doubleFormatMode: DoubleFormatMode.compatible,
   textUnit: TextUnit.graphemeClusters,
 );
+final localeFormat = Format(numberLocale: const _IrTestNumberLocale());
+final shortSpellingFormat = Format(
+  doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+);
+
+/// Values that reach the double pipeline through every non-finite and
+/// signed-zero branch, plus the exponent threshold where the dartSdk mode
+/// switches representation. Precision validation must fire for all of them
+/// alike, so they are the value axis of the rejection matrices below.
+const _specialDoubles = <Object?>[
+  2.5,
+  -2.5,
+  0.0,
+  -0.0,
+  double.nan,
+  double.infinity,
+  double.negativeInfinity,
+  1e21,
+];
 
 void expectBraceParity(
   String template, {
@@ -194,6 +213,20 @@ void main() {
     ]) {
       expectBraceParity('<{}>', positional: [value]);
       expectBraceParity('<{}>', positional: [value], engine: compatibleFormat);
+    }
+  });
+
+  test('empty-spec specials keep parity for short spelling', () {
+    for (final value in [
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+    ]) {
+      expectBraceParity(
+        '<{}>',
+        positional: [value],
+        engine: shortSpellingFormat,
+      );
     }
   });
 
@@ -357,6 +390,41 @@ void main() {
     );
   });
 
+  test('brace doubles keep parity under a custom locale', () {
+    for (final spec in [
+      // f/e/g/% stay ASCII in the brace dialect (only 'n' consults the
+      // locale), so these pin that the hot ops keep ignoring it exactly as
+      // the legacy tail does.
+      '{:.2f}',
+      '{:10.2f}',
+      '{:e}',
+      '{:.3g}',
+      '{:.1%}',
+      // 'n' is deliberately absent from the hot double op, so these rows
+      // pin the localized fallback: digits, separators, and signs all come
+      // from the custom locale.
+      '{:n}',
+      '{:.3n}',
+      '{:+012n}',
+    ]) {
+      for (final value in <Object?>[2.5, -2.5, double.nan, 1e21]) {
+        expectBraceParity(spec, positional: [value], engine: localeFormat);
+      }
+    }
+  });
+
+  test('double edge values keep parity', () {
+    // Negative value that rounds to zero: exercises the z-flag suppression
+    // through roundedZero, not the trivial -0.0 route.
+    expectBraceParity('{:z.1f}', positional: [-0.04]);
+    expectBraceParity('{:z.1f}', positional: [-0.04], engine: compatibleFormat);
+    // BigInt whose toDouble() overflows to infinity: the typed branch must
+    // throw like legacy, before any precision validation.
+    final huge = BigInt.two.pow(2000);
+    expectBraceParity('{:.2f}', positional: [huge]);
+    expectBraceParity('{:.2f}', positional: [-huge]);
+  });
+
   test('%s op matches the legacy path', () {
     const templates = ['%s', '%10s', '%-10s', '%.3s', '%10.3s', '%-10.3s'];
     final values = <Object?>['hello', '', 'éé', 42, null, 3.5, true];
@@ -483,11 +551,76 @@ void main() {
     expectPrintfParity('%*.*f', [12, 3, -2.5]);
   });
 
+  test('printf doubles keep parity for graphemes and missing args', () {
+    expectPrintfParity('%10.2f', [2.5], engine: graphemeFormat);
+    expectPrintfParity('%f', const []);
+    expectPrintfParity('%*.2f', const []);
+  });
+
+  test('printf static precision rejected by dartSdk keeps parity', () {
+    const templates = [
+      '%.21f', // f: max 20 -> rejected
+      '%.25f',
+      '%.30F',
+      '%.21e',
+      '%.99E',
+      '%.0g', // g: min 1 -> rejected
+      '%.22g',
+      '%.0G',
+      '%.22G',
+      // Accepted boundaries, which must NOT throw.
+      '%.20f',
+      '%.20e',
+      '%.1g',
+      '%.21g',
+      '%.0f',
+    ];
+    for (final template in templates) {
+      for (final value in _specialDoubles) {
+        expectPrintfParity(template, [value]);
+        expectPrintfParity(template, [value], engine: compatibleFormat);
+      }
+    }
+    // Width in front of a rejected precision: validation must still win over
+    // padding, so the baked static conversion cannot short-circuit it.
+    for (final template in ['%10.25f', '%-10.0g', '%010.22G', '%+.21e']) {
+      for (final value in _specialDoubles) {
+        expectPrintfParity(template, [value]);
+        expectPrintfParity(template, [value], engine: compatibleFormat);
+      }
+    }
+  });
+
+  test('printf dynamic precision rejected by dartSdk keeps parity', () {
+    // Precisions the option resolver accepts (it only rejects values past the
+    // 100000 guard), so rejection has to happen inside the double conversion.
+    const precisions = [-1, 0, 1, 20, 21, 22, 25, 99];
+    for (final precision in precisions) {
+      for (final value in _specialDoubles) {
+        expectPrintfParity('%.*f', [precision, value]);
+        expectPrintfParity('%.*e', [precision, value]);
+        expectPrintfParity('%.*g', [precision, value]);
+        expectPrintfParity('%.*G', [precision, value]);
+        expectPrintfParity(
+          '%.*f',
+          [precision, value],
+          engine: compatibleFormat,
+        );
+        expectPrintfParity(
+          '%.*g',
+          [precision, value],
+          engine: compatibleFormat,
+        );
+      }
+      expectPrintfParity('%*.*f', [12, precision, 2.5]);
+      expectPrintfParity('%*.*g', [-12, precision, 2.5]);
+    }
+  });
+
   test('printf double op falls back to slow path for custom locales', () {
-    final locale = Format(numberLocale: const _IrTestNumberLocale());
     for (final template in ['%.2f', '%10.2f', '%e', '%.3g']) {
       for (final value in [2.5, -2.5, double.nan, 1e21]) {
-        expectPrintfParity(template, [value], engine: locale);
+        expectPrintfParity(template, [value], engine: localeFormat);
       }
     }
     // Dynamic options too: the slow branch has to rebuild the resolved
@@ -495,13 +628,13 @@ void main() {
     // flag and passing the width on as a magnitude, exactly as
     // _PrintfProcessor._resolve does before calling the same tail.
     for (final width in [12, -12]) {
-      expectPrintfParity('%*.2f', [width, 2.5], engine: locale);
-      expectPrintfParity('%0*.2f', [width, -2.5], engine: locale);
-      expectPrintfParity('%*e', [width, 12.0], engine: locale);
+      expectPrintfParity('%*.2f', [width, 2.5], engine: localeFormat);
+      expectPrintfParity('%0*.2f', [width, -2.5], engine: localeFormat);
+      expectPrintfParity('%*e', [width, 12.0], engine: localeFormat);
     }
-    expectPrintfParity('%.*f', [-1, 2.5], engine: locale);
-    expectPrintfParity('%*.*f', [-14, 3, -2.5], engine: locale);
-    expectPrintfParity('%*.2f', [100001, 2.5], engine: locale);
+    expectPrintfParity('%.*f', [-1, 2.5], engine: localeFormat);
+    expectPrintfParity('%*.*f', [-14, 3, -2.5], engine: localeFormat);
+    expectPrintfParity('%*.2f', [100001, 2.5], engine: localeFormat);
   });
 
   test('integers beyond 2^53 keep legacy digits on every platform', () {

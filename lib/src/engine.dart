@@ -6,11 +6,11 @@ import 'extensions.dart';
 import 'number_locale.dart';
 import 'text_unit.dart';
 
-// DoubleFormatMode is part of the same seam surface as TextUnit below: the
-// differential tests build engines in both double modes through this
-// library alone (it is also separately exported by the public
-// `format.dart` library).
-export 'double_format.dart' show DoubleFormatMode;
+// DoubleFormatMode and DoubleSpecialValueSpelling are part of the same seam
+// surface as TextUnit below: the differential tests build engines in both
+// double modes and in both non-finite spellings through this library alone
+// (both are also separately exported by the public `format.dart` library).
+export 'double_format.dart' show DoubleFormatMode, DoubleSpecialValueSpelling;
 
 // FormattingException and FormatExceptionContext are needed by the
 // template-IR differential tests accessed via `package:format/src/engine.dart`:
