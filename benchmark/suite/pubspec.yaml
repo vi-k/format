@@ -9,13 +9,10 @@ environment:
 dependencies:
   ansi_escape_codes: ^3.1.2
   benchmark_harness: ^2.3.1
-  characters: ^1.4.0
   format:
     path: ../..
   format16_baseline:
     path: ../baselines/format16
-  intl: ^0.20.2
-  meta: ^1.16.0
   # Exact pin: the frozen competitor baseline. Bumping it invalidates
   # comparability with recorded benchmark numbers.
   sprintf: 7.0.0

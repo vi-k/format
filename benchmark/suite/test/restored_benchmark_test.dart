@@ -2,20 +2,17 @@ import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('restored benchmark exposes Format 3, Format 2, Format 1.6 and '
-      'sprintf engines', () {
+  test('restored benchmark exposes Format 3, Format 1.6 and sprintf '
+      'engines', () {
     final format3 = BenchmarkFormat30Format();
-    final format2 = BenchmarkFormat20Format();
     final format16 = BenchmarkFormat16Format();
     final printf = BenchmarkSprintf70();
 
     format3.go('{:d}', [42]);
-    format2.go('{:d}', [42]);
     format16.go('{:d}', [42]);
     printf.go('%d', [42]);
 
     expect(format3.output, '42');
-    expect(format2.output, '42');
     expect(format16.output, '42');
     expect(printf.output, '42');
   });
@@ -35,12 +32,12 @@ void main() {
     expect(binary.sprintf, isNull);
 
     // Zero padding fitted to the grouped width: the regression scenario for
-    // the fitRegroupedZeroPadding fix; format 2.0 agrees on the output.
+    // the fitRegroupedZeroPadding fix; pub format 1.6 agrees on the output.
     final groupedZero = benchmarkScenarios.singleWhere(
       (s) => s.brace == '{:010,d}',
     );
     expect(groupedZero.sprintf, isNull);
-    expect(groupedZero.skipFormat20, isFalse);
+    expect(groupedZero.skipFormat16, isFalse);
     expect(groupedZero.cases.single.$1, [1234]);
     expect(groupedZero.cases.single.$2, '00,001,234');
 
@@ -56,7 +53,7 @@ void main() {
     final scientific = benchmarkScenarios.singleWhere((s) => s.brace == '{:e}');
     expect(scientific.sprintf, '%e');
     expect(scientific.skipSprintf70, isTrue);
-    expect(scientific.skipFormat20, isTrue);
+    expect(scientific.skipFormat16, isTrue);
 
     final integer = benchmarkScenarios.singleWhere((s) => s.brace == '{:d}');
     expect(integer.cases.last.$1, [-9223372036854775808]);
@@ -69,7 +66,7 @@ void main() {
     );
 
     expect(wide.sprintf, List.filled(50, '%d').join('|'));
-    expect(wide.skipFormat20, isFalse);
+    expect(wide.skipFormat16, isFalse);
     expect(wide.skipSprintf70, isFalse);
     expect(wide.cases, hasLength(1));
     expect(wide.cases.single.$1, List<Object?>.generate(50, (index) => index));

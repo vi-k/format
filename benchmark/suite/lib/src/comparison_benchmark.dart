@@ -4,7 +4,6 @@ import 'package:format/format.dart';
 
 import 'benchmark_cold.dart';
 import 'benchmark_format16_format.dart';
-import 'benchmark_format20_format.dart';
 import 'benchmark_format30_format.dart';
 import 'benchmark_format30_sprintf.dart';
 import 'benchmark_sprintf70.dart';
@@ -33,11 +32,10 @@ void runComparisonBenchmark({
   final resolved = durations ?? parseBenchmarkArgs(args);
   final emit = writeLine ?? print;
   final benchmarks = [
-    BenchmarkSprintf70(),
     BenchmarkFormat16Format(),
-    BenchmarkFormat20Format(),
     BenchmarkFormat30Format(),
     BenchmarkFormat30Sprintf(),
+    BenchmarkSprintf70(),
   ];
   for (final benchmark in benchmarks) {
     benchmark.durations = resolved;
@@ -59,7 +57,6 @@ void runComparisonBenchmark({
             benchmark.isSprintf ? scenario.sprintf : scenario.brace;
         final skipped =
             template == null ||
-            (benchmark.isFormat20 && scenario.skipFormat20) ||
             (benchmark.isSprintf70 && scenario.skipSprintf70) ||
             (benchmark.isFormat16 && scenario.skipFormat16);
         if (skipped) {

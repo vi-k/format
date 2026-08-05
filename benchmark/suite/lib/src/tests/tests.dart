@@ -1,7 +1,6 @@
 final class BenchmarkScenario {
   final String? brace;
   final String? sprintf;
-  final bool skipFormat20;
   final bool skipSprintf70;
   final bool skipFormat16;
   final List<(List<Object?>, String)> cases;
@@ -9,7 +8,6 @@ final class BenchmarkScenario {
   const BenchmarkScenario({
     required this.brace,
     required this.sprintf,
-    this.skipFormat20 = false,
     this.skipSprintf70 = false,
     this.skipFormat16 = false,
     required this.cases,
@@ -103,7 +101,7 @@ final benchmarkScenarios = <BenchmarkScenario>[
   ),
   // Zero padding fitted to the grouped width (Python semantics): the
   // regression scenario for the fitRegroupedZeroPadding integer fix.
-  // Format 2.0 produces the same output, so the legacy runner stays on.
+  // Pub 1.6 produces the same output, so its runner stays on.
   BenchmarkScenario(
     brace: '{:010,d}',
     sprintf: null,
@@ -111,7 +109,7 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([1234], '00,001,234'),
     ],
   ),
-  // Oracle: sprintf7_baseline throws "Unknown format type c" for %c, while
+  // Oracle: sprintf 7.0 throws "Unknown format type c" for %c, while
   // format3's own printf engine supports it and agrees ("A").
   BenchmarkScenario(
     brace: '{:c}',
@@ -138,17 +136,16 @@ final benchmarkScenarios = <BenchmarkScenario>[
   ),
   // Oracle: with no explicit precision, format3's default DoubleFormatMode
   // (dartSdk) renders 'e' with the shortest round-tripping mantissa and an
-  // unpadded exponent ("1.23456789e+4") in both syntaxes, while pub 1.6,
-  // legacy 2.0 and sprintf7 all default to a fixed 6-digit mantissa with
-  // sprintf7 also zero-padding the exponent ("1.234568e+4" /
-  // "1.234568e+04"). This is a systematic default policy difference
-  // (confirmed by brute-force search: no replacement value makes the
-  // engines agree), so the competitors are skipped, leaving format3's own
-  // output as the expected value.
+  // unpadded exponent ("1.23456789e+4") in both syntaxes, while pub 1.6
+  // and sprintf7 both default to a fixed 6-digit mantissa with sprintf7
+  // also zero-padding the exponent ("1.234568e+4" / "1.234568e+04").
+  // This is a systematic default policy difference (confirmed by
+  // brute-force search: no replacement value makes the engines agree),
+  // so the competitors are skipped, leaving format3's own output as the
+  // expected value.
   BenchmarkScenario(
     brace: '{:e}',
     sprintf: '%e',
-    skipFormat20: true,
     skipSprintf70: true,
     skipFormat16: true,
     cases: [
@@ -174,14 +171,12 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([1234567890123.0], '1.23e+12'),
     ],
   ),
-  // Oracle: the 1.6/2.0 format spec regex has no '%' presentation type, so
+  // Oracle: the 1.6 format spec regex has no '%' presentation type, so
   // '{:%}' fails to match and is left untouched ("{:%}" literal) instead
-  // of being formatted. Both older engines disagree identically, so both
-  // are skipped.
+  // of being formatted, so 1.6 is skipped.
   BenchmarkScenario(
     brace: '{:%}',
     sprintf: null,
-    skipFormat20: true,
     skipFormat16: true,
     cases: [
       ([0.756], '75.600000%'),

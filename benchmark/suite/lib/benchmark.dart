@@ -1,6 +1,5 @@
 export 'src/benchmark_cold.dart';
 export 'src/benchmark_format16_format.dart';
-export 'src/benchmark_format20_format.dart';
 export 'src/benchmark_format30_format.dart';
 export 'src/benchmark_format30_sprintf.dart';
 export 'src/benchmark_sprintf70.dart';

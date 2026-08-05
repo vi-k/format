@@ -26,8 +26,6 @@ abstract base class MyBenchmarkBase extends BenchmarkBase {
 
   bool get isSprintf;
 
-  bool get isFormat20 => false;
-
   bool get isSprintf70 => false;
 
   bool get isFormat16 => false;
