@@ -241,8 +241,12 @@ void main() {
   });
 
   test('brace dartSdk precision rejection keeps parity', () {
-    // dartSdk rejects precision outside [0,20] for f/F/e/E and [1,21] for
-    // g/G; the empty conversion and '%' route through the same validation.
+    // dartSdk rejects precision outside [0,20] for f/F/e/E and outside
+    // [1,21] for g/G/n. The two remaining presentations split: the empty
+    // conversion is g-shaped ([1,21]) while '%' is f-shaped ([0,20]) — see
+    // _validateDartDoublePrecision in lib/src/dart_double_format.dart, where
+    // `general` covers null/g/G/n only. Both shapes are pinned at both of
+    // their boundaries below.
     const specs = [
       '{:.21f}',
       '{:.25f}',
@@ -251,12 +255,14 @@ void main() {
       '{:.22g}',
       '{:.0}', // no conversion: still g-shaped validation
       '{:.22}',
+      '{:.21%}', // %: f-shaped max 20 -> rejected (g-shaped would accept)
       '{:.25%}',
       // Accepted boundaries, which must NOT throw.
       '{:.20f}',
       '{:.21g}',
       '{:.1}',
       '{:.21}',
+      '{:.0%}', // %: f-shaped min 0 -> accepted (g-shaped would reject)
       '{:.20%}',
     ];
     for (final spec in specs) {
@@ -478,16 +484,14 @@ void main() {
         expectPrintfParity('%.*e', [precision, value]);
         expectPrintfParity('%.*g', [precision, value]);
         expectPrintfParity('%.*G', [precision, value]);
-        expectPrintfParity(
-          '%.*f',
-          [precision, value],
-          engine: compatibleFormat,
-        );
-        expectPrintfParity(
-          '%.*g',
-          [precision, value],
-          engine: compatibleFormat,
-        );
+        expectPrintfParity('%.*f', [
+          precision,
+          value,
+        ], engine: compatibleFormat);
+        expectPrintfParity('%.*g', [
+          precision,
+          value,
+        ], engine: compatibleFormat);
       }
       expectPrintfParity('%*.*f', [12, precision, 2.5]);
       expectPrintfParity('%*.*g', [-12, precision, 2.5]);
@@ -545,10 +549,14 @@ void main() {
       'auto {} then {:{}d} then {}',
       positional: [1, 2, 5, 'tail'],
     );
-    expectPrintfParity(
-      '[%s] %05.1f%% (%d of %d, %#x) %-8s|',
-      ['run', 99.95, 3, 10, 255, 'ok'],
-    );
+    expectPrintfParity('[%s] %05.1f%% (%d of %d, %#x) %-8s|', [
+      'run',
+      99.95,
+      3,
+      10,
+      255,
+      'ok',
+    ]);
     expectPrintfParity('%0*d/%.*s/%%', [6, 42, 2, 'abcdef']);
   });
 
