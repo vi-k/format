@@ -1,9 +1,24 @@
+/// Where in a template a formatting failure happened.
+///
+/// Every field is optional: a failure carries as much location as the
+/// engine had at that point.
 final class FormatExceptionContext {
+  /// The whole template being formatted.
   final String? template;
+
+  /// The UTF-16 offset of [fragment] within [template].
   final int? offset;
+
+  /// The placeholder or conversion text the failure belongs to.
   final String? fragment;
+
+  /// The format specification (after `:`) or printf option role.
   final String? specifier;
+
+  /// The `!s`/`!r`/`!a` conversion or the printf conversion type.
   final String? conversion;
+
+  /// The index of the argument being formatted.
   final int? argumentIndex;
 
   const FormatExceptionContext({
@@ -28,8 +43,16 @@ String _describeGuarded(Object? value) {
   }
 }
 
+/// The base of every failure thrown by the formatting engine.
+///
+/// The hierarchy is sealed: a `switch` over it can be exhaustive.
+/// [toString] reports the type, [message], the subclass payload, and the
+/// full [context].
 sealed class FormattingException implements Exception {
+  /// A short, fixed description of the failure class.
   final String message;
+
+  /// Where in the template the failure happened.
   final FormatExceptionContext context;
 
   const FormattingException(this.message, this.context);
@@ -96,33 +119,48 @@ sealed class FormattingException implements Exception {
   }
 }
 
+/// The template itself does not parse: an unmatched brace, a bad field
+/// name, an unterminated or unknown printf conversion.
 final class InvalidFormatException extends FormattingException {
+  /// Why the template does not parse.
   final String reason;
 
   const InvalidFormatException(FormatExceptionContext context, this.reason)
     : super('The format is invalid.', context);
 
+  /// The template text the parser rejected.
   String get fragment => context.fragment ?? '';
 }
 
+/// The template parses, but a format specification is not valid: an
+/// unknown presentation type, an option that the type does not accept, or
+/// a width/precision outside the supported range.
 final class InvalidSpecifierException extends FormattingException {
+  /// Why the specification was rejected.
   final String reason;
 
   const InvalidSpecifierException(FormatExceptionContext context, this.reason)
     : super('The format specifier is invalid.', context);
 
+  /// The rejected specification text.
   String get specifier => context.specifier ?? '';
 }
 
+/// A placeholder refers to an argument that was not supplied.
 final class MissingFormatArgumentException extends FormattingException {
+  /// The positional index or the name that had no argument.
   final Object? key;
 
   const MissingFormatArgumentException(FormatExceptionContext context, this.key)
     : super('A required format argument is missing.', context);
 }
 
+/// A `.attribute` or `[key]` step in a field access chain failed.
 final class FormatLookupException extends FormattingException {
+  /// The attribute name or item key that failed to resolve.
   final Object? segment;
+
+  /// The value the lookup was attempted on.
   final Object? value;
 
   const FormatLookupException(
@@ -132,7 +170,10 @@ final class FormatLookupException extends FormattingException {
   ) : super('A field lookup failed.', context);
 }
 
+/// A `!s`/`!r`/`!a` conversion (or a printf conversion) cannot be applied
+/// to the given value.
 final class UnsupportedConversionException extends FormattingException {
+  /// The value the conversion rejected.
   final Object? value;
 
   const UnsupportedConversionException(
@@ -141,7 +182,10 @@ final class UnsupportedConversionException extends FormattingException {
   ) : super('The conversion is not supported for this value.', context);
 }
 
+/// The format specification is valid, but not for this value's type: a
+/// numeric presentation for a string, `%d` for a double, and so on.
 final class UnsupportedFormatValueException extends FormattingException {
+  /// The rejected value.
   final Object? value;
 
   const UnsupportedFormatValueException(
@@ -149,11 +193,17 @@ final class UnsupportedFormatValueException extends FormattingException {
     this.value,
   ) : super('The formatter does not accept this value.', context);
 
+  /// The specification the value does not satisfy.
   String get specifier => context.specifier ?? '';
 }
 
+/// A `Format` instance was constructed with an invalid configuration,
+/// such as a reserved or duplicated custom formatter name.
 final class FormatConfigurationException extends FormattingException {
+  /// Why the configuration was rejected.
   final String reason;
+
+  /// The offending formatter name, if the failure concerns one.
   final String? name;
 
   const FormatConfigurationException(this.reason, {this.name})
@@ -163,8 +213,13 @@ final class FormatConfigurationException extends FormattingException {
       );
 }
 
+/// More than one configured extension accepts the same value, so the
+/// engine cannot choose between them.
 final class AmbiguousFormatterException extends FormattingException {
+  /// The value that several extensions accept.
   final Object? value;
+
+  /// Descriptions of the competing extensions.
   final List<String> matches;
 
   AmbiguousFormatterException(
@@ -174,12 +229,22 @@ final class AmbiguousFormatterException extends FormattingException {
   ) : matches = List.unmodifiable(matches),
       super('Multiple formatting extensions accept this value.', context);
 
+  /// An alias of [matches].
   List<String> get specifiers => matches;
 }
 
+/// User-provided code threw during formatting: a custom formatter,
+/// lookup, representation, locale, or a value's own `toString()`.
+///
+/// The original failure is preserved in [error] and [stackTrace].
 final class FormatExtensionException extends FormattingException {
+  /// The extension that failed — a formatter specifier or a type name.
   final String extension;
+
+  /// The original error thrown by the extension.
   final Object error;
+
+  /// The stack trace of the original error.
   final StackTrace stackTrace;
 
   const FormatExtensionException(

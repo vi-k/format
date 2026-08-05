@@ -1,5 +1,14 @@
 part of 'engine.dart';
 
+/// An immutable formatting engine: brace and printf mini-languages under
+/// one configuration.
+///
+/// The default configuration (see [defaultFormat]) uses the C locale,
+/// Unicode scalars for widths, and Dart SDK decimal double conversion.
+/// Construct an instance to opt into custom [formatters], [lookups],
+/// [representations], a [numberLocale], grapheme-cluster widths
+/// ([textUnit]), or the Python/C++-compatible double profile
+/// ([doubleFormatMode]).
 final class Format {
   static final RegExp _formatterNamePattern = RegExp(
     r'^[A-Za-z][A-Za-z0-9_]*$',
@@ -22,15 +31,30 @@ final class Format {
     '%',
   };
 
+  /// Custom formatters selectable by `{:name}` specifications.
   final List<Formatter<dynamic>> formatters;
   late final Map<String, Formatter<dynamic>> _formattersBySpecifier;
+
+  /// Custom resolvers for `{value.attribute}` field access.
   final List<AttributeLookup<dynamic>> lookups;
+
+  /// Custom `!r`/`!a` representations.
   final List<Representation<dynamic>> representations;
+
+  /// Number symbols and grouping rules; the C locale by default.
   final NumberLocale numberLocale;
+
+  /// The unit in which widths and precisions measure text.
   final TextUnit textUnit;
+
+  /// How decimal doubles are converted; the Dart SDK profile by default.
   final DoubleFormatMode doubleFormatMode;
+
+  /// How non-finite doubles are spelled in Dart SDK mode.
   final DoubleSpecialValueSpelling doubleSpecialValueSpelling;
 
+  /// Creates an engine; throws [FormatConfigurationException] when the
+  /// configuration is invalid (reserved or duplicated formatter names).
   Format({
     Iterable<Formatter<dynamic>> formatters = const [],
     Iterable<AttributeLookup<dynamic>> lookups = const [],
@@ -48,9 +72,12 @@ final class Format {
     });
   }
 
+  /// The configured custom formatter registered under [specifier], if any.
   Formatter<dynamic>? formatterFor(String specifier) =>
       _formattersBySpecifier[specifier];
 
+  /// Formats a brace [template] with up to ten positional values; the
+  /// instance counterpart of the top-level [format].
   String format(
     String template, [
     Object? value1 = _MissingValue.value,
@@ -79,6 +106,8 @@ final class Format {
     ),
   );
 
+  /// Formats a printf [template] with up to ten positional values; the
+  /// instance counterpart of the top-level [sprintf].
   String sprintf(
     String template, [
     Object? value1 = _MissingValue.value,
@@ -107,6 +136,8 @@ final class Format {
     ),
   );
 
+  /// Formats a printf [template] with a list of [values]; the instance
+  /// counterpart of the top-level [vsprintf].
   String vsprintf(String template, List<Object?> values) =>
       _PrintfProcessor(
         template,
@@ -114,6 +145,8 @@ final class Format {
         this,
       ).format();
 
+  /// Formats a brace [template] with [positional] and [named] value
+  /// collections; the instance counterpart of the top-level [formatWith].
   String formatWith(
     String template, {
     List<Object?> positional = const [],
