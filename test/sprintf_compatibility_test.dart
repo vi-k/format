@@ -7,20 +7,27 @@ import 'package:test/test.dart';
 import 'support/fixture_value.dart';
 
 void main() {
-  test('matches committed std::sprintf C++23 fixtures', () async {
-    final compatibleFormat = Format(
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
-    final suite = await SprintfFixtureSuite.load(
-      'test/fixtures/sprintf_common.json',
-    );
+  final compatibleFormat = Format(
+    doubleFormatMode: DoubleFormatMode.compatible,
+  );
+  final suite = SprintfFixtureSuite.load('test/fixtures/sprintf_common.json');
 
+  group('committed std::sprintf C++23 fixtures', () {
+    // One test per fixture: a regression in one case does not hide the
+    // remaining disagreements behind the first failing expect.
     for (final fixture in suite.cases) {
-      expect(
-        () => compatibleFormat.vsprintf(fixture.template, fixture.arguments),
-        fixture.matcher,
-        reason: fixture.id,
-      );
+      test(fixture.id, () {
+        expect(
+          () => compatibleFormat.vsprintf(fixture.template, fixture.arguments),
+          fixture.matcher,
+        );
+      });
+    }
+  });
+
+  group('documented result divergences hold', () {
+    for (final entry in _executableResults.entries) {
+      test(entry.key, () => expect(entry.value.run(), entry.value.output));
     }
   });
 
@@ -36,6 +43,7 @@ void main() {
     final ids = <String>[];
     final anchors = <String>{};
     final documentedDartErrors = <String, String>{};
+    final documentedDartResults = <String>{};
     for (var index = 0; index < records.length; index++) {
       final path = '\$.divergences[$index]';
       final record = _object(records[index], path);
@@ -49,10 +57,15 @@ void main() {
           dartOutcome['error'],
           '$path.dart.error',
         );
+      } else {
+        documentedDartResults.add(ids.last);
       }
       expect(_string(record['reason'], '$path.reason').trim(), isNotEmpty);
       anchors.add(_string(record['readme_anchor'], '$path.readme_anchor'));
     }
+    // Every result-divergence must ship an executable exemplar (run in
+    // the group above), so the documented Dart behavior cannot rot.
+    expect(documentedDartResults, unorderedEquals(_executableResults.keys));
     expect(ids, orderedEquals([...ids]..sort()));
     expect(ids.toSet(), hasLength(ids.length));
     expect(ids, containsAll(_requiredDivergenceIds));
@@ -158,6 +171,57 @@ const _requiredDivergenceIds = {
   'wide-dart-integers',
 };
 
+/// One executable exemplar per result-divergence in the registry,
+/// pinning the documented Dart outcome.
+final _executableResults = <String, ({String output, String Function() run})>{
+  'arbitrary-tostring-for-s': (
+    output: '0:00:01.000000',
+    run: () => vsprintf('%s', [const Duration(seconds: 1)]),
+  ),
+  'canonical-special-values': (
+    output: 'inf NAN',
+    run:
+        () => Format(
+          doubleFormatMode: DoubleFormatMode.compatible,
+        ).vsprintf('%f %F', [double.infinity, double.nan]),
+  ),
+  'dartsdk-default-double-profile': (
+    output: '1.25e+1',
+    run: () => vsprintf('%e', [12.5]),
+  ),
+  'fixed-rounding-mode': (
+    output: '2 4',
+    run:
+        () => Format(
+          doubleFormatMode: DoubleFormatMode.compatible,
+        ).vsprintf('%.0f %.0f', [2.5, 3.5]),
+  ),
+  'format-intl-locale-extensions': (
+    output: '−1,5',
+    run:
+        () => Format(
+          numberLocale: const SpacedNumberLocale(),
+        ).vsprintf('%.1f', [-1.5]),
+  ),
+  'unicode-character-scalar': (
+    output: '😀',
+    run: () => vsprintf('%c', [0x1F600]),
+  ),
+  // The combining-accent form 'e\u0301': one grapheme cluster of two
+  // scalars, kept whole where C's byte/wchar semantics have no analogue.
+  'unicode-string-text-units': (
+    output: 'e\u0301',
+    run:
+        () => Format(
+          textUnit: TextUnit.graphemeClusters,
+        ).vsprintf('%.1s', ['e\u0301x']),
+  ),
+  'wide-dart-integers': (
+    output: '9223372036854775808',
+    run: () => vsprintf('%d', [BigInt.two.pow(63)]),
+  ),
+};
+
 final _executableErrors = <
   String,
   ({String template, List<Object?> arguments, String type, Matcher matcher})
@@ -205,8 +269,9 @@ final class SprintfFixtureSuite {
 
   const SprintfFixtureSuite._(this.cases);
 
-  static Future<SprintfFixtureSuite> load(String path) async {
-    final document = _object(jsonDecode(await File(path).readAsString()), r'$');
+  /// Synchronous so callers can register one `test()` per fixture.
+  factory SprintfFixtureSuite.load(String path) {
+    final document = _object(jsonDecode(File(path).readAsStringSync()), r'$');
     if (document['schema'] != 1) {
       throw const FormatException('Unsupported sprintf fixture schema.');
     }

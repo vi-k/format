@@ -7,26 +7,30 @@ import 'package:test/test.dart';
 import 'support/fixture_value.dart';
 
 void main() {
-  test('matches committed Python 3.14 fixtures', () async {
-    final compatibleFormat = Format(
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
-    final suite = await PythonFixtureSuite.load(
-      'test/fixtures/python_format.json',
-    );
+  final compatibleFormat = Format(
+    doubleFormatMode: DoubleFormatMode.compatible,
+  );
+  final suite = PythonFixtureSuite.load('test/fixtures/python_format.json');
+
+  test('fixture metadata pins CPython 3.14', () {
     expect(suite.implementation, 'CPython');
     expect(suite.version, '3.14');
+  });
 
+  group('committed Python 3.14 fixtures', () {
+    // One test per fixture: a regression in one case does not hide the
+    // remaining disagreements behind the first failing expect.
     for (final fixture in suite.cases) {
-      expect(
-        () => compatibleFormat.formatWith(
-          fixture.template,
-          positional: fixture.positional,
-          named: fixture.named,
-        ),
-        fixture.matcher,
-        reason: fixture.id,
-      );
+      test(fixture.id, () {
+        expect(
+          () => compatibleFormat.formatWith(
+            fixture.template,
+            positional: fixture.positional,
+            named: fixture.named,
+          ),
+          fixture.matcher,
+        );
+      });
     }
   });
 
@@ -134,17 +138,116 @@ void main() {
         }),
       );
 
-      expect(PythonFixtureSuite.load(file.path), throwsFormatException);
+      expect(() => PythonFixtureSuite.load(file.path), throwsFormatException);
     } finally {
       await directory.delete(recursive: true);
     }
   });
 
-  test('keeps intentional divergences sorted and reviewable', () async {
-    final suite = await PythonDivergenceSuite.load(
-      'test/fixtures/python_divergences.json',
-    );
+  final divergences = PythonDivergenceSuite.load(
+    'test/fixtures/python_divergences.json',
+  );
 
-    expect(suite.ids, hasLength(10));
+  test('keeps intentional divergences sorted and executable', () {
+    // Every registry entry must ship an executable exemplar below (or a
+    // documented platform exemption), so the documented Dart behavior
+    // cannot rot silently.
+    expect(divergences.ids.toSet(), {
+      ..._executableDivergences.keys,
+      ..._platformDivergences,
+    });
   });
+
+  group('intentional divergences hold', () {
+    for (final entry in _executableDivergences.entries) {
+      test(entry.key, entry.value);
+    }
+  });
+}
+
+/// Entries whose Dart side only exists on another platform. The JS
+/// canonicalization entry is pinned by test/js_number_dispatch_test.dart
+/// in the node run; this suite is VM-only (dart:io).
+const _platformDivergences = {'dart-js-integral-number-canonicalization'};
+
+/// One executable exemplar per registry entry, pinning the documented
+/// Dart outcome.
+final _executableDivergences = <String, void Function()>{
+  'dart-bool-null-tokens':
+      () => expect(format('{} {} {}', true, false, null), 'true false null'),
+  'dart-container-representation-order':
+      () => expect(format('{!r}', {'b': 1, 'a': 2}), "{'b': 1, 'a': 2}"),
+  'dart-custom-formatter-payload':
+      () => expect(
+        Format(formatters: [_PayloadFormatter()]).format('{:json:pretty}', 42),
+        '42/pretty',
+      ),
+  'dart-custom-lookup-hooks':
+      () => expect(
+        Format(
+          lookups: [_NameLookup()],
+        ).formatWith('{value.name}', named: {'value': const _Named('Ada')}),
+        'Ada',
+      ),
+  'dart-format-intl-locale-extensions':
+      () => expect(
+        Format(numberLocale: const SpacedNumberLocale()).format('{:n}', 1234),
+        '1 234',
+      ),
+  'dart-map-dot-key':
+      () => expect(
+        formatWith(
+          '{value.name}',
+          named: {
+            'value': {'name': 'Ada'},
+          },
+        ),
+        'Ada',
+      ),
+  'dart-repr-ascii-policy':
+      () => expect(
+        format('{0!r} {0!a}', 'строка'),
+        "'строка' "
+        r"'\u0441\u0442\u0440\u043e\u043a\u0430'",
+      ),
+  'dart-strict-text-zero-padding':
+      () => expect(
+        () => format('{:05s}', 'x'),
+        throwsA(isA<InvalidSpecifierException>()),
+      ),
+  // The combining-accent form 'e\u0301': one grapheme cluster of two
+  // scalars, kept whole by the grapheme engine where Python (and the
+  // scalar default) would cut after 'e'.
+  'dart-text-grapheme-mode':
+      () => expect(
+        Format(textUnit: TextUnit.graphemeClusters).format('{:.1s}', 'e\u0301'),
+        'e\u0301',
+      ),
+};
+
+final class _PayloadFormatter extends Formatter<int> {
+  @override
+  String get specifier => 'json';
+
+  @override
+  bool canFormat(Object? value) => value is int;
+
+  @override
+  String format(int value, FormatOptions options) =>
+      '$value/${options.payload}';
+}
+
+final class _Named {
+  final String name;
+
+  const _Named(this.name);
+}
+
+final class _NameLookup extends AttributeLookup<_Named> {
+  @override
+  bool canLookup(Object? value) => value is _Named;
+
+  @override
+  Object? lookup(_Named value, String attribute) =>
+      attribute == 'name' ? value.name : null;
 }

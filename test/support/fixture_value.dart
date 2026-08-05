@@ -15,8 +15,9 @@ final class PythonFixtureSuite {
     required this.cases,
   });
 
-  static Future<PythonFixtureSuite> load(String path) async {
-    final document = _object(jsonDecode(await File(path).readAsString()), r'$');
+  /// Synchronous so callers can register one `test()` per fixture.
+  factory PythonFixtureSuite.load(String path) {
+    final document = _object(jsonDecode(File(path).readAsStringSync()), r'$');
     final generator = _object(document['generator'], r'$.generator');
     final implementation = _string(
       generator['implementation'],
@@ -103,8 +104,9 @@ final class PythonDivergenceSuite {
 
   const PythonDivergenceSuite._(this.ids);
 
-  static Future<PythonDivergenceSuite> load(String path) async {
-    final document = _object(jsonDecode(await File(path).readAsString()), r'$');
+  /// Synchronous so callers can register one `test()` per entry.
+  factory PythonDivergenceSuite.load(String path) {
+    final document = _object(jsonDecode(File(path).readAsStringSync()), r'$');
     if (document['schema'] != 1) {
       throw const FormatException('Unsupported divergence schema.');
     }
@@ -136,6 +138,36 @@ final class PythonDivergenceSuite {
     }
     return PythonDivergenceSuite._(List.unmodifiable(ids));
   }
+}
+
+/// A deterministic non-C test locale shared by the divergence exemplars:
+/// space grouping (enabled), comma decimal, U+2212 minus.
+final class SpacedNumberLocale implements NumberLocale {
+  const SpacedNumberLocale();
+
+  @override
+  String get decimalSeparator => ',';
+
+  @override
+  String get groupSeparator => ' ';
+
+  @override
+  String get plusSign => '+';
+
+  @override
+  String get minusSign => '−';
+
+  @override
+  String get exponentSeparator => 'e';
+
+  @override
+  bool get groupingEnabled => true;
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  String localizeDigits(String asciiDigits) => asciiDigits;
 }
 
 Object? decodeFixtureValue(Object? encoded, [String path = r'$']) {
