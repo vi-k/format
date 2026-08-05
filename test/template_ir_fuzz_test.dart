@@ -9,9 +9,11 @@ import 'parity_harness.dart';
 /// every runtime. Both generators raise ten through `pow(10.0, e)` — a double
 /// base, so every draw is an exact power of ten. With the former int base the
 /// single exponent 19 overflowed int64 on the VM (turning that draw negative)
-/// while JS yielded `+1e19`, which split the VM and node corpora on ~0.3% of
-/// `_value` draws; with the double base 2000 consecutive draws agree
-/// numerically on both runtimes. Reproducibility still assumes `Random(seed)`
+/// while JS yielded `+1e19`, which split the VM and node corpora on ~0.6% of
+/// `_value` draws (analytically 2/8 branches that call `pow` × 1/40 exponents
+/// = 0.625%; a 2000-draw sample happened to show 6, which is low for that
+/// rate). With the double base 2000 consecutive draws agree numerically on
+/// both runtimes. Reproducibility still assumes `Random(seed)`
 /// keeps its stream, which the SDK does not contractually guarantee across
 /// releases. Bump deliberately (with a comment) if the corpus needs
 /// refreshing.
