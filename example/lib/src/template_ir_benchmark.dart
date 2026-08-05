@@ -15,6 +15,11 @@ import 'utils/output.dart';
 // after the IR hot ops land.
 final _graphemes = Format(textUnit: TextUnit.graphemeClusters);
 
+// Compatible-mode engine: the hot double ops carry a second spelling of the
+// shortest/fixed conversions, so the A/B comparison has to cover both
+// doubleFormatMode values rather than the dartSdk default alone.
+final _compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
+
 var _benchmarkChecksum = 0;
 
 final class _IrScenario {
@@ -93,6 +98,48 @@ final _scenarios = <_IrScenario>[
       positional: const ['hello'],
     ),
   ),
+  // --- hot: brace static double ops, both doubleFormatMode spellings ---
+  _IrScenario(
+    label: '{:.2f}',
+    kind: 'hot',
+    ir: () => formatWith('{:.2f}', positional: const [3.14159]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{:.2f}',
+      defaultFormat,
+      positional: const [3.14159],
+    ),
+  ),
+  _IrScenario(
+    label: '{:.2f} compatible',
+    kind: 'hot',
+    ir: () => _compatible.formatWith('{:.2f}', positional: const [3.14159]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{:.2f}',
+      _compatible,
+      positional: const [3.14159],
+    ),
+  ),
+  _IrScenario(
+    label: '{:e}',
+    kind: 'hot',
+    ir: () => formatWith('{:e}', positional: const [3.14159]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{:e}',
+      defaultFormat,
+      positional: const [3.14159],
+    ),
+  ),
+  // --- hot: brace dynamic-value op dispatching a double (empty spec) ---
+  _IrScenario(
+    label: '{} (double)',
+    kind: 'hot',
+    ir: () => formatWith('{}', positional: const [3.14159]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{}',
+      defaultFormat,
+      positional: const [3.14159],
+    ),
+  ),
   // --- hot: printf static string op ---
   _IrScenario(
     label: '%s',
@@ -126,15 +173,27 @@ final _scenarios = <_IrScenario>[
       const [7, 42],
     ),
   ),
-  // --- fallback-control: doubles never compile hot ---
+  // --- hot: printf static double op ---
   _IrScenario(
-    label: '{:.2f}',
-    kind: 'fallback-control',
-    ir: () => formatWith('{:.2f}', positional: const [3.14159]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:.2f}',
+    label: '%.2f',
+    kind: 'hot',
+    ir: () => vsprintf('%.2f', const [3.14159]),
+    legacy: () => engine.debugFormatPrintfWithoutIr(
+      '%.2f',
       defaultFormat,
-      positional: const [3.14159],
+      const [3.14159],
+    ),
+  ),
+  // --- fallback-control: grouping keeps a double on the legacy tail, which
+  // writes the separated integer body the hot double op never emits.
+  _IrScenario(
+    label: '{:,.2f}',
+    kind: 'fallback-control',
+    ir: () => formatWith('{:,.2f}', positional: const [1234567.891]),
+    legacy: () => engine.debugFormatBraceWithoutIr(
+      '{:,.2f}',
+      defaultFormat,
+      positional: const [1234567.891],
     ),
   ),
   // --- fallback-control: multi-code-unit fill on a grapheme-cluster engine.
