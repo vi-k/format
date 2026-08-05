@@ -153,6 +153,17 @@ void main() {
     }
   });
 
+  test('oversized double precision stays on fallback', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:.100001f}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['fallback'],
+    );
+  });
+
   test('IR path and legacy path agree on a mixed template', () {
     const template = '{} + {} = {answer:>6}';
     final ir = formatWith(template, positional: [2, 3], named: {'answer': 5});

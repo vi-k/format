@@ -348,6 +348,15 @@ void main() {
     }
   });
 
+  test('oversized double precision keeps the legacy error', () {
+    expectBraceParity('{:.100001f}', positional: [2.5]);
+    expectBraceParity(
+      '{:.100001f}',
+      positional: [2.5],
+      engine: compatibleFormat,
+    );
+  });
+
   test('%s op matches the legacy path', () {
     const templates = ['%s', '%10s', '%-10s', '%.3s', '%10.3s', '%-10.3s'];
     final values = <Object?>['hello', '', 'éé', 42, null, 3.5, true];

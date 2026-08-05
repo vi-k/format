@@ -594,12 +594,21 @@ bool _rejectsDartDoublePrecision(String? type, int? precision) {
 }
 
 /// True for specifications the double op cannot write directly: grouping
-/// needs `_displayFloatBody`, and an oversized precision must keep the
-/// legacy `_validateDoubleSpec` error, which the op never raises.
-bool _rejectsHotDouble(_FormatSpec spec) =>
-    spec.grouping != null ||
-    spec.fractionalGrouping != null ||
-    (spec.precision != null && spec.precision! > 100000);
+/// needs `_displayFloatBody`, and anything `_validateDoubleSpec` rejects
+/// must keep its legacy per-call error, which the op never raises. The
+/// validator is probed instead of copied so its rules cannot drift away
+/// from the classifier (same pattern as _rejectsDartDoublePrecision).
+bool _rejectsHotDouble(_FormatSpec spec) {
+  if (spec.grouping != null || spec.fractionalGrouping != null) {
+    return true;
+  }
+  try {
+    _validateDoubleSpec(spec, spec.type, const FormatExceptionContext());
+    return false;
+  } on FormattingException {
+    return true;
+  }
+}
 
 _BraceOp? _classifyBraceField(
   _FieldNode field,
@@ -1255,12 +1264,13 @@ final class _PrintfDoubleOp extends _PrintfOp {
           alternate,
           type,
         ),
-        _ => _formatGeneral(
+        'g' || 'G' => _formatGeneral(
           Binary64.fromDouble(argument),
           effective == 0 ? 1 : effective,
           alternate,
           type == 'G' ? 'E' : 'e',
         ),
+        _ => throw StateError('Unsupported decimal printf conversion: $type'),
       };
     }
 
