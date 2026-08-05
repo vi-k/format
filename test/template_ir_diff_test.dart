@@ -1,6 +1,48 @@
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
+/// A deliberately non-default locale, modeled on `_PrintfNumberLocale` in
+/// test/sprintf_double_test.dart: every symbol and every digit differs from
+/// `CNumberLocale`, so any hot op that skipped localization would show up
+/// immediately in the parity comparison.
+final class _IrTestNumberLocale implements NumberLocale {
+  const _IrTestNumberLocale();
+
+  @override
+  String get decimalSeparator => ',';
+
+  @override
+  String get exponentSeparator => '×10^';
+
+  @override
+  String get groupSeparator => '.';
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  bool get groupingEnabled => true;
+
+  @override
+  String get minusSign => '−';
+
+  @override
+  String get plusSign => '＋';
+
+  @override
+  String localizeDigits(String asciiDigits) => asciiDigits
+      .replaceAll('0', '٠')
+      .replaceAll('1', '١')
+      .replaceAll('2', '٢')
+      .replaceAll('3', '٣')
+      .replaceAll('4', '٤')
+      .replaceAll('5', '٥')
+      .replaceAll('6', '٦')
+      .replaceAll('7', '٧')
+      .replaceAll('8', '٨')
+      .replaceAll('9', '٩');
+}
+
 final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
 final compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
 final compatibleGraphemes = Format(
@@ -379,6 +421,78 @@ void main() {
       expectPrintfParity('%.*d', [precision, 42]);
     }
     expectPrintfParity('%*.*d', [10, 4, -42]);
+  });
+
+  test('printf double op matches the legacy path', () {
+    const templates = [
+      '%f',
+      '%.0f',
+      '%.2f',
+      '%10.2f',
+      '%-10.2f',
+      '%010.2f',
+      '%+.2f',
+      '% .2f',
+      '%#.0f',
+      '%e',
+      '%.3e',
+      '%E',
+      '%g',
+      '%.3g',
+      '%G',
+      '%F',
+    ];
+    final values = <Object?>[
+      0.0,
+      -0.0,
+      0.1,
+      2.5,
+      -2.5,
+      12345678901234.568,
+      1e21,
+      1e-7,
+      double.maxFinite,
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+      42,
+      'text',
+      null,
+    ];
+    for (final template in templates) {
+      for (final value in values) {
+        expectPrintfParity(template, [value]);
+        expectPrintfParity(template, [value], engine: compatibleFormat);
+      }
+    }
+    for (final width in [0, 8, -8, 100001]) {
+      expectPrintfParity('%*.2f', [width, 2.5]);
+    }
+    for (final precision in [0, 3, -1, 100001]) {
+      expectPrintfParity('%.*f', [precision, 2.5]);
+    }
+    expectPrintfParity('%*.*f', [12, 3, -2.5]);
+  });
+
+  test('printf double op falls back to slow path for custom locales', () {
+    final locale = Format(numberLocale: const _IrTestNumberLocale());
+    for (final template in ['%.2f', '%10.2f', '%e', '%.3g']) {
+      for (final value in [2.5, -2.5, double.nan, 1e21]) {
+        expectPrintfParity(template, [value], engine: locale);
+      }
+    }
+    // Dynamic options too: the slow branch has to rebuild the resolved
+    // conversion by hand, folding a runtime-negative width into the left
+    // flag and passing the width on as a magnitude, exactly as
+    // _PrintfProcessor._resolve does before calling the same tail.
+    for (final width in [12, -12]) {
+      expectPrintfParity('%*.2f', [width, 2.5], engine: locale);
+      expectPrintfParity('%0*.2f', [width, -2.5], engine: locale);
+      expectPrintfParity('%*e', [width, 12.0], engine: locale);
+    }
+    expectPrintfParity('%.*f', [-1, 2.5], engine: locale);
+    expectPrintfParity('%*.*f', [-14, 3, -2.5], engine: locale);
+    expectPrintfParity('%*.2f', [100001, 2.5], engine: locale);
   });
 
   test('integers beyond 2^53 keep legacy digits on every platform', () {

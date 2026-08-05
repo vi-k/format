@@ -166,15 +166,16 @@ void main() {
   });
 
   test('printf skeleton: literals merge, %% folds into literal', () {
-    // %f stays on fallback even after Tasks 7-8 (doubles are out of the
-    // v1 hot core), so this expectation survives the whole plan.
+    // The point of this case is the literal merging around a conversion and
+    // the %% fold, not what %f classifies as: %f became a hot double op with
+    // the printf double ops.
     expect(
       debugCompiledProgramDescription(
         'x=%f, done 100%%',
         printf: true,
         textUnit: TextUnit.unicodeScalars,
       ),
-      ['literal', 'fallback', 'literal'],
+      ['literal', 'double:f', 'literal'],
     );
   });
 
@@ -242,6 +243,33 @@ void main() {
         'int:u',
         'literal',
         'int:X',
+      ],
+    );
+  });
+
+  test('printf doubles compile to double ops, %a stays fallback', () {
+    expect(
+      debugCompiledProgramDescription(
+        '%f|%.2f|%-10.2f|%010.2f|%e|%.3G|%*.*f|%a',
+        printf: true,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'double:f',
+        'literal',
+        'double:f:p2',
+        'literal',
+        'double:f:w10:p2',
+        'literal',
+        'double:f:w10:p2',
+        'literal',
+        'double:e',
+        'literal',
+        'double:G:p3',
+        'literal',
+        'double:f:w*:p*',
+        'literal',
+        'fallback',
       ],
     );
   });

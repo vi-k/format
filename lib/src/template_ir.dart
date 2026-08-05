@@ -1137,6 +1137,174 @@ final class _PrintfIntOp extends _PrintfOp {
   }
 }
 
+/// Hot op for `f F e E g G`. Width/precision resolution mirrors
+/// `_PrintfStringOp`; the body branches are a transliteration of
+/// `_formatPrintfDouble`, whose order is the parity contract. `a`/`A` are
+/// deliberately absent: their bodies ride an `0x`/`0X` prefix through
+/// `_displayPrintfHexBody`, which this op does not reproduce.
+final class _PrintfDoubleOp extends _PrintfOp {
+  final _PrintfConversionNode node;
+  final int valueArgIndex;
+  final bool left;
+  final bool hasWidth;
+  final int staticWidth; // meaningful when hasWidth && widthArgIndex < 0
+  final int widthArgIndex; // -1 static
+  final bool hasPrecision;
+  final int staticPrecision;
+  final int precisionArgIndex; // -1 static
+  final String type; // f F e E g G
+  final bool alternate;
+  final bool spaceFlag;
+  final bool signFlag;
+  final bool zeroFlag;
+
+  const _PrintfDoubleOp({
+    required this.node,
+    required this.valueArgIndex,
+    required this.left,
+    required this.hasWidth,
+    required this.staticWidth,
+    required this.widthArgIndex,
+    required this.hasPrecision,
+    required this.staticPrecision,
+    required this.precisionArgIndex,
+    required this.type,
+    required this.alternate,
+    required this.spaceFlag,
+    required this.signFlag,
+    required this.zeroFlag,
+  });
+
+  @override
+  void write(CharSink sink, _PrintfProcessor frame) {
+    var effectiveLeft = left;
+    int? width;
+    if (hasWidth) {
+      var resolved =
+          widthArgIndex < 0
+              ? staticWidth
+              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
+      if (resolved < 0) {
+        effectiveLeft = true;
+        resolved = -resolved;
+      }
+      width = resolved;
+    }
+    int? precision;
+    if (hasPrecision) {
+      final resolved =
+          precisionArgIndex < 0
+              ? staticPrecision
+              : _resolveIrPrintfOption(
+                frame,
+                node,
+                precisionArgIndex,
+                'precision',
+              );
+      if (resolved >= 0) precision = resolved;
+    }
+    final argument = frame._argumentAt(valueArgIndex, node);
+    if (argument is! double) {
+      throw UnsupportedFormatValueException(_valueContext(frame), argument);
+    }
+    final engine = frame.engine;
+
+    if (!identical(engine.numberLocale, const CNumberLocale())) {
+      // Non-default locales localize digits/signs/separators; the legacy
+      // tail reproduces that exactly, at legacy cost.
+      var flags = node.flags;
+      if (effectiveLeft) flags |= _PrintfFlags.left;
+      sink.writeString(
+        _formatPrintfDouble(
+          argument,
+          _ResolvedPrintfConversion(
+            node: node,
+            flags: flags,
+            width: width,
+            precision: precision,
+          ),
+          engine,
+          _valueContext(frame),
+        ),
+      );
+      return;
+    }
+
+    final uppercase = type == 'E' || type == 'F' || type == 'G';
+    if (precision != null &&
+        engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
+      // Legacy validates before the finiteness check, so a bad precision on
+      // nan must still throw. Unlike the brace op the verdict cannot be
+      // decided at compile time: `%.*f` resolves its precision per call. The
+      // null guard only skips a call the validator would return from at once,
+      // so the common no-precision write allocates no context at all.
+      _validateDartDoublePrecision(type, precision, _valueContext(frame));
+    }
+    late final _AsciiFloat formatted;
+    if (!argument.isFinite) {
+      formatted = _formatSpecialDouble(argument, uppercase, engine);
+    } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
+      formatted = _formatDartDouble(argument, type, precision, alternate);
+    } else {
+      final effective = precision ?? 6;
+      formatted = switch (type) {
+        'f' || 'F' => _formatFixed(argument, effective, alternate),
+        'e' || 'E' => _formatScientific(
+          Binary64.fromDouble(argument),
+          effective,
+          alternate,
+          type,
+        ),
+        _ => _formatGeneral(
+          Binary64.fromDouble(argument),
+          effective == 0 ? 1 : effective,
+          alternate,
+          type == 'G' ? 'E' : 'e',
+        ),
+      };
+    }
+
+    final negative = !argument.isNaN && argument.isNegative;
+    final signChar =
+        negative
+            ? 0x2d
+            : signFlag
+            ? 0x2b
+            : spaceFlag
+            ? 0x20
+            : 0;
+    // Unlike printf integers, a precision does not suppress the zero flag
+    // for doubles; only left alignment and the special spellings do.
+    final zero = zeroFlag && !effectiveLeft && !formatted.special;
+    _writeAsciiFloatDirect(
+      sink,
+      formatted.body,
+      signChar,
+      false,
+      width ?? -1,
+      zero ? 0x30 : 0x20,
+      effectiveLeft
+          ? 0x3c
+          : zero
+          ? 0x3d
+          : 0x3e,
+    );
+  }
+
+  FormatExceptionContext _valueContext(_PrintfProcessor frame) =>
+      _printfContext(frame.template, node, argumentIndex: valueArgIndex);
+
+  @override
+  String describe() {
+    final buffer = StringBuffer('double:$type');
+    if (hasWidth) buffer.write(widthArgIndex < 0 ? ':w$staticWidth' : ':w*');
+    if (hasPrecision) {
+      buffer.write(precisionArgIndex < 0 ? ':p$staticPrecision' : ':p*');
+    }
+    return buffer.toString();
+  }
+}
+
 _PrintfOp? _classifyPrintfConversion(
   _PrintfConversionNode node,
   int widthArgIndex,
@@ -1216,6 +1384,44 @@ _PrintfOp? _classifyPrintfConversion(
       },
       uppercase: type == 'X',
       signed: type == 'd' || type == 'i',
+      alternate: _hasPrintfFlag(node.flags, _PrintfFlags.alternate),
+      spaceFlag: _hasPrintfFlag(node.flags, _PrintfFlags.space),
+      signFlag: _hasPrintfFlag(node.flags, _PrintfFlags.sign),
+      zeroFlag: _hasPrintfFlag(node.flags, _PrintfFlags.zero),
+    );
+  }
+  // 'a'/'A' are deliberately absent: they keep the legacy hex tail.
+  if (const {'f', 'F', 'e', 'E', 'g', 'G'}.contains(node.type)) {
+    final width = node.width;
+    final precision = node.precision;
+    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
+    var staticWidth = 0;
+    if (width case _LiteralPrintfOption(:final value)) {
+      if (value < -_maximumSafePrintfOption ||
+          value > _maximumSafePrintfOption) {
+        return null; // Unsafe static width keeps today's per-call error.
+      }
+      staticWidth = value < 0 ? -value : value;
+      if (value < 0) left = true;
+    }
+    var staticPrecision = 0;
+    var hasPrecision = precision != null;
+    if (precision case _LiteralPrintfOption(:final value)) {
+      if (value > _maximumSafePrintfOption) return null;
+      if (value < 0) hasPrecision = false;
+      staticPrecision = value < 0 ? 0 : value;
+    }
+    return _PrintfDoubleOp(
+      node: node,
+      valueArgIndex: valueArgIndex,
+      left: left,
+      hasWidth: width != null,
+      staticWidth: staticWidth,
+      widthArgIndex: widthArgIndex,
+      hasPrecision: hasPrecision,
+      staticPrecision: staticPrecision,
+      precisionArgIndex: precisionArgIndex,
+      type: node.type,
       alternate: _hasPrintfFlag(node.flags, _PrintfFlags.alternate),
       spaceFlag: _hasPrintfFlag(node.flags, _PrintfFlags.space),
       signFlag: _hasPrintfFlag(node.flags, _PrintfFlags.sign),
