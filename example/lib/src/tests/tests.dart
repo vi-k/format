@@ -228,4 +228,16 @@ final benchmarkScenarios = <BenchmarkScenario>[
       ([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], '1 2 3 4 5 6 7 8 9 10 '),
     ],
   ),
+  // Placeholder scaling: migrated from the retired format2 gate benchmark,
+  // where 50 auto-numbered placeholders were the widest template measured.
+  BenchmarkScenario(
+    brace: List.filled(50, '{}').join('|'),
+    sprintf: List.filled(50, '%d').join('|'),
+    cases: [
+      (
+        List<Object?>.generate(50, (index) => index),
+        List.generate(50, (index) => '$index').join('|'),
+      ),
+    ],
+  ),
 ];

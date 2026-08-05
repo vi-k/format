@@ -17,7 +17,7 @@ void main() {
   });
 
   test('comparison matrix covers common builtin scenarios', () {
-    expect(benchmarkScenarios, hasLength(26));
+    expect(benchmarkScenarios, hasLength(27));
 
     final braces = benchmarkScenarios.map((s) => s.brace).toList();
     expect(braces, contains('{:b}'));
@@ -46,6 +46,22 @@ void main() {
     final integer = benchmarkScenarios.singleWhere((s) => s.brace == '{:d}');
     expect(integer.cases.last.$1, [-9223372036854775808]);
     expect(integer.cases.last.$2, '-9223372036854775808');
+  });
+
+  test('comparison matrix keeps the 50-placeholder scaling scenario', () {
+    final wide = benchmarkScenarios.singleWhere(
+      (s) => s.brace == List.filled(50, '{}').join('|'),
+    );
+
+    expect(wide.sprintf, List.filled(50, '%d').join('|'));
+    expect(wide.skipLegacy, isFalse);
+    expect(wide.skipSprintf7, isFalse);
+    expect(wide.cases, hasLength(1));
+    expect(wide.cases.single.$1, List<Object?>.generate(50, (index) => index));
+    expect(
+      wide.cases.single.$2,
+      List.generate(50, (index) => '$index').join('|'),
+    );
   });
 
   test('double modes benchmark prints results and timing for both modes', () {
@@ -143,6 +159,7 @@ void main() {
 
     final output = lines.join('\n');
     expect(output, contains('{:b}'));
+    expect(output, contains(List.filled(50, '{}').join('|')));
     expect(output, contains(': —'));
     expect(output, contains('OK'));
     expect(output, contains('Mode: quick'));

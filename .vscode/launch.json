@@ -17,14 +17,6 @@
       "args": []
     },
     {
-      "name": "Benchmark: Format 2 gate",
-      "request": "launch",
-      "type": "dart",
-      "program": "bin/format2_gate_benchmark.dart",
-      "cwd": "${workspaceFolder}/example",
-      "args": []
-    },
-    {
       "name": "Benchmark: double modes",
       "request": "launch",
       "type": "dart",
@@ -86,7 +78,6 @@
       "name": "Benchmark: all",
       "configurations": [
         "Benchmark: original example",
-        "Benchmark: Format 2 gate",
         "Benchmark: double modes",
         "Benchmark: template IR vs legacy",
         "Benchmark: release harness smoke",

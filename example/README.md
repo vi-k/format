@@ -15,12 +15,6 @@ Precise measurements with the benchmark_harness defaults (~4 min):
 dart run bin/benchmark.dart --full
 ```
 
-Compare Format 3 against the frozen Format 2 baseline:
-
-```console
-dart run bin/format2_gate_benchmark.dart
-```
-
 Compare the Dart SDK and Python/C++-compatible decimal `double` profiles:
 
 ```console
