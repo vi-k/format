@@ -8,17 +8,21 @@
 
 Перед каждым коммитом — `dart format` на затронутых файлах (локальный
 хук `.git/hooks/pre-commit` проверяет это автоматически; в клоне его
-надо ставить заново). Вендоренные `benchmark/baselines/*` НЕ
-форматировать — это verbatim-копии upstream, три файла sprintf7
-намеренно остаются в формат-дрейфе.
+надо ставить заново). Вендоренный `benchmark/baselines/format2` НЕ
+форматировать и не менять — замороженная verbatim-копия. Репозиторий
+полностью формат-чист (`dart format -o none --set-exit-if-changed .`
+из корня — 0 изменений).
 
 ## Git-состояние
 
 Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
-**девять** — ревью-раунд и реструктуризация этой сессии:
+**двенадцать** — ревью-раунд и реструктуризация этой сессии:
 
 ```text
-<новый>  docs: refresh handoff and TODO after the restructuring
+<новый>  docs: record the sprintf pub pin and the Kazakh locale swap
+4cdf9a1  chore: switch the showcase locale from Ukrainian to Kazakh
+f038f7e  refactor: take sprintf from pub instead of the vendored baseline
+1d10d6a  docs: refresh handoff and TODO after the restructuring
 89f48dd  chore: add pub.dev topics to both packages
 639d752  style: format the repository with the Dart 3.12.2 formatter
 f26d0a4  refactor: unify benchmarks under benchmark/, real example in example/
@@ -445,6 +449,21 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
 - Проверки после реструктуризации: корень 401, `benchmark/suite` 14,
   `format_intl` 7 — все зелёные; analyzer — те же 13 info в
   `benchmark/` (baselines/model/scenarios), lib/test чисты.
+- **sprintf7 теперь из pub** (`f038f7e`): вендоренный
+  `benchmark/baselines/sprintf7` удалён; вместо него точный пин
+  `sprintf: 7.0.0` (dev-зависимость корня для гейт-харнеса,
+  зависимость suite для матрицы). Перед удалением `lib/` вендора
+  сверен побайтово с pub-пакетом — **идентичен**, сопоставимость
+  записанных бенчмарк-чисел сохранена; provenance раннера теперь
+  `7.0.0/pub`. Пин точный намеренно: бамп версии обнуляет
+  сопоставимость. `format2` остаётся вендоренным — версия 2.0.0
+  никогда не публиковалась, из pub её не взять.
+- **Локаль-витрина: kk_KZ вместо uk_UA** (`4cdf9a1`): README-примеры,
+  `example/format_example.dart` (заполнение `🇰🇿`, слово
+  `Қазақстан`), format_intl (README, example, тесты), golden-intl
+  сценарий бенчмарка и его пин. CLDR-символы kk совпадают с uk
+  (NBSP-группировка, запятая, латинские цифры) — все ожидаемые
+  строки не изменились, проверено живыми прогонами.
 
 ## Замеры: RED → GREEN
 
