@@ -1,4 +1,4 @@
-import 'package:sprintf7_baseline/sprintf.dart' as sprintf7;
+import 'package:sprintf/sprintf.dart' as sprintf7;
 
 import 'my_benchmark_base.dart';
 

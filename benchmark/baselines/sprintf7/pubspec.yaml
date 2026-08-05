@@ -1,7 +1,0 @@
-name: sprintf7_baseline
-description: Frozen sprintf 7.0.0 baseline used by format benchmarks.
-version: 7.0.0
-publish_to: none
-
-environment:
-  sdk: ^3.7.2

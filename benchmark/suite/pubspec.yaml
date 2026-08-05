@@ -14,8 +14,9 @@ dependencies:
     path: ../..
   intl: ^0.20.2
   meta: ^1.16.0
-  sprintf7_baseline:
-    path: ../baselines/sprintf7
+  # Exact pin: the frozen competitor baseline. Bumping it invalidates
+  # comparability with recorded benchmark numbers.
+  sprintf: 7.0.0
 
 dev_dependencies:
   lints: ^5.0.0

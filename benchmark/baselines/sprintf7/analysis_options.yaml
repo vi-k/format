@@ -1,7 +1,0 @@
-# Keep the frozen Dart 2-era source outside this package's strict-analysis and
-# lint policy. The source itself remains byte-for-byte identical to upstream.
-analyzer:
-  language:
-    strict-casts: false
-    strict-inference: false
-    strict-raw-types: false

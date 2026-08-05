@@ -1,10 +1,9 @@
 import 'package:format/format.dart';
+import 'package:sprintf/sprintf.dart' as sprintf7;
 
 // ignore: avoid_relative_lib_imports
 import '../packages/format_intl/lib/format_intl.dart';
 import 'baselines/format2/format2.dart';
-// ignore: avoid_relative_lib_imports
-import 'baselines/sprintf7/lib/sprintf.dart' as sprintf7;
 import 'model.dart';
 
 const _braceScalarTemplate = '{:.1s}';
@@ -284,11 +283,11 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:n}',
     expected: const TextOutcome('1\u00a0234'),
     rationale:
-        'Pinned uk_UA Intl output is a golden reference, not a performance competitor.',
+        'Pinned kk_KZ Intl output is a golden reference, not a performance competitor.',
     candidate: (_) => _capture(() => _intlFormat.format('{:n}', 1234)),
     reference: (_) => const TextOutcome('1\u00a0234'),
     referenceKind: BenchmarkReferenceKind.golden,
-    referenceLabel: 'golden-intl:uk_UA:1234',
+    referenceLabel: 'golden-intl:kk_KZ:1234',
   ),
   _printfComparable(
     'printf.literal',
@@ -513,7 +512,7 @@ final Format _compatibleFormat = Format(
 final _braceTearOff = defaultFormat.format;
 final _printfTearOff = defaultFormat.sprintf;
 final Format _cFormat = Format(numberLocale: const CNumberLocale());
-final Format _intlFormat = Format(numberLocale: IntlNumberLocale('uk_UA'));
+final Format _intlFormat = Format(numberLocale: IntlNumberLocale('kk_KZ'));
 
 BenchmarkScenario _braceComparable(
   String name, {

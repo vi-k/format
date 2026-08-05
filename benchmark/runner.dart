@@ -160,7 +160,9 @@ BenchmarkReport runBenchmark(
       ...platform.environmentInfo(),
       'format': '3.0.0',
       'format2Baseline': '86febb4',
-      'sprintf7Baseline': '7.0.0/f1e74f2',
+      // Exact pub pin (byte-identical to the previously vendored
+      // upstream commit f1e74f2).
+      'sprintf7Baseline': '7.0.0/pub',
     },
     executableSizeBytes:
         detectedRuntime == 'aot' ? platform.executableSizeBytes() : null,
