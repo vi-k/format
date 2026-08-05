@@ -17,10 +17,11 @@ import 'utils/output.dart';
 BenchmarkDurations parseBenchmarkArgs(List<String> args) => switch (args) {
   [] => BenchmarkDurations.quick,
   ['--full'] => BenchmarkDurations.full,
-  _ => throw FormatException(
-    'Unknown arguments: ${args.join(' ')}. '
-    'Usage: benchmark.dart [--full]',
-  ),
+  _ =>
+    throw FormatException(
+      'Unknown arguments: ${args.join(' ')}. '
+      'Usage: benchmark.dart [--full]',
+    ),
 };
 
 void runComparisonBenchmark({
@@ -54,7 +55,8 @@ void runComparisonBenchmark({
       for (final benchmark in benchmarks) {
         final template =
             benchmark.isSprintf ? scenario.sprintf : scenario.brace;
-        final skipped = template == null ||
+        final skipped =
+            template == null ||
             (benchmark.isLegacy && scenario.skipLegacy) ||
             (benchmark.isSprintf7 && scenario.skipSprintf7);
         if (skipped) {
@@ -106,8 +108,7 @@ void runComparisonBenchmark({
 
   emit('');
   emit(h1('----------------------------------------'));
-  final mode =
-      identical(resolved, BenchmarkDurations.full) ? 'full' : 'quick';
+  final mode = identical(resolved, BenchmarkDurations.full) ? 'full' : 'quick';
   final seconds = (stopwatch.elapsedMilliseconds / 1000).toStringAsFixed(1);
   emit('Mode: $mode. Total: $seconds s');
 }

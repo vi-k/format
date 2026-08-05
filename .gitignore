@@ -6,12 +6,8 @@
 # Conventional directory for build outputs
 build/
 
-# The example remains an independent package and keeps its library lock local.
-/example/pubspec.lock
-
-# Compiled benchmark binaries stay local: they go stale with every code
-# change and bloat the repository.
-/example/bin/benchmark.exe
-
+# The benchmark suite remains an independent package and keeps its
+# library lock local.
+/benchmark/suite/pubspec.lock
 # Directory created by dartdoc
 doc/api/

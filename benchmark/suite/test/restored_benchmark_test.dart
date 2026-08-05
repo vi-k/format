@@ -1,4 +1,4 @@
-import 'package:example/benchmark.dart';
+import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -153,10 +153,7 @@ void main() {
     expect(parseBenchmarkArgs([]), BenchmarkDurations.quick);
     expect(parseBenchmarkArgs(['--full']), BenchmarkDurations.full);
     expect(() => parseBenchmarkArgs(['--fast']), throwsFormatException);
-    expect(
-      () => parseBenchmarkArgs(['--full', 'x']),
-      throwsFormatException,
-    );
+    expect(() => parseBenchmarkArgs(['--full', 'x']), throwsFormatException);
   });
 
   test('comparison benchmark skips unsupported runners and shows only the '

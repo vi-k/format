@@ -5,15 +5,15 @@
       "name": "format",
       "request": "launch",
       "type": "dart",
-      "program": "example2/format_example.dart",
+      "program": "example/format_example.dart",
       "args": []
     },
     {
-      "name": "Benchmark: original example",
+      "name": "Benchmark: comparison matrix",
       "request": "launch",
       "type": "dart",
       "program": "bin/benchmark.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/benchmark/suite",
       "args": []
     },
     {
@@ -21,7 +21,7 @@
       "request": "launch",
       "type": "dart",
       "program": "bin/double_modes_benchmark.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/benchmark/suite",
       "args": []
     },
     {
@@ -29,7 +29,7 @@
       "request": "launch",
       "type": "dart",
       "program": "bin/template_ir_benchmark.dart",
-      "cwd": "${workspaceFolder}/example",
+      "cwd": "${workspaceFolder}/benchmark/suite",
       "args": []
     },
     {
@@ -77,7 +77,7 @@
     {
       "name": "Benchmark: all",
       "configurations": [
-        "Benchmark: original example",
+        "Benchmark: comparison matrix",
         "Benchmark: double modes",
         "Benchmark: template IR vs legacy",
         "Benchmark: release harness smoke"

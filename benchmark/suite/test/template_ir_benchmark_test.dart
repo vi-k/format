@@ -1,4 +1,4 @@
-import 'package:example/benchmark.dart';
+import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -21,20 +21,16 @@ void main() {
     // Zero padding fitted to the grouped width stays on the legacy tail too.
     expect(output, contains('{:010,d}'));
     expect(output, isNot(contains('RESULTS DIFFER')));
-    final verdicts =
-        lines.where(
-          (line) =>
-              line.contains('IR FASTER') ||
-              line.contains('LEGACY FASTER') ||
-              line.contains('PERFORMANCE EQUAL'),
-        );
+    final verdicts = lines.where(
+      (line) =>
+          line.contains('IR FASTER') ||
+          line.contains('LEGACY FASTER') ||
+          line.contains('PERFORMANCE EQUAL'),
+    );
     expect(verdicts.length, 16);
   });
 
   test('template IR benchmark validates its options', () {
-    expect(
-      () => runTemplateIrBenchmark(operations: 0),
-      throwsArgumentError,
-    );
+    expect(() => runTemplateIrBenchmark(operations: 0), throwsArgumentError);
   });
 }

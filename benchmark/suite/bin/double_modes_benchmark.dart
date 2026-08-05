@@ -1,5 +1,5 @@
 import 'package:ansi_escape_codes/ansi_escape_codes.dart' as ansi;
-import 'package:example/benchmark.dart';
+import 'package:format_benchmarks/benchmark.dart';
 
 void main() {
   ansi.runZonedPrinter(

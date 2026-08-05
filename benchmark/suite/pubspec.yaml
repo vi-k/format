@@ -1,5 +1,5 @@
-name: example
-description: Example for format.
+name: format_benchmarks
+description: ANSI-colored benchmark suite for format.
 version: 1.0.0
 publish_to: none
 
@@ -11,11 +11,11 @@ dependencies:
   benchmark_harness: ^2.3.1
   characters: ^1.4.0
   format:
-    path: ..
+    path: ../..
   intl: ^0.20.2
   meta: ^1.16.0
   sprintf7_baseline:
-    path: ../benchmark/baselines/sprintf7
+    path: ../baselines/sprintf7
 
 dev_dependencies:
   lints: ^5.0.0

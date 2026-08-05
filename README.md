@@ -96,7 +96,7 @@ compatible.format('{}', double.infinity);  // inf
 Compare both profiles on the current machine with the ANSI-colored benchmark:
 
 ```console
-cd example
+cd benchmark/suite
 dart run bin/double_modes_benchmark.dart
 ```
 

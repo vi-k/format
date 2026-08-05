@@ -50,139 +50,145 @@ final _scenarios = <_IrScenario>[
     label: '{:10d}',
     kind: 'hot',
     ir: () => formatWith('{:10d}', positional: const [12345]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:10d}',
-      defaultFormat,
-      positional: const [12345],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:10d}',
+          defaultFormat,
+          positional: const [12345],
+        ),
   ),
   _IrScenario(
     label: '{:x}',
     kind: 'hot',
     ir: () => formatWith('{:x}', positional: const [255]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:x}',
-      defaultFormat,
-      positional: const [255],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:x}',
+          defaultFormat,
+          positional: const [255],
+        ),
   ),
   // --- hot: brace static text ops ---
   _IrScenario(
     label: '{:s}',
     kind: 'hot',
     ir: () => formatWith('{:s}', positional: const ['hello world']),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:s}',
-      defaultFormat,
-      positional: const ['hello world'],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:s}',
+          defaultFormat,
+          positional: const ['hello world'],
+        ),
   ),
   _IrScenario(
     label: '{:<10s}',
     kind: 'hot',
     ir: () => formatWith('{:<10s}', positional: const ['hello']),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:<10s}',
-      defaultFormat,
-      positional: const ['hello'],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:<10s}',
+          defaultFormat,
+          positional: const ['hello'],
+        ),
   ),
   // --- hot: brace dynamic-value op (empty spec) ---
   _IrScenario(
     label: '{}',
     kind: 'hot',
     ir: () => formatWith('{}', positional: const ['hello']),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{}',
-      defaultFormat,
-      positional: const ['hello'],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{}',
+          defaultFormat,
+          positional: const ['hello'],
+        ),
   ),
   // --- hot: brace static double ops, both doubleFormatMode spellings ---
   _IrScenario(
     label: '{:.2f}',
     kind: 'hot',
     ir: () => formatWith('{:.2f}', positional: const [3.14159]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:.2f}',
-      defaultFormat,
-      positional: const [3.14159],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:.2f}',
+          defaultFormat,
+          positional: const [3.14159],
+        ),
   ),
   _IrScenario(
     label: '{:.2f} compatible',
     kind: 'hot',
     ir: () => _compatible.formatWith('{:.2f}', positional: const [3.14159]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:.2f}',
-      _compatible,
-      positional: const [3.14159],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:.2f}',
+          _compatible,
+          positional: const [3.14159],
+        ),
   ),
   _IrScenario(
     label: '{:e}',
     kind: 'hot',
     ir: () => formatWith('{:e}', positional: const [3.14159]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:e}',
-      defaultFormat,
-      positional: const [3.14159],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:e}',
+          defaultFormat,
+          positional: const [3.14159],
+        ),
   ),
   // --- hot: brace dynamic-value op dispatching a double (empty spec) ---
   _IrScenario(
     label: '{} (double)',
     kind: 'hot',
     ir: () => formatWith('{}', positional: const [3.14159]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{}',
-      defaultFormat,
-      positional: const [3.14159],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{}',
+          defaultFormat,
+          positional: const [3.14159],
+        ),
   ),
   // --- hot: printf static string op ---
   _IrScenario(
     label: '%s',
     kind: 'hot',
     ir: () => vsprintf('%s', const ['hello world']),
-    legacy: () => engine.debugFormatPrintfWithoutIr(
-      '%s',
-      defaultFormat,
-      const ['hello world'],
-    ),
+    legacy:
+        () => engine.debugFormatPrintfWithoutIr('%s', defaultFormat, const [
+          'hello world',
+        ]),
   ),
   // --- hot: printf static integer op ---
   _IrScenario(
     label: '%10d',
     kind: 'hot',
     ir: () => vsprintf('%10d', const [12345]),
-    legacy: () => engine.debugFormatPrintfWithoutIr(
-      '%10d',
-      defaultFormat,
-      const [12345],
-    ),
+    legacy:
+        () => engine.debugFormatPrintfWithoutIr('%10d', defaultFormat, const [
+          12345,
+        ]),
   ),
   // --- hot: printf integer op with dynamic width (still hot for printf) ---
   _IrScenario(
     label: '%0*d',
     kind: 'hot',
     ir: () => vsprintf('%0*d', const [7, 42]),
-    legacy: () => engine.debugFormatPrintfWithoutIr(
-      '%0*d',
-      defaultFormat,
-      const [7, 42],
-    ),
+    legacy:
+        () => engine.debugFormatPrintfWithoutIr('%0*d', defaultFormat, const [
+          7,
+          42,
+        ]),
   ),
   // --- hot: printf static double op ---
   _IrScenario(
     label: '%.2f',
     kind: 'hot',
     ir: () => vsprintf('%.2f', const [3.14159]),
-    legacy: () => engine.debugFormatPrintfWithoutIr(
-      '%.2f',
-      defaultFormat,
-      const [3.14159],
-    ),
+    legacy:
+        () => engine.debugFormatPrintfWithoutIr('%.2f', defaultFormat, const [
+          3.14159,
+        ]),
   ),
   // --- fallback-control: grouping keeps a double on the legacy tail, which
   // writes the separated integer body the hot double op never emits.
@@ -190,11 +196,12 @@ final _scenarios = <_IrScenario>[
     label: '{:,.2f}',
     kind: 'fallback-control',
     ir: () => formatWith('{:,.2f}', positional: const [1234567.891]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:,.2f}',
-      defaultFormat,
-      positional: const [1234567.891],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:,.2f}',
+          defaultFormat,
+          positional: const [1234567.891],
+        ),
   ),
   // --- fallback-control: zero padding fitted to the grouped width keeps an
   // integer on the legacy tail; both sides share formatBraceInteger with the
@@ -203,11 +210,12 @@ final _scenarios = <_IrScenario>[
     label: '{:010,d}',
     kind: 'fallback-control',
     ir: () => formatWith('{:010,d}', positional: const [1234]),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:010,d}',
-      defaultFormat,
-      positional: const [1234],
-    ),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:010,d}',
+          defaultFormat,
+          positional: const [1234],
+        ),
   ),
   // --- fallback-control: multi-code-unit fill on a grapheme-cluster engine.
   // The fill is 'e' + combining U+0301, written as an explicit escape so it
@@ -216,15 +224,15 @@ final _scenarios = <_IrScenario>[
   _IrScenario(
     label: '{:e\u0301^10s}',
     kind: 'fallback-control',
-    ir: () => _graphemes.formatWith(
-      '{:e\u0301^10s}',
-      positional: const ['abc'],
-    ),
-    legacy: () => engine.debugFormatBraceWithoutIr(
-      '{:e\u0301^10s}',
-      _graphemes,
-      positional: const ['abc'],
-    ),
+    ir:
+        () =>
+            _graphemes.formatWith('{:e\u0301^10s}', positional: const ['abc']),
+    legacy:
+        () => engine.debugFormatBraceWithoutIr(
+          '{:e\u0301^10s}',
+          _graphemes,
+          positional: const ['abc'],
+        ),
   ),
 ];
 
@@ -281,7 +289,8 @@ void runTemplateIrBenchmark({
     }
     final irFaster = measurements.irMicros <= measurements.legacyMicros;
     final fastest = irFaster ? 'IR' : 'LEGACY';
-    final slowest = irFaster ? measurements.legacyMicros : measurements.irMicros;
+    final slowest =
+        irFaster ? measurements.legacyMicros : measurements.irMicros;
     final fastestTime =
         irFaster ? measurements.irMicros : measurements.legacyMicros;
     final difference =
@@ -321,10 +330,7 @@ void runTemplateIrBenchmark({
       irSamples.add(_measure(scenario.ir, irResult, operations));
     }
   }
-  return (
-    irMicros: _median(irSamples),
-    legacyMicros: _median(legacySamples),
-  );
+  return (irMicros: _median(irSamples), legacyMicros: _median(legacySamples));
 }
 
 double _measure(String Function() operation, String expected, int operations) {

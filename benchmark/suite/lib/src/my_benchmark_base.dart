@@ -9,10 +9,11 @@ final class BenchmarkDurations {
     required this.measureMillis,
   });
 
-  static const quick =
-      BenchmarkDurations(warmupMillis: 45, measureMillis: 165);
-  static const full =
-      BenchmarkDurations(warmupMillis: 100, measureMillis: 2000);
+  static const quick = BenchmarkDurations(warmupMillis: 45, measureMillis: 165);
+  static const full = BenchmarkDurations(
+    warmupMillis: 100,
+    measureMillis: 2000,
+  );
 }
 
 abstract base class MyBenchmarkBase extends BenchmarkBase {
@@ -33,10 +34,7 @@ abstract base class MyBenchmarkBase extends BenchmarkBase {
   double measure() {
     setup();
     BenchmarkBase.measureFor(warmup, durations.warmupMillis);
-    final result = BenchmarkBase.measureFor(
-      exercise,
-      durations.measureMillis,
-    );
+    final result = BenchmarkBase.measureFor(exercise, durations.measureMillis);
     teardown();
     return result;
   }

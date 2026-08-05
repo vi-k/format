@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:ansi_escape_codes/ansi_escape_codes.dart' as ansi;
-import 'package:example/benchmark.dart';
+import 'package:format_benchmarks/benchmark.dart';
 
 void main(List<String> arguments) {
   final BenchmarkDurations durations;
