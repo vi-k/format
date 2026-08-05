@@ -21,7 +21,7 @@
 (`lib/src/template_ir.dart`, дифф-харнес с паритетом контекстов,
 A/B-бенчмарк `example/bin/template_ir_benchmark.dart`).
 
-Спека: `docs/superpowers/specs/2026-08-05-double-ops-design.md`.
+Спека: `docs/2026-08-05[1]-double-ops-design.md`.
 
 ## Global Constraints
 

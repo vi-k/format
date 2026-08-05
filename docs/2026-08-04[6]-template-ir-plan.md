@@ -19,7 +19,7 @@ sealed-иерархии `_BraceOp`/`_PrintfOp` с компиляторами и�
 **Tech Stack:** Dart ≥3, `package:test`, benchmark-инфраструктура
 `example/` (образец — `double_modes_benchmark.dart`).
 
-Спека: `docs/superpowers/specs/2026-08-04-template-ir-design.md`.
+Спека: `docs/2026-08-04[5]-template-ir-design.md`.
 
 ## Global Constraints
 

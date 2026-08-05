@@ -8,7 +8,7 @@
 
 **Tech Stack:** Dart, `benchmark_harness` 2.3.1 (остаётся), `package:test`.
 
-**Спека:** `docs/superpowers/specs/2026-08-04-benchmark-type-coverage-design.md`.
+**Спека:** `docs/2026-08-04[1]-benchmark-type-coverage-design.md`.
 
 ## Global Constraints
 

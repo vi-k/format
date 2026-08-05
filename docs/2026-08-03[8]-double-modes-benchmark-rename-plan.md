@@ -15,7 +15,7 @@
 - Активные пользовательские тексты используют `double modes` и `double-mode`.
 - Старые alias не сохраняются.
 - README утверждает преимущество или равенство только для конечных `double` в протестированных сценариях.
-- Исторические файлы в `docs/superpowers/specs` и `docs/superpowers/plans` не переписываются.
+- Исторические файлы в `docs/` (бывшие `docs/superpowers/specs` и `docs/superpowers/plans`) не переписываются.
 
 ---
 

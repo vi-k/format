@@ -8,7 +8,7 @@
 
 **Tech Stack:** Dart; `package:test`; benchmark_harness (без изменений).
 
-**Спека:** `docs/superpowers/specs/2026-08-04-template-cache-design.md`.
+**Спека:** `docs/2026-08-04[3]-template-cache-design.md`.
 
 ## Global Constraints
 
