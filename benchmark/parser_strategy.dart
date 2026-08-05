@@ -1,9 +1,13 @@
 // ARCHIVED design probe. It compared three sprintf parser strategies once, to
 // pick one; the decision is recorded in `benchmark/results/parser_strategy.json`
 // (selected: scanner; commit 682c37f, 2026-08-02) and is implemented in the
-// package's parser. Template caching and the template IR later moved parsing
-// off the hot path entirely, so this probe informs no further decisions. It is
-// kept runnable for provenance only -- do not treat its numbers as a gate.
+// package's parser. Its question -- which strategy -- is settled, so the probe
+// drives no further decisions and is kept runnable for provenance only; do not
+// treat its numbers as a gate. Parser performance itself is still covered:
+// template caching and the template IR moved parsing off the hot path, and the
+// cold section of the example matrix (`example/lib/src/benchmark_cold.dart`,
+// where every call sees a template the cache has never seen) measures it where
+// it still runs.
 
 import 'dart:convert';
 import 'dart:math';
