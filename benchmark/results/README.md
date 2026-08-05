@@ -11,19 +11,19 @@ replace `<40hex>` in every compile or run command below with that
 exact value:
 
 ```sh
-rtk git rev-parse HEAD
+git rev-parse HEAD
 ```
 
 Run a gate-eligible JIT measurement with at least seven recorded rounds:
 
 ```sh
-rtk dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=1 --output=/private/tmp/format3-jit-1.json
+dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=1 --output=/private/tmp/format3-jit-1.json
 ```
 
 The shortened command is for local diagnosis only and must say `--smoke`:
 
 ```sh
-rtk dart run benchmark/runner.dart --dialect=braces --phase=hot --run=1 --samples=1 --smoke --output=/private/tmp/brace-smoke.json
+dart run benchmark/runner.dart --dialect=braces --phase=hot --run=1 --samples=1 --smoke --output=/private/tmp/brace-smoke.json
 ```
 
 Every report has `schemaVersion`, `runtime`, `run`, `versions`,
@@ -42,20 +42,20 @@ Gateable JavaScript reports require `node --version` to print exactly
 verify it before running the JavaScript commands:
 
 ```sh
-rtk node --version
+node --version
 ```
 
 ```sh
-rtk dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=1 --output=/private/tmp/format3-jit-1.json
-rtk dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=2 --output=/private/tmp/format3-jit-2.json
+dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=1 --output=/private/tmp/format3-jit-1.json
+dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=2 --output=/private/tmp/format3-jit-2.json
 
-rtk dart compile exe -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark-aot
-rtk /private/tmp/format3-benchmark-aot --runtime=aot --run=1 --output=/private/tmp/format3-aot-1.json
-rtk /private/tmp/format3-benchmark-aot --runtime=aot --run=2 --output=/private/tmp/format3-aot-2.json
+dart compile exe -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark-aot
+/private/tmp/format3-benchmark-aot --runtime=aot --run=1 --output=/private/tmp/format3-aot-1.json
+/private/tmp/format3-benchmark-aot --runtime=aot --run=2 --output=/private/tmp/format3-aot-2.json
 
-rtk dart compile js -O4 -Dformat.benchmark.dartCompilerVersion=3.12.2 -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark.js
-rtk node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
-rtk node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=2 --output=/private/tmp/format3-js-2.json
+dart compile js -O4 -Dformat.benchmark.dartCompilerVersion=3.12.2 -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark.js
+node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
+node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=2 --output=/private/tmp/format3-js-2.json
 ```
 
 On macOS only, if the system `node` is not pinned, the Darwin ARM64 package can
@@ -63,14 +63,14 @@ be used as a local workaround after verifying its version; do not substitute
 this package for the cross-platform commands above:
 
 ```sh
-rtk npx -y node-bin-darwin-arm64@24.8.0 --version
-rtk npx -y node-bin-darwin-arm64@24.8.0 /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
+npx -y node-bin-darwin-arm64@24.8.0 --version
+npx -y node-bin-darwin-arm64@24.8.0 /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
 ```
 
 Merge the reports after all six commands finish:
 
 ```sh
-rtk dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --output=/private/tmp/format3-gates.json
+dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --output=/private/tmp/format3-gates.json
 ```
 
 The merge rejects smoke/non-gateable reports, fewer than seven or mismatched

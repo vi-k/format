@@ -8,14 +8,14 @@ Format 2 from this repository's commit `86febb4`.
 The historical sources were inspected read-only with these commands:
 
 ```sh
-rtk git show 86febb4:LICENSE
-rtk git show 86febb4:lib/format.dart
-rtk git show 86febb4:lib/src/processor.dart
-rtk git show 86febb4:lib/src/formatter.dart
-rtk git show 86febb4:lib/src/options.dart
-rtk git show 86febb4:lib/src/format.dart
-rtk git show 86febb4:lib/src/errors.dart
-rtk git show 86febb4:lib/src/utils/utils.dart
+git show 86febb4:LICENSE
+git show 86febb4:lib/format.dart
+git show 86febb4:lib/src/processor.dart
+git show 86febb4:lib/src/formatter.dart
+git show 86febb4:lib/src/options.dart
+git show 86febb4:lib/src/format.dart
+git show 86febb4:lib/src/errors.dart
+git show 86febb4:lib/src/utils/utils.dart
 ```
 
 `LICENSE` is an exact copy of the repository-root `LICENSE`.
