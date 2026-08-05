@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve dependencies
+        run: dart pub get
+      - name: Formatting
+        # The format16 baseline is not materialized in this job, so the
+        # whole checkout must be format-clean.
+        run: dart format --output=none --set-exit-if-changed .
+      - name: Analyze (zero-info baseline)
+        # The full-repository pass lives in the benchmark-suite job:
+        # here the suite and the format16 baseline are not resolved yet.
+        run: dart analyze --fatal-infos lib test example
+      - name: Tests (VM, includes dart2js/AOT/node runners)
+        run: dart test
+      - name: Tests (node platform)
+        run: >-
+          dart test -p node
+          test/char_sink_test.dart
+          test/template_ir_compile_test.dart
+          test/template_ir_diff_test.dart
+          test/template_ir_fuzz_test.dart
+          test/js_number_dispatch_test.dart
+      - name: Example runs
+        run: dart run example/format_example.dart
+      - name: Tests (format_intl)
+        run: dart test
+        working-directory: packages/format_intl
+      - name: Publish dry-run
+        run: dart pub publish --dry-run
+
+  benchmark-suite:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve root dependencies
+        run: dart pub get
+      - name: Materialize the format 1.6.0 baseline from pub
+        run: dart run benchmark/baselines/format16/fetch.dart
+      - name: Resolve suite dependencies
+        run: dart pub get
+        working-directory: benchmark/suite
+      - name: Analyze (full repository)
+        run: dart analyze
+      - name: Tests (benchmark suite)
+        run: dart test
+        working-directory: benchmark/suite

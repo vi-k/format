@@ -1,5 +1,7 @@
 # format
 
+[![CI](https://github.com/vi-k/format/actions/workflows/ci.yaml/badge.svg)](https://github.com/vi-k/format/actions/workflows/ci.yaml)
+
 `format` brings Python-style braces and printf-style mini-languages to Dart
 while keeping Dart SDK number conversion as the default. It supports positional
 and named values, Unicode-aware alignment, locale-aware numbers, and custom
