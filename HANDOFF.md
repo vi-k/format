@@ -6,14 +6,23 @@
 Все shell-команды запускать с префиксом `rtk` (hook подменяет
 прозрачно). Спецификации, планы и handoff писать по-русски.
 
+Перед каждым коммитом — `dart format` на затронутых файлах (локальный
+хук `.git/hooks/pre-commit` проверяет это автоматически; в клоне его
+надо ставить заново). Вендоренные `benchmark/baselines/*` НЕ
+форматировать — это verbatim-копии upstream, три файла sprintf7
+намеренно остаются в формат-дрейфе.
+
 ## Git-состояние
 
-Ветка `main`. `origin/main` == `98dc98b` — вся follow-up связка прошлой
-сессии запушена владельцем. Непушнутых коммитов ровно **пять** —
-ревью-раунд этой сессии:
+Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
+**девять** — ревью-раунд и реструктуризация этой сессии:
 
 ```text
-<новый>  docs: refresh handoff, TODO and changelog     (этот коммит)
+<новый>  docs: refresh handoff and TODO after the restructuring
+89f48dd  chore: add pub.dev topics to both packages
+639d752  style: format the repository with the Dart 3.12.2 formatter
+f26d0a4  refactor: unify benchmarks under benchmark/, real example in example/
+5fa8402  docs: refresh handoff, TODO and changelog
 1b886b4  chore: publication and repo hygiene from the review
 65e8c9e  test: pin the {:010,d} scenario in both benchmarks
 6da4107  fix: grouped zero padding, exact web ints, richer typed errors
@@ -404,7 +413,38 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
   это осознанный воспроизводимый дизайн. Код гейта не менялся.
 - Осталось из плана ревью (см. отчёт): CI (главный системный риск),
   исполняемые реестры дивергенций, dartdoc на публичный API,
-  заметка о непубликовавшейся 2.0.0, формат-дрейф 19 файлов.
+  заметка о непубликовавшейся 2.0.0.
+
+## Реструктуризация и подготовка к публикации (2026-08-05, поздний вечер)
+
+- **`example/` → `benchmark/suite/`** (`f26d0a4`): бывший example-пакет
+  был бенчмарк-сьютом; теперь все бенчмарки живут под `benchmark/` —
+  гейт-харнес сверху, ANSI-матрица в `suite/` (имя пакета
+  `format_benchmarks`, импорты `package:format_benchmarks/...`,
+  path-зависимость sprintf7 стала `../baselines/sprintf7`). VS Code
+  конфигурации перенацелены; исторические упоминания
+  `example/bin/...` в разделах ниже оставлены как были — теперь это
+  `benchmark/suite/bin/...`.
+- **Настоящий пример**: `example/format_example.dart` — гид по API
+  (braces, printf, настроенные Format, кастомный форматтер,
+  типизированные ошибки), комментарии совпадают с реальным выводом
+  (проверено запуском); pub.dev покажет его на вкладке Example.
+  Скудный `example2/` удалён.
+- **Формат-нормализация** (`639d752`): весь репозиторий отформатирован
+  SDK 3.12.2; в дрейфе остались ровно 3 verbatim-файла
+  `benchmark/baselines/sprintf7` (намеренно). Локальный пре-коммит хук
+  `.git/hooks/pre-commit` проверяет формат затронутых dart-файлов
+  (baselines исключены). **Решение по SDK**: минимум `^3.7.2` НЕ
+  поднимаем ради форматтера — tall style гейтится языковой версией
+  (3.7+ уже включён), дрейф был от разницы реализаций форматтера
+  между SDK, а не от языковой версии; лечится форматированием одним
+  актуальным SDK + хуком/CI.
+- **pub.dev** (`89f48dd` + `f26d0a4`): topics у обоих пакетов; архив
+  111 KB; dry-run — 0 предметных warnings (остались только «грязное
+  дерево» на момент прогона и hint о скачке версии 1.6.0 → 3.0.0).
+- Проверки после реструктуризации: корень 401, `benchmark/suite` 14,
+  `format_intl` 7 — все зелёные; analyzer — те же 13 info в
+  `benchmark/` (baselines/model/scenarios), lib/test чисты.
 
 ## Замеры: RED → GREEN
 
@@ -572,8 +612,8 @@ hardening'а гейтилась A/B-прогонами Task 2, см. разде�
 ```text
 dart test (корень): 401 прошли        (+5 к прошлой сессии: 1 web-digits,
   3 toString исключений, 1 потолок ширины)
-dart test (example): 14 прошли        (пины {:010,d} дописаны в
-  существующие тесты, новых test() нет)
+dart test (benchmark/suite): 14 прошли  (бывший example; пины {:010,d}
+  дописаны в существующие тесты, новых test() нет)
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart
   test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart
   test/js_number_dispatch_test.dart:
