@@ -144,6 +144,7 @@ Future<ProcessResult> _runFixtureVerifier(File reference, File actual) =>
 const _requiredDivergenceIds = {
   'arbitrary-tostring-for-s',
   'canonical-special-values',
+  'dartsdk-default-double-profile',
   'fixed-rounding-mode',
   'format-intl-locale-extensions',
   'negative-unsigned-error',

@@ -136,7 +136,9 @@ conversions, and decimal or hexadecimal floating-point conversions. Width and
 precision may be literals or `*` arguments. Decimal floating-point conversions
 use the selected double profile: Dart SDK semantics by default, or deterministic
 C++23-compatible nearest-even rounding and `inf`/`nan` spelling in compatible
-mode. Negative unsigned values are rejected instead of wrapped.
+mode. In the default profile `sprintf('%e', 12.5)` returns `1.25e+1`, not the
+C `1.250000e+01`: select `DoubleFormatMode.compatible` when C-exact decimal
+output is required. Negative unsigned values are rejected instead of wrapped.
 
 This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX
 `$` argument indexing, and C++26 `%b`/`%B`. String width and precision use the
@@ -195,6 +197,10 @@ represented as `{}`. This ambiguity is intentional: non-empty values remain
 distinguishable by their entries.
 
 ## Format 3.0 migration
+
+Version 2.0.0 was never published to pub.dev, so migrating from the published
+1.6.0 means adopting the 2.0 and 3.0 changes together; both are described in
+the CHANGELOG.
 
 Version 3.0 removes `formatNamed` and treats a `List` passed to `format` as one
 value. Pass direct values separately, or use `formatWith` for positional and

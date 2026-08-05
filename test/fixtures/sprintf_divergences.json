@@ -18,6 +18,14 @@
       "readme_anchor": "#sprintf"
     },
     {
+      "id": "dartsdk-default-double-profile",
+      "input": {"template": "%e", "value": 12.5},
+      "cpp": {"result": "1.250000e+01"},
+      "dart": {"result": "1.25e+1"},
+      "reason": "The default DoubleFormatMode.dartSdk delegates decimal doubles to the Dart SDK conversions: shortest mantissa when %e/%g have no explicit precision, unpadded exponents, and SDK precision limits. Select DoubleFormatMode.compatible for C++-exact decimal output; the compatibility fixtures run in that mode.",
+      "readme_anchor": "#sprintf"
+    },
+    {
       "id": "fixed-rounding-mode",
       "input": {"template": "%.0f", "value": 2.5},
       "cpp": {"result": "depends on the active floating-point rounding mode"},
