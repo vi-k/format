@@ -4,6 +4,12 @@ version: 1.0.0
 homepage: https://github.com/vi-k/format
 repository: https://github.com/vi-k/format
 issue_tracker: https://github.com/vi-k/format/issues
+topics:
+  - string
+  - formatting
+  - intl
+  - i18n
+  - localization
 environment:
   sdk: ^3.7.2
 resolution: workspace

@@ -3,6 +3,12 @@ description: Dart string formatting with Python-style braces and printf mini-lan
 version: 3.0.0
 repository: https://github.com/vi-k/format
 issue_tracker: https://github.com/vi-k/format/issues
+topics:
+  - string
+  - formatting
+  - printf
+  - sprintf
+  - interpolation
 environment:
   sdk: ^3.7.2
 workspace:
