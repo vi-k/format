@@ -2,6 +2,11 @@ import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
 final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
+final compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
+final compatibleGraphemes = Format(
+  doubleFormatMode: DoubleFormatMode.compatible,
+  textUnit: TextUnit.graphemeClusters,
+);
 
 void expectBraceParity(
   String template, {
@@ -206,6 +211,75 @@ void main() {
       for (final value in values) {
         expectBraceParity(spec, positional: [value]);
         expectBraceParity(spec, positional: [value], engine: graphemeFormat);
+      }
+    }
+  });
+
+  test('double op matches the legacy path across specs and values', () {
+    const specs = [
+      '{:f}',
+      '{:.0f}',
+      '{:.2f}',
+      '{:10.2f}',
+      '{:<10.2f}',
+      '{:^10.2f}',
+      '{:=10.2f}',
+      '{:010.2f}',
+      '{:+.2f}',
+      '{: .2f}',
+      '{:z.1f}',
+      '{:#.0f}',
+      '{:e}',
+      '{:.3e}',
+      '{:E}',
+      '{:g}',
+      '{:.3g}',
+      '{:G}',
+      '{:.1%}',
+      // The '%' suffix rides inside applyNumericWidth's digits, so pad it
+      // in every direction; a non-space fill exercises fillChar.
+      '{:010.1%}',
+      '{:<10.1%}',
+      '{:*>10.2f}',
+      '{:*=10.2f}',
+      '{:+010.2f}',
+      '{:.3}',
+      '{:10.3}',
+      '{:>10}',
+      '{:F}',
+      '{:.25f}',
+    ];
+    final values = <Object?>[
+      0.0,
+      -0.0,
+      0.1,
+      2.5,
+      -2.5,
+      12345678901234.568,
+      1e21,
+      1e-7,
+      double.minPositive,
+      double.maxFinite,
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+      42,
+      -7,
+      BigInt.parse('123456789012345678901234567890'),
+      'text',
+      true,
+      null,
+    ];
+    for (final spec in specs) {
+      for (final value in values) {
+        expectBraceParity(spec, positional: [value]);
+        expectBraceParity(spec, positional: [value], engine: graphemeFormat);
+        expectBraceParity(spec, positional: [value], engine: compatibleFormat);
+        expectBraceParity(
+          spec,
+          positional: [value],
+          engine: compatibleGraphemes,
+        );
       }
     }
   });

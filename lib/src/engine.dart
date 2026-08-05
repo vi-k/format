@@ -6,6 +6,12 @@ import 'extensions.dart';
 import 'number_locale.dart';
 import 'text_unit.dart';
 
+// DoubleFormatMode is part of the same seam surface as TextUnit below: the
+// differential tests build engines in both double modes through this
+// library alone (it is also separately exported by the public
+// `format.dart` library).
+export 'double_format.dart' show DoubleFormatMode;
+
 // FormattingException and FormatExceptionContext are needed by the
 // template-IR differential tests accessed via `package:format/src/engine.dart`:
 // the parity helpers compare exception context fields (offset, fragment,

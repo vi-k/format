@@ -26,16 +26,17 @@ void main() {
     );
   });
 
-  test('fields compile to fallback ops in the skeleton', () {
-    // Both fields stay on fallback even after Tasks 4-8: a floating spec
-    // and a dynamic nested spec are outside the v1 hot core.
+  test('dynamic nested specs stay on fallback', () {
+    // The floating spec became hot with the double ops; a dynamic nested
+    // spec stays on fallback because it cannot be classified at compile
+    // time.
     expect(
       debugCompiledProgramDescription(
         'a{:.2f}b{:{}d}',
         printf: false,
         textUnit: TextUnit.unicodeScalars,
       ),
-      ['literal', 'fallback', 'literal', 'fallback'],
+      ['literal', 'double:f:p2', 'literal', 'fallback'],
     );
   });
 
@@ -98,6 +99,48 @@ void main() {
       '{:,s}',
       '{:e\u0301^10s}',
     ]) {
+      expect(
+        debugCompiledProgramDescription(
+          spec,
+          printf: false,
+          textUnit: TextUnit.unicodeScalars,
+        ),
+        ['fallback'],
+        reason: spec,
+      );
+    }
+  });
+
+  test('static double specs compile to double ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:.2f}|{:e}|{:10.3G}|{:.1%}|{:.3}|{:10}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'double:f:p2',
+        'literal',
+        'double:e',
+        'literal',
+        'double:G:w10:p3',
+        'literal',
+        'double:%:p1',
+        'literal',
+        'double:-:p3',
+        'literal',
+        'double:-:w10',
+      ],
+    );
+  });
+
+  test('non-hot double specs stay on fallback', () {
+    // The combining fill (e + U+0301) is written as an explicit escape so
+    // it stays two code units regardless of editor/source normalization:
+    // the parser rejects it under unicodeScalars and it is a multi-unit
+    // fill under graphemeClusters, so it never compiles hot. A precomposed
+    // single-code-unit fill would compile hot instead.
+    for (final spec in ['{:,.2f}', '{:.2n}', '{:e\u0301^10.2f}']) {
       expect(
         debugCompiledProgramDescription(
           spec,

@@ -317,6 +317,198 @@ final class _BraceTextOp extends _BraceOp {
   }
 }
 
+/// Writes a formatted ASCII float — optional sign, [body], optional `%` —
+/// into [sink] with the padding described by [width] (-1 for none),
+/// [fillChar] and [align].
+///
+/// The body produced by the double generators is always ASCII, so
+/// `body.length` is at once its code-unit count, its scalar count and its
+/// grapheme count: the padding arithmetic below needs no TextUnit. The write
+/// order per alignment mirrors `applyNumericWidth`: `>` fill-sign-body-'%',
+/// `=` sign-fill-body-'%', `<` sign-body-'%'-fill, `^` splits the fill
+/// around sign-body-'%'. Shared by the brace and printf double ops.
+void _writeAsciiFloatDirect(
+  CharSink sink,
+  String body,
+  int signChar,
+  bool percentSuffix,
+  int width,
+  int fillChar,
+  int align,
+) {
+  final content =
+      body.length + (signChar == 0 ? 0 : 1) + (percentSuffix ? 1 : 0);
+  final padding = width < 0 ? 0 : width - content;
+  if (align == 0x3e) {
+    sink.fill(fillChar, padding);
+  } else if (align == 0x5e) {
+    sink.fill(fillChar, padding ~/ 2);
+  }
+  if (signChar != 0) sink.writeCharCode(signChar);
+  if (align == 0x3d) sink.fill(fillChar, padding);
+  sink.writeString(body);
+  if (percentSuffix) sink.writeCharCode(0x25);
+  if (align == 0x3c) {
+    sink.fill(fillChar, padding);
+  } else if (align == 0x5e) {
+    sink.fill(fillChar, padding - padding ~/ 2);
+  }
+}
+
+/// Hot op for the floating presentations (`f F e E g G %`) and for typeless
+/// specifications such as `{:10}` or `{:.3}`. The branch order in [write]
+/// is a transliteration of `formatBraceDouble`: it is the parity contract.
+final class _BraceDoubleOp extends _BraceOp {
+  final _FieldNode field;
+  final int argumentIndex;
+  final String? argumentName;
+  final String specifierText;
+  final _FormatSpec spec; // delegate branch + generator params
+  final String? type; // null = default presentation
+  final int? precision;
+  final bool alternate;
+  final int requestedSign; // 0x2b '+', 0x20 ' ', 0 none
+  final bool normalizeNegativeZero;
+  final bool percent;
+  final int width; // -1 none
+  final int fillChar;
+  final int align;
+  final bool dartPrecisionRejected; // see _rejectsDartDoublePrecision
+
+  const _BraceDoubleOp({
+    required this.field,
+    required this.argumentIndex,
+    required this.argumentName,
+    required this.specifierText,
+    required this.spec,
+    required this.type,
+    required this.precision,
+    required this.alternate,
+    required this.requestedSign,
+    required this.normalizeNegativeZero,
+    required this.percent,
+    required this.width,
+    required this.fillChar,
+    required this.align,
+    required this.dartPrecisionRejected,
+  });
+
+  @override
+  void write(CharSink sink, _BraceProcessor frame) {
+    final value = frame._argument(argumentIndex, argumentName, field);
+    final double converted;
+    if (value is double && !(type == null && _isIntegerValue(value))) {
+      converted = value;
+    } else if (type != null &&
+        ((value is int && _isIntegerValue(value)) || value is BigInt)) {
+      // Only an explicit floating type converts integers here:
+      // `_isFloatingFormatType(null)` is false, so under a typeless
+      // specification legacy sends int/BigInt to formatBraceInteger. The
+      // `_isIntegerValue` guard above keeps the same split on the web,
+      // where a whole double is an int and must take integer semantics.
+      converted = switch (value) {
+        final int number => number.toDouble(),
+        final BigInt number => number.toDouble(),
+        // Unreachable: the branch above admits int and BigInt only.
+        _ => throw StateError('Unsupported floating value: $value'),
+      };
+      if (!converted.isFinite) {
+        throw UnsupportedFormatValueException(_context(frame), value);
+      }
+    } else {
+      // The generic path reproduces legacy exactly: text output for
+      // strings under a null type, integer semantics for integers, and
+      // today's errors for everything else.
+      sink.writeString(
+        formatParsedValue(value, spec, frame.engine, _context(frame)),
+      );
+      return;
+    }
+
+    final engine = frame.engine;
+    final uppercase = type == 'E' || type == 'F' || type == 'G';
+    final formattingValue = percent ? converted * 100 : converted;
+    if (engine.doubleFormatMode == DoubleFormatMode.dartSdk &&
+        dartPrecisionRejected) {
+      // Legacy validates before the finiteness check: bad precision on
+      // nan must still throw. The verdict is static (see
+      // _rejectsDartDoublePrecision), so only the throwing call pays for a
+      // context; the throw itself stays inside the shared validator.
+      _validateDartDoublePrecision(type, precision, _context(frame));
+    }
+
+    late final _AsciiFloat formatted;
+    if (!formattingValue.isFinite) {
+      formatted = _formatSpecialDouble(formattingValue, uppercase, engine);
+    } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
+      formatted = _formatDartDouble(
+        formattingValue,
+        type,
+        precision,
+        alternate,
+        _context(frame),
+      );
+    } else if (type == null && precision == null) {
+      formatted = _formatShortest(converted, alternate);
+    } else {
+      final effective = precision ?? 6;
+      formatted = switch (type) {
+        'f' || 'F' => _formatFixed(converted, effective, alternate),
+        'e' || 'E' => _formatScientific(
+          Binary64.fromDouble(converted),
+          effective,
+          alternate,
+          type!,
+        ),
+        'g' || 'G' => _formatGeneral(
+          Binary64.fromDouble(converted),
+          effective == 0 ? 1 : effective,
+          alternate,
+          type == 'G' ? 'E' : 'e',
+        ),
+        '%' => _formatFixed(formattingValue, effective, alternate),
+        null => _formatGeneral(
+          Binary64.fromDouble(converted),
+          effective == 0 ? 1 : effective,
+          alternate,
+          'e',
+          emptyType: true,
+        ),
+        _ => throw StateError('Unsupported floating presentation: $type'),
+      };
+    }
+
+    var negative = !formattingValue.isNaN && formattingValue.isNegative;
+    if (normalizeNegativeZero && formatted.roundedZero) negative = false;
+    final signChar = negative ? 0x2d : requestedSign;
+    _writeAsciiFloatDirect(
+      sink,
+      formatted.body,
+      signChar,
+      percent,
+      width,
+      fillChar,
+      align,
+    );
+  }
+
+  FormatExceptionContext _context(_BraceProcessor frame) =>
+      FormatExceptionContext(
+        template: frame.template,
+        offset: field.offset,
+        fragment: field.fragment,
+        specifier: specifierText,
+      );
+
+  @override
+  String describe() {
+    final buffer = StringBuffer('double:${type ?? '-'}');
+    if (width >= 0) buffer.write(':w$width');
+    if (precision != null) buffer.write(':p$precision');
+    return buffer.toString();
+  }
+}
+
 int _automaticFieldCount(_FieldNode field) {
   var count = field.root is _AutomaticRoot ? 1 : 0;
   for (final node in field.specification) {
@@ -331,6 +523,60 @@ String? _staticBraceSpecification(_FieldNode field) {
   if (specification case [_LiteralNode(:final text)]) return text;
   return null;
 }
+
+_BraceDoubleOp _buildBraceDoubleOp(
+  _FieldNode field,
+  int argumentIndex,
+  String? argumentName,
+  String specText,
+  _FormatSpec spec,
+) => _BraceDoubleOp(
+  field: field,
+  argumentIndex: argumentIndex,
+  argumentName: argumentName,
+  specifierText: specText,
+  spec: spec,
+  type: spec.type,
+  precision: spec.precision,
+  alternate: spec.alternate,
+  requestedSign: switch (spec.sign) {
+    '+' => 0x2b,
+    ' ' => 0x20,
+    _ => 0,
+  },
+  normalizeNegativeZero: spec.normalizeNegativeZero,
+  percent: spec.type == '%',
+  width: spec.width ?? -1,
+  fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
+  align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
+  dartPrecisionRejected: _rejectsDartDoublePrecision(spec.type, spec.precision),
+);
+
+/// Probes `_validateDartDoublePrecision` once, at compile time: its verdict
+/// depends only on the static type/precision pair, so the write path can
+/// skip both the call and the exception context it would need when the pair
+/// is valid. The probe calls the validator itself, so the rule stays in one
+/// place.
+bool _rejectsDartDoublePrecision(String? type, int? precision) {
+  try {
+    _validateDartDoublePrecision(
+      type,
+      precision,
+      const FormatExceptionContext(),
+    );
+    return false;
+  } on FormattingException {
+    return true;
+  }
+}
+
+/// True for specifications the double op cannot write directly: grouping
+/// needs `_displayFloatBody`, and an oversized precision must keep the
+/// legacy `_validateDoubleSpec` error, which the op never raises.
+bool _rejectsHotDouble(_FormatSpec spec) =>
+    spec.grouping != null ||
+    spec.fractionalGrouping != null ||
+    (spec.precision != null && spec.precision! > 100000);
 
 _BraceOp? _classifyBraceField(
   _FieldNode field,
@@ -359,6 +605,19 @@ _BraceOp? _classifyBraceField(
   if (spec.customName != null || spec.payload != null) return null;
   final fill = spec.fill;
   if (fill != null && fill.length != 1) return null; // multi-unit fill
+  if (spec.type == null) {
+    // A non-empty specification without a type; empty ones already left
+    // through _BraceDynamicValueOp. Doubles format here, every other value
+    // type keeps its legacy dispatch through the op's delegate branch.
+    if (_rejectsHotDouble(spec)) return null;
+    return _buildBraceDoubleOp(
+      field,
+      argumentIndex,
+      argumentName,
+      specText,
+      spec,
+    );
+  }
   switch (spec.type) {
     case 'd' || 'b' || 'o' || 'x' || 'X':
       if (spec.grouping != null ||
@@ -390,6 +649,16 @@ _BraceOp? _classifyBraceField(
         fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
         align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
         type: type,
+      );
+    // 'n' is deliberately absent: locale-aware doubles stay on fallback.
+    case 'f' || 'F' || 'e' || 'E' || 'g' || 'G' || '%':
+      if (_rejectsHotDouble(spec)) return null;
+      return _buildBraceDoubleOp(
+        field,
+        argumentIndex,
+        argumentName,
+        specText,
+        spec,
       );
     case 's':
       if (spec.sign != null ||
