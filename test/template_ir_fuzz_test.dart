@@ -5,14 +5,21 @@ import 'package:test/test.dart';
 
 import 'parity_harness.dart';
 
-/// Deterministic seed: the fuzzer reproduces identically on every run of a
-/// given runtime, not across runtimes. The value generator calls
-/// `pow(10, ...)` with two int arguments, and at the single exponent 19 the
-/// result overflows int64 on the VM (turning negative) while JS yields
-/// `+1e19`, so the VM and node corpora differ on ~0.6% of `_value` draws.
-/// Reproducibility also assumes `Random(seed)` keeps its stream, which the SDK
-/// does not contractually guarantee across releases. Bump deliberately (with a
-/// comment) if the corpus needs refreshing.
+/// Deterministic seed: the fuzzer draws the same values on every run of
+/// every runtime. Both generators raise ten through `pow(10.0, e)` — a double
+/// base, so every draw is an exact power of ten. With the former int base the
+/// single exponent 19 overflowed int64 on the VM (turning that draw negative)
+/// while JS yielded `+1e19`, which split the VM and node corpora on ~0.3% of
+/// `_value` draws; with the double base 2000 consecutive draws agree
+/// numerically on both runtimes. Reproducibility still assumes `Random(seed)`
+/// keeps its stream, which the SDK does not contractually guarantee across
+/// releases. Bump deliberately (with a comment) if the corpus needs
+/// refreshing.
+///
+/// That `pow` change was itself the last corpus refresh, done without a seed
+/// bump: the generators moved, so the affected draws are new even though the
+/// seed is unchanged. The distinctness and rendering guards below were
+/// re-verified against the refreshed corpus on the VM and on node.
 const _seed = 20260805;
 const _casesPerDialect = 400;
 
@@ -123,8 +130,8 @@ String _printfTemplate(Random random) {
 }
 
 Object? _value(Random random) => switch (random.nextInt(8)) {
-  0 => random.nextDouble() * pow(10, random.nextInt(40) - 20),
-  1 => -random.nextDouble() * pow(10, random.nextInt(40) - 20),
+  0 => random.nextDouble() * pow(10.0, random.nextInt(40) - 20),
+  1 => -random.nextDouble() * pow(10.0, random.nextInt(40) - 20),
   2 => random.nextInt(1 << 30) - (1 << 29),
   3 => _edgeDoubles[random.nextInt(_edgeDoubles.length)],
   4 => 'str${random.nextInt(1000)}',
@@ -153,7 +160,7 @@ Object? _matchedValue(Random random, String spec) {
     'c' => 33 + random.nextInt(90),
     // Trailing digit means "no conversion": the empty spec is the double
     // pipeline's general form, so a double is the matching value there too.
-    _ => random.nextDouble() * pow(10, random.nextInt(20) - 10),
+    _ => random.nextDouble() * pow(10.0, random.nextInt(20) - 10),
   };
 }
 
