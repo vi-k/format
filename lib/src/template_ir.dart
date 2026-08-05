@@ -98,7 +98,7 @@ final class _BraceDynamicValueOp extends _BraceOp {
       // rejects — fractional values, negative zero, nan and the infinities —
       // which is exactly how legacy routes them too.
       final engine = frame.engine;
-      late final _AsciiFloat formatted;
+      final _AsciiFloat formatted;
       if (!value.isFinite) {
         formatted = _formatSpecialDouble(value, false, engine);
       } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
@@ -397,6 +397,7 @@ final class _BraceDoubleOp extends _BraceOp {
   final int width; // -1 none
   final int fillChar;
   final int align;
+  final bool uppercase; // 'E' 'F' 'G' spell their bodies in upper case
   final bool dartPrecisionRejected; // see _rejectsDartDoublePrecision
 
   const _BraceDoubleOp({
@@ -414,6 +415,7 @@ final class _BraceDoubleOp extends _BraceOp {
     required this.width,
     required this.fillChar,
     required this.align,
+    required this.uppercase,
     required this.dartPrecisionRejected,
   });
 
@@ -450,7 +452,6 @@ final class _BraceDoubleOp extends _BraceOp {
     }
 
     final engine = frame.engine;
-    final uppercase = type == 'E' || type == 'F' || type == 'G';
     final formattingValue = percent ? converted * 100 : converted;
     if (engine.doubleFormatMode == DoubleFormatMode.dartSdk &&
         dartPrecisionRejected) {
@@ -461,7 +462,7 @@ final class _BraceDoubleOp extends _BraceOp {
       _validateDartDoublePrecision(type, precision, _context(frame));
     }
 
-    late final _AsciiFloat formatted;
+    final _AsciiFloat formatted;
     if (!formattingValue.isFinite) {
       formatted = _formatSpecialDouble(formattingValue, uppercase, engine);
     } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
@@ -572,6 +573,7 @@ _BraceDoubleOp _buildBraceDoubleOp(
   width: spec.width ?? -1,
   fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
   align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
+  uppercase: spec.type == 'E' || spec.type == 'F' || spec.type == 'G',
   dartPrecisionRejected: _rejectsDartDoublePrecision(spec.type, spec.precision),
 );
 
@@ -1162,6 +1164,9 @@ final class _PrintfDoubleOp extends _PrintfOp {
   final int staticPrecision;
   final int precisionArgIndex; // -1 static
   final String type; // f F e E g G
+  final bool uppercase; // 'E' 'F' 'G' spell their bodies in upper case
+  // Meaningful when precisionArgIndex < 0; see _rejectsDartDoublePrecision.
+  final bool staticPrecisionRejected;
   final bool alternate;
   final bool spaceFlag;
   final bool signFlag;
@@ -1178,6 +1183,8 @@ final class _PrintfDoubleOp extends _PrintfOp {
     required this.staticPrecision,
     required this.precisionArgIndex,
     required this.type,
+    required this.uppercase,
+    required this.staticPrecisionRejected,
     required this.alternate,
     required this.spaceFlag,
     required this.signFlag,
@@ -1239,17 +1246,24 @@ final class _PrintfDoubleOp extends _PrintfOp {
       return;
     }
 
-    final uppercase = type == 'E' || type == 'F' || type == 'G';
-    if (precision != null &&
-        engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
+    if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
       // Legacy validates before the finiteness check, so a bad precision on
-      // nan must still throw. Unlike the brace op the verdict cannot be
-      // decided at compile time: `%.*f` resolves its precision per call. The
-      // null guard only skips a call the validator would return from at once,
-      // so the common no-precision write allocates no context at all.
-      _validateDartDoublePrecision(type, precision, _valueContext(frame));
+      // nan must still throw. A static precision has its verdict baked at
+      // classification time, exactly like the brace op; `%.*f` resolves its
+      // precision per call, so it keeps a live probe, which allocates
+      // nothing while the precision is valid (a null precision is what the
+      // validator returns from at once). Only a rejected precision pays for
+      // an exception context, and the throw itself stays inside the shared
+      // validator.
+      final rejected =
+          precisionArgIndex < 0
+              ? staticPrecisionRejected
+              : _rejectsDartDoublePrecision(type, precision);
+      if (rejected) {
+        _validateDartDoublePrecision(type, precision, _valueContext(frame));
+      }
     }
-    late final _AsciiFloat formatted;
+    final _AsciiFloat formatted;
     if (!argument.isFinite) {
       formatted = _formatSpecialDouble(argument, uppercase, engine);
     } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
@@ -1432,6 +1446,13 @@ _PrintfOp? _classifyPrintfConversion(
       staticPrecision: staticPrecision,
       precisionArgIndex: precisionArgIndex,
       type: node.type,
+      uppercase: node.type == 'E' || node.type == 'F' || node.type == 'G',
+      // A static precision is the value `write` would resolve, so its
+      // verdict is decided here once; a dynamic `*` keeps a live probe.
+      staticPrecisionRejected:
+          precisionArgIndex < 0 &&
+          hasPrecision &&
+          _rejectsDartDoublePrecision(node.type, staticPrecision),
       alternate: _hasPrintfFlag(node.flags, _PrintfFlags.alternate),
       spaceFlag: _hasPrintfFlag(node.flags, _PrintfFlags.space),
       signFlag: _hasPrintfFlag(node.flags, _PrintfFlags.sign),
