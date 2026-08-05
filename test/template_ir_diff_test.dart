@@ -133,6 +133,28 @@ void main() {
     }
   });
 
+  test('empty-spec doubles stay identical across modes', () {
+    for (final value in <double>[
+      // Spelled as double literals: the signed zero pair is the point of
+      // these two rows, so they stay readable instead of int-literal short.
+      // ignore: prefer_int_literals
+      0.0,
+      // ignore: prefer_int_literals
+      -0.0,
+      0.1,
+      2.5,
+      3.14159,
+      1e21,
+      1e-7,
+      double.nan,
+      double.infinity,
+      double.negativeInfinity,
+    ]) {
+      expectBraceParity('<{}>', positional: [value]);
+      expectBraceParity('<{}>', positional: [value], engine: compatibleFormat);
+    }
+  });
+
   test('dynamic value op keeps missing-argument errors', () {
     expectBraceParity('{} {}', positional: ['only one']);
     expectBraceParity('{name}', named: {});

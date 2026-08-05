@@ -89,22 +89,52 @@ final class _BraceDynamicValueOp extends _BraceOp {
       sink.writeString(value.toString());
       return;
     }
-    // BigInt, double, custom formatters, unsupported values: the generic
-    // dispatch reproduces today's behavior and errors exactly.
+    if (value is double) {
+      // Transliteration of formatBraceDouble under an empty specification:
+      // no presentation type, no precision, no width, no grouping, so the
+      // body needs neither _displayFloatBody nor applyNumericWidth. On the
+      // web a whole double is an int, so the integer branch above already
+      // claimed it; what reaches this point there is what _isIntegerValue
+      // rejects — fractional values, negative zero, nan and the infinities —
+      // which is exactly how legacy routes them too.
+      final engine = frame.engine;
+      late final _AsciiFloat formatted;
+      if (!value.isFinite) {
+        formatted = _formatSpecialDouble(value, false, engine);
+      } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
+        formatted = _formatDartDouble(
+          value,
+          null,
+          null,
+          false,
+          _context(frame),
+        );
+      } else {
+        formatted = _formatShortest(value, false);
+      }
+      if (!value.isNaN && value.isNegative) sink.writeCharCode(0x2d);
+      sink.writeString(formatted.body);
+      return;
+    }
+    // BigInt, custom formatters, unsupported values: the generic dispatch
+    // reproduces today's behavior and errors exactly.
     sink.writeString(
       formatParsedValue(
         value,
         const _FormatSpec(),
         frame.engine,
-        FormatExceptionContext(
-          template: frame.template,
-          offset: field.offset,
-          fragment: field.fragment,
-          specifier: '',
-        ),
+        _context(frame),
       ),
     );
   }
+
+  FormatExceptionContext _context(_BraceProcessor frame) =>
+      FormatExceptionContext(
+        template: frame.template,
+        offset: field.offset,
+        fragment: field.fragment,
+        specifier: '',
+      );
 
   @override
   String describe() => 'dynamic';
