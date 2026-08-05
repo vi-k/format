@@ -8,18 +8,23 @@
 
 Перед каждым коммитом — `dart format` на затронутых файлах (локальный
 хук `.git/hooks/pre-commit` проверяет это автоматически; в клоне его
-надо ставить заново). Вендоренный `benchmark/baselines/format2` НЕ
-форматировать и не менять — замороженная verbatim-копия. Репозиторий
-полностью формат-чист (`dart format -o none --set-exit-if-changed .`
-из корня — 0 изменений).
+надо ставить заново). Baseline-код в `benchmark/baselines/*` НЕ
+форматировать и не менять: `format20` — замороженная копия,
+`format16/lib/src/format_base.dart` — материализуется из pub скриптом
+`benchmark/baselines/format16/fetch.dart` (в git не хранится; новый
+клон обязан запустить скрипт один раз). Все закоммиченные файлы
+формат-чисты; полный `dart format -o none .` показывает дрейф только
+в материализованном файле 1.6 — это норма.
 
 ## Git-состояние
 
 Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
-**двенадцать** — ревью-раунд и реструктуризация этой сессии:
+**четырнадцать** — ревью-раунд и реструктуризация этой сессии:
 
 ```text
-<новый>  docs: record the sprintf pub pin and the Kazakh locale swap
+<новый>  docs: record the 1.6 competitor and the runner renames
+<новый>  bench: add pub format 1.6.0 to the matrix, version-suffix runners
+03d652e  docs: record the sprintf pub pin and the Kazakh locale swap
 4cdf9a1  chore: switch the showcase locale from Ukrainian to Kazakh
 f038f7e  refactor: take sprintf from pub instead of the vendored baseline
 1d10d6a  docs: refresh handoff and TODO after the restructuring
@@ -458,6 +463,30 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
   `7.0.0/pub`. Пин точный намеренно: бамп версии обнуляет
   сопоставимость. `format2` остаётся вендоренным — версия 2.0.0
   никогда не публиковалась, из pub её не взять.
+- **format 1.6.0 в матрице бенчмарков**: pub-версию нельзя взять
+  зависимостью напрямую (коллизия имени `format` с локальным пакетом),
+  поэтому в `benchmark/baselines/format16/` лежит тонкий
+  пакет-обёртка `format16_baseline`, а сама реализация (один файл
+  `lib/src/format_base.dart`) НЕ коммитится — материализуется из
+  pub-кэша скриптом `fetch.dart` (pub сам верифицирует хэш архива;
+  SHA-256 записан в README baseline'а). Раннер
+  `BenchmarkFormat16Format` — шестая колонка матрицы; расхождения 1.6
+  сняты пробой по всем 28 сценариям: их ровно два (`{:e}` —
+  6-значная мантисса по умолчанию, как у 2.0/sprintf7; `{:%}` — тип
+  не поддержан, шаблон остаётся литералом, как у 2.0), оба закрыты
+  `skipFormat16` с Oracle-комментариями; намеренный ERROR в матрице
+  по-прежнему ровно один. Примечательно: `{:010,d}` и minInt у 1.6
+  корректны.
+- **Версионные суффиксы в именах раннеров**: по аналогии с format16 —
+  `BenchmarkSprintf70`, `BenchmarkFormat20Format`,
+  `BenchmarkFormat30Format`/`Sprintf`/`Cold*`, файлы
+  `benchmark_sprintf70.dart` и т.д., флаги
+  `isFormat20`/`skipFormat20`, `isSprintf70`/`skipSprintf70`,
+  `isFormat16`/`skipFormat16`; каталог `baselines/format2` →
+  `baselines/format20` (обновлены `part of` в его src),
+  `legacy_format_baseline.dart` → `format20_baseline.dart`; ключи
+  provenance раннера — `format20Baseline`/`sprintf70Baseline`.
+  Отображаемые имена в отчётах не менялись (`format 2.0 → format`).
 - **Локаль-витрина: kk_KZ вместо uk_UA** (`4cdf9a1`): README-примеры,
   `example/format_example.dart` (заполнение `🇰🇿`, слово
   `Қазақстан`), format_intl (README, example, тесты), golden-intl
