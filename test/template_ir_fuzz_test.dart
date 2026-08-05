@@ -5,9 +5,14 @@ import 'package:test/test.dart';
 
 import 'parity_harness.dart';
 
-/// Deterministic seed: the fuzzer must reproduce identically on every
-/// platform and every run. Bump deliberately (with a comment) if the
-/// corpus needs refreshing.
+/// Deterministic seed: the fuzzer reproduces identically on every run of a
+/// given runtime, not across runtimes. The value generator calls
+/// `pow(10, ...)` with two int arguments, and at the single exponent 19 the
+/// result overflows int64 on the VM (turning negative) while JS yields
+/// `+1e19`, so the VM and node corpora differ on ~0.6% of `_value` draws.
+/// Reproducibility also assumes `Random(seed)` keeps its stream, which the SDK
+/// does not contractually guarantee across releases. Bump deliberately (with a
+/// comment) if the corpus needs refreshing.
 const _seed = 20260805;
 const _casesPerDialect = 400;
 
