@@ -19,49 +19,46 @@ void main() {
     expect(engine.debugUsesSimpleBuiltinFormatSpec('.2g'), isFalse);
   });
 
-  test(
-    'recognizes ASCII flag and width specifications and matches the general '
-    'parser',
-    () {
-      const sources = [
-        '10d',
-        '010d',
-        '+10d',
-        '-10d',
-        ' 10d',
-        '#x',
-        '#o',
-        '+#010X',
-        'z10d',
-        '0d',
-        '00d',
-        '07',
-        '10',
-        '100000x',
-        '+d',
-        '10s',
-        '10%',
-        '>10s',
-        '<10s',
-        '^10s',
-        '*^10s',
-        '=10d',
-        '0<5d',
-        '1<5d',
-        '<5d',
-        '>+#010X',
-        '<<',
-        's<5s',
-      ];
-      for (final source in sources) {
-        expect(
-          engine.debugSimpleBuiltinFormatSpecMatchesGeneralParser(source),
-          isTrue,
-          reason: source,
-        );
-      }
-    },
-  );
+  test('recognizes ASCII flag and width specifications and matches the general '
+      'parser', () {
+    const sources = [
+      '10d',
+      '010d',
+      '+10d',
+      '-10d',
+      ' 10d',
+      '#x',
+      '#o',
+      '+#010X',
+      'z10d',
+      '0d',
+      '00d',
+      '07',
+      '10',
+      '100000x',
+      '+d',
+      '10s',
+      '10%',
+      '>10s',
+      '<10s',
+      '^10s',
+      '*^10s',
+      '=10d',
+      '0<5d',
+      '1<5d',
+      '<5d',
+      '>+#010X',
+      '<<',
+      's<5s',
+    ];
+    for (final source in sources) {
+      expect(
+        engine.debugSimpleBuiltinFormatSpecMatchesGeneralParser(source),
+        isTrue,
+        reason: source,
+      );
+    }
+  });
 
   test('leaves Unicode, custom and uncommon specifications to the general '
       'parser', () {

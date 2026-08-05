@@ -13,11 +13,7 @@ void main() {
     for (final spec in ['{:d}', '{:30d}', '{:x}', '{:b}', '{:#o}', '{}']) {
       expect(
         formatWith(spec, positional: [minInt]),
-        debugFormatBraceWithoutIr(
-          spec,
-          defaultFormat,
-          positional: [minInt],
-        ),
+        debugFormatBraceWithoutIr(spec, defaultFormat, positional: [minInt]),
         reason: spec,
       );
     }

@@ -79,9 +79,7 @@ void main() {
     });
 
     test('keeps distinguishable JavaScript doubles on floating paths', () {
-      final compatible = Format(
-        doubleFormatMode: DoubleFormatMode.compatible,
-      );
+      final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
       expect(format('{}', double.infinity), 'Infinity');
       expect(format('{:f}', double.infinity), 'Infinity');

@@ -93,9 +93,7 @@ void main() {
 
   test('compatible r and a use platform-aware Python number spelling', () {
     const integralSpelling = isJavaScript ? '100000000000000000000' : '1e+20';
-    final compatible = Format(
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
+    final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
     expect(compatible.format('{!r}', 1e20), integralSpelling);
     expect(compatible.format('{!r}', 1e-7), '1e-07');
@@ -107,16 +105,11 @@ void main() {
     final short = Format(
       doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
     );
-    final compatible = Format(
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
+    final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
     expect(format('{!r}', [1e-7, double.infinity]), '[1e-7, Infinity]');
     expect(short.format('{!r}', [double.nan]), '[nan]');
-    expect(
-      compatible.format('{!r}', [1e-7, double.infinity]),
-      '[1e-07, inf]',
-    );
+    expect(compatible.format('{!r}', [1e-7, double.infinity]), '[1e-07, inf]');
     expect(format('{!a}', ['é', double.infinity]), r"['\xe9', Infinity]");
   });
 

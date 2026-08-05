@@ -319,48 +319,35 @@ void main() {
     },
   );
 
-  test(
-    'report rejects gateable smoke, short gateable rounds, and '
-    'forbidden ratios',
-    () {
-      final valid =
-          runBenchmark(
-            const BenchmarkRunOptions(
-              dialect: BenchmarkDialect.braces,
-              phase: BenchmarkPhase.hot,
-              run: 1,
-              samples: 1,
-              smoke: true,
-            ),
-          ).toJson();
-      final gateableSmoke = Map<String, Object?>.from(valid)
-        ..['gateable'] = true;
-      expect(
-        () => BenchmarkReport.fromJson(gateableSmoke),
-        throwsArgumentError,
-      );
-      final shortGateable =
-          Map<String, Object?>.from(valid)
-            ..['smoke'] = false
-            ..['gateable'] = true;
-      expect(
-        () => BenchmarkReport.fromJson(shortGateable),
-        throwsArgumentError,
-      );
-      final results = List<Object?>.from(valid['scenarios']! as List<Object?>);
-      final nonPerformance =
-          Map<String, Object?>.from(results.first! as Map<String, Object?>)
-            ..['comparisonKind'] = 'informational'
-            ..['ratio'] = 1.0;
-      results[0] = nonPerformance;
-      final forbiddenRatio = Map<String, Object?>.from(valid)
-        ..['scenarios'] = results;
-      expect(
-        () => BenchmarkReport.fromJson(forbiddenRatio),
-        throwsArgumentError,
-      );
-    },
-  );
+  test('report rejects gateable smoke, short gateable rounds, and '
+      'forbidden ratios', () {
+    final valid =
+        runBenchmark(
+          const BenchmarkRunOptions(
+            dialect: BenchmarkDialect.braces,
+            phase: BenchmarkPhase.hot,
+            run: 1,
+            samples: 1,
+            smoke: true,
+          ),
+        ).toJson();
+    final gateableSmoke = Map<String, Object?>.from(valid)..['gateable'] = true;
+    expect(() => BenchmarkReport.fromJson(gateableSmoke), throwsArgumentError);
+    final shortGateable =
+        Map<String, Object?>.from(valid)
+          ..['smoke'] = false
+          ..['gateable'] = true;
+    expect(() => BenchmarkReport.fromJson(shortGateable), throwsArgumentError);
+    final results = List<Object?>.from(valid['scenarios']! as List<Object?>);
+    final nonPerformance =
+        Map<String, Object?>.from(results.first! as Map<String, Object?>)
+          ..['comparisonKind'] = 'informational'
+          ..['ratio'] = 1.0;
+    results[0] = nonPerformance;
+    final forbiddenRatio = Map<String, Object?>.from(valid)
+      ..['scenarios'] = results;
+    expect(() => BenchmarkReport.fromJson(forbiddenRatio), throwsArgumentError);
+  });
 
   test('runner checks a comparable output before recording timing', () {
     final scenario = BenchmarkScenario(
@@ -389,72 +376,76 @@ void main() {
     );
   });
 
-  test('compiled JavaScript runner preserves typed error outcomes', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'format-js-runner-',
-    );
-    final output = '${directory.path}/runner.js';
-    try {
-      final compile = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'js',
-        'benchmark/runner.dart',
-        '-Dformat.benchmark.dartCompilerVersion=3.12.2',
-        '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
-        '-O4',
-        '-o',
-        output,
-      ]);
-      expect(compile.exitCode, 0, reason: compile.stderr.toString());
+  test(
+    'compiled JavaScript runner preserves typed error outcomes',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'format-js-runner-',
+      );
+      final output = '${directory.path}/runner.js';
+      try {
+        final compile = await Process.run(Platform.resolvedExecutable, [
+          'compile',
+          'js',
+          'benchmark/runner.dart',
+          '-Dformat.benchmark.dartCompilerVersion=3.12.2',
+          '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
+          '-O4',
+          '-o',
+          output,
+        ]);
+        expect(compile.exitCode, 0, reason: compile.stderr.toString());
 
-      final mismatch = await Process.run('node', [
-        output,
-        '--runtime=jit',
-        '--dialect=printf',
-        '--run=1',
-        '--samples=1',
-        '--smoke',
-      ]);
-      expect(mismatch.exitCode, isNonZero);
+        final mismatch = await Process.run('node', [
+          output,
+          '--runtime=jit',
+          '--dialect=printf',
+          '--run=1',
+          '--samples=1',
+          '--smoke',
+        ]);
+        expect(mismatch.exitCode, isNonZero);
 
-      final run = await Process.run('node', [
-        output,
-        '--runtime=js',
-        '--dialect=printf',
-        '--run=1',
-        '--samples=1',
-        '--smoke',
-        '--output=${directory.path}/report.json',
-      ]);
-      expect(run.exitCode, 0, reason: run.stderr.toString());
-      final report = BenchmarkReport.fromJson(
-        jsonDecode(await File('${directory.path}/report.json').readAsString())
-            as Map<String, Object?>,
-      );
-      expect(report.runtime, 'js');
-      expect(report.detectedRuntime, 'js');
-      expect(
-        report.runtimeProvenance['detector'],
-        'dart2js.compile-time-define',
-      );
-      expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
-      expect(report.sourceRevision, _testSourceRevision);
-      expect(
-        report.scenarios
-            .where(
-              (scenario) =>
-                  scenario.comparisonKind ==
-                  BenchmarkComparisonKind.performance,
-            )
-            .map((scenario) => scenario.ratio),
-        everyElement(
-          isA<double>().having((ratio) => ratio.isFinite, 'finite', isTrue),
-        ),
-      );
-    } finally {
-      await directory.delete(recursive: true);
-    }
-  }, timeout: const Timeout.factor(4));
+        final run = await Process.run('node', [
+          output,
+          '--runtime=js',
+          '--dialect=printf',
+          '--run=1',
+          '--samples=1',
+          '--smoke',
+          '--output=${directory.path}/report.json',
+        ]);
+        expect(run.exitCode, 0, reason: run.stderr.toString());
+        final report = BenchmarkReport.fromJson(
+          jsonDecode(await File('${directory.path}/report.json').readAsString())
+              as Map<String, Object?>,
+        );
+        expect(report.runtime, 'js');
+        expect(report.detectedRuntime, 'js');
+        expect(
+          report.runtimeProvenance['detector'],
+          'dart2js.compile-time-define',
+        );
+        expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
+        expect(report.sourceRevision, _testSourceRevision);
+        expect(
+          report.scenarios
+              .where(
+                (scenario) =>
+                    scenario.comparisonKind ==
+                    BenchmarkComparisonKind.performance,
+              )
+              .map((scenario) => scenario.ratio),
+          everyElement(
+            isA<double>().having((ratio) => ratio.isFinite, 'finite', isTrue),
+          ),
+        );
+      } finally {
+        await directory.delete(recursive: true);
+      }
+    },
+    timeout: const Timeout.factor(4),
+  );
 
   test(
     'compiled AOT runner rejects JIT label and records AOT provenance',

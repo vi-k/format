@@ -23,14 +23,15 @@ const parserCorpus = <String>[
   r'%% %1$d %llx %b %',
 ];
 
-typedef ParserToken = ({
-  int offset,
-  String fragment,
-  String flags,
-  String? width,
-  String? precision,
-  String type,
-});
+typedef ParserToken =
+    ({
+      int offset,
+      String fragment,
+      String flags,
+      String? width,
+      String? precision,
+      String type,
+    });
 
 enum ParseErrorCategory { invalidConversion }
 
@@ -613,9 +614,8 @@ Map<String, Object?> _runMeasurement(String runtime) {
     'hot': <String, int>{},
   };
   for (var round = 0; round < _sampleCount; round++) {
-    final scenarioOrder = round.isEven
-        ? const ['cold', 'hot']
-        : const ['hot', 'cold'];
+    final scenarioOrder =
+        round.isEven ? const ['cold', 'hot'] : const ['hot', 'cold'];
     final candidateOrder = <String>[
       for (var index = 0; index < _candidateOrder.length; index++)
         _candidateOrder[(index + round) % _candidateOrder.length],
@@ -623,12 +623,13 @@ Map<String, Object?> _runMeasurement(String runtime) {
     for (final scenario in scenarioOrder) {
       for (final name in candidateOrder) {
         final candidate = candidates[name]!;
-        final measurement = scenario == 'cold'
-            ? _runColdWork(
-                candidate,
-                measuredColdBatches[round][_candidateOrder.indexOf(name)],
-              )
-            : _runHotWork(candidate);
+        final measurement =
+            scenario == 'cold'
+                ? _runColdWork(
+                  candidate,
+                  measuredColdBatches[round][_candidateOrder.indexOf(name)],
+                )
+                : _runHotWork(candidate);
         samples[scenario]![name]!.add(measurement.micros);
         final previous = checksums[scenario]![name];
         if (previous != null && previous != measurement.checksum) {

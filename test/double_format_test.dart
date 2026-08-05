@@ -92,9 +92,7 @@ final class _NonEmptyDigitsLocale implements NumberLocale {
   }
 }
 
-final _compatibleFormat = Format(
-  doubleFormatMode: DoubleFormatMode.compatible,
-);
+final _compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
 String format(String template, Object? value) =>
     _compatibleFormat.format(template, value);

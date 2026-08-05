@@ -104,7 +104,10 @@ void main() {
 
   test('empty first string then another string keeps single-string mode '
       'consistent', () {
-    final sink = CharSink(1)..writeString('')..writeString('x');
+    final sink =
+        CharSink(1)
+          ..writeString('')
+          ..writeString('x');
     expect(sink.length, 1);
     expect(sink.toString(), 'x');
   });
@@ -114,7 +117,10 @@ void main() {
     // this pins the materialize-then-copy order directly: a copy-then-
     // materialize bug (or one that drops/reorders the pending string)
     // would produce something other than the straight concatenation.
-    final sink = CharSink(1)..writeString('hello')..writeString('world');
+    final sink =
+        CharSink(1)
+          ..writeString('hello')
+          ..writeString('world');
     expect(sink.length, 10);
     expect(sink.toString(), 'helloworld');
   });

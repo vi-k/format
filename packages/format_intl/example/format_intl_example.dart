@@ -2,9 +2,7 @@ import 'package:format/format.dart';
 import 'package:format_intl/format_intl.dart';
 
 void main() {
-  final ukrainian = Format(
-    numberLocale: IntlNumberLocale('uk_UA'),
-  );
+  final ukrainian = Format(numberLocale: IntlNumberLocale('uk_UA'));
   final formatUk = ukrainian.format;
   final sprintfUk = ukrainian.sprintf;
 

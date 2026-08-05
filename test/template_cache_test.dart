@@ -33,14 +33,8 @@ void main() {
   });
 
   test('does not cache templates that fail to parse', () {
-    expect(
-      () => engine.format('{:d', 1),
-      throwsA(isA<FormattingException>()),
-    );
-    expect(
-      () => engine.format('{:d', 1),
-      throwsA(isA<FormattingException>()),
-    );
+    expect(() => engine.format('{:d', 1), throwsA(isA<FormattingException>()));
+    expect(() => engine.format('{:d', 1), throwsA(isA<FormattingException>()));
     expect(engine.debugBraceTemplateCacheSize(), 0);
   });
 
