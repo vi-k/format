@@ -164,6 +164,7 @@ const _requiredDivergenceIds = {
   'unsupported-cpp26-binary',
   'unsupported-length-modifiers',
   'unsupported-pointer-conversion',
+  'subnormal-hexadecimal-spelling',
   'unsupported-posix-indexing',
   'typed-invalid-format-error',
   'unicode-character-scalar',
@@ -202,6 +203,10 @@ final _executableResults = <String, ({String output, String Function() run})>{
         () => Format(
           numberLocale: const SpacedNumberLocale(),
         ).vsprintf('%.1f', [-1.5]),
+  ),
+  'subnormal-hexadecimal-spelling': (
+    output: '0x0.0000000000001p-1022',
+    run: () => vsprintf('%a', [5e-324]),
   ),
   'unicode-character-scalar': (
     output: '😀',

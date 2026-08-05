@@ -13,23 +13,6 @@ final class Format {
   static final RegExp _formatterNamePattern = RegExp(
     r'^[A-Za-z][A-Za-z0-9_]*$',
   );
-  static const Set<String> _reservedFormatterNames = {
-    'b',
-    'c',
-    'd',
-    'e',
-    'E',
-    'f',
-    'F',
-    'g',
-    'G',
-    'n',
-    'o',
-    's',
-    'x',
-    'X',
-    '%',
-  };
 
   /// Custom formatters selectable by `{:name}` specifications.
   final List<Formatter<dynamic>> formatters;
@@ -171,7 +154,9 @@ final class Format {
           name: name,
         );
       }
-      if (_reservedFormatterNames.contains(name)) {
+      // The reserved set is exactly the built-in presentation types of the
+      // spec parser: one source of truth for both checks.
+      if (_builtInTypes.contains(name)) {
         throw FormatConfigurationException(
           'Formatter name is reserved by a built-in formatter.',
           name: name,

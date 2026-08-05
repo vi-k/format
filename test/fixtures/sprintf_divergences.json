@@ -50,6 +50,14 @@
       "readme_anchor": "#sprintf"
     },
     {
+      "id": "subnormal-hexadecimal-spelling",
+      "input": {"template": "%a", "value": 5e-324},
+      "cpp": {"result": "an implementation-chosen normalization such as 0x1p-1074"},
+      "dart": {"result": "0x0.0000000000001p-1022"},
+      "reason": "C23 permits any hexadecimal normalization; Format keeps the fixed p-1022 exponent for subnormals (glibc style), while e.g. Apple libc renormalizes the leading digit.",
+      "readme_anchor": "#sprintf"
+    },
+    {
       "id": "typed-invalid-format-error",
       "input": {"template": "%q", "arguments": []},
       "cpp": {"error": "undefined behavior for an invalid conversion specification"},

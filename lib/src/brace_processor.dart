@@ -88,7 +88,7 @@ final class _BraceProcessor {
               engine,
               _context(field, ''),
             );
-    final staticSpecification = _staticSpecificationText(field);
+    final staticSpecification = _staticBraceSpecification(field);
     if (staticSpecification != null) {
       final context = _context(field, staticSpecification);
       var spec = field.memoizedSpec(engine.textUnit);
@@ -101,13 +101,6 @@ final class _BraceProcessor {
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);
     return formatValue(converted, specification, engine, context);
-  }
-
-  String? _staticSpecificationText(_FieldNode field) {
-    final specification = field.specification;
-    if (specification.isEmpty) return '';
-    if (specification case [_LiteralNode(:final text)]) return text;
-    return null;
   }
 
   String _resolveSpecification(_FieldResolver resolver, _FieldNode field) {

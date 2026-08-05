@@ -1,6 +1,14 @@
 {
   "divergences": [
     {
+      "dart": {"error": "InvalidSpecifierException"},
+      "id": "dart-ascii-spec-digits",
+      "input": {"template": "{:٥d}", "value": 1},
+      "python": {"result": "    1"},
+      "readme_anchor": "#dart-spec-digits",
+      "reason": "Width и precision спецификации принимают только ASCII-цифры; юникод-цифры Python в индексах и ключах полей при этом поддерживаются."
+    },
+    {
       "dart": {"result": "true false null"},
       "id": "dart-bool-null-tokens",
       "input": {"template": "{} {} {}", "values": [true, false, null]},
@@ -63,6 +71,22 @@
       "python": {"result": "CPython repr/ascii"},
       "readme_anchor": "#representation-conversions",
       "reason": "!r и !a реализованы библиотекой и не вызывают Python object protocol."
+    },
+    {
+      "dart": {"error": "UnsupportedFormatValueException"},
+      "id": "dart-strict-character-scalars",
+      "input": {"template": "{:c}", "value": 55296},
+      "python": {"result": "'\\ud800'"},
+      "readme_anchor": "#dart-character-values",
+      "reason": "Конверсия c требует валидный Unicode-скаляр; одиночные суррогаты отвергаются вместо порчи строки."
+    },
+    {
+      "dart": {"error": "InvalidSpecifierException"},
+      "id": "dart-strict-character-zero-padding",
+      "input": {"template": "{:05c}", "value": 65},
+      "python": {"result": "0000A"},
+      "readme_anchor": "#dart-character-values",
+      "reason": "Нулевое заполнение — числовая опция; для символьной конверсии c она отвергается, как и для строк (см. dart-strict-text-zero-padding)."
     },
     {
       "dart": {"error": "InvalidSpecifierException"},

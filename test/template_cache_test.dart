@@ -23,13 +23,48 @@ void main() {
     expect(engine.debugPrintfTemplateCacheSize(), 1);
   });
 
-  test('clears the cache when capacity overflows', () {
-    for (var index = 0; index < 512; index++) {
+  test('evicts only the oldest brace entry when capacity overflows', () {
+    final capacity = engine.debugTemplateCacheCapacity();
+    final first = engine.debugCachedBraceTemplate('unique 0 {}');
+    final second = engine.debugCachedBraceTemplate('unique 1 {}');
+    for (var index = 2; index < capacity; index++) {
       engine.debugCachedBraceTemplate('unique $index {}');
     }
-    expect(engine.debugBraceTemplateCacheSize(), 512);
+    expect(engine.debugBraceTemplateCacheSize(), capacity);
+
     engine.debugCachedBraceTemplate('overflow {}');
-    expect(engine.debugBraceTemplateCacheSize(), 1);
+    expect(engine.debugBraceTemplateCacheSize(), capacity);
+    // The second-oldest entry survived (identity hit)...
+    expect(
+      identical(engine.debugCachedBraceTemplate('unique 1 {}'), second),
+      isTrue,
+    );
+    // ...while the oldest one was evicted and reparses to a fresh AST.
+    expect(
+      identical(engine.debugCachedBraceTemplate('unique 0 {}'), first),
+      isFalse,
+    );
+  });
+
+  test('evicts only the oldest printf entry when capacity overflows', () {
+    final capacity = engine.debugTemplateCacheCapacity();
+    final first = engine.debugCachedPrintfTemplate('unique 0 %d');
+    final second = engine.debugCachedPrintfTemplate('unique 1 %d');
+    for (var index = 2; index < capacity; index++) {
+      engine.debugCachedPrintfTemplate('unique $index %d');
+    }
+    expect(engine.debugPrintfTemplateCacheSize(), capacity);
+
+    engine.debugCachedPrintfTemplate('overflow %d');
+    expect(engine.debugPrintfTemplateCacheSize(), capacity);
+    expect(
+      identical(engine.debugCachedPrintfTemplate('unique 1 %d'), second),
+      isTrue,
+    );
+    expect(
+      identical(engine.debugCachedPrintfTemplate('unique 0 %d'), first),
+      isFalse,
+    );
   });
 
   test('does not cache templates that fail to parse', () {

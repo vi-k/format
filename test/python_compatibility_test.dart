@@ -173,6 +173,11 @@ const _platformDivergences = {'dart-js-integral-number-canonicalization'};
 /// One executable exemplar per registry entry, pinning the documented
 /// Dart outcome.
 final _executableDivergences = <String, void Function()>{
+  'dart-ascii-spec-digits':
+      () => expect(
+        () => format('{:٥d}', 1),
+        throwsA(isA<InvalidSpecifierException>()),
+      ),
   'dart-bool-null-tokens':
       () => expect(format('{} {} {}', true, false, null), 'true false null'),
   'dart-container-representation-order':
@@ -209,6 +214,16 @@ final _executableDivergences = <String, void Function()>{
         format('{0!r} {0!a}', 'строка'),
         "'строка' "
         r"'\u0441\u0442\u0440\u043e\u043a\u0430'",
+      ),
+  'dart-strict-character-scalars':
+      () => expect(
+        () => format('{:c}', 0xd800),
+        throwsA(isA<UnsupportedFormatValueException>()),
+      ),
+  'dart-strict-character-zero-padding':
+      () => expect(
+        () => format('{:05c}', 65),
+        throwsA(isA<InvalidSpecifierException>()),
       ),
   'dart-strict-text-zero-padding':
       () => expect(

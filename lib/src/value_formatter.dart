@@ -58,9 +58,6 @@ String formatParsedValue(
     return _fallbackToString(value, context);
   }
 
-  if (_isNumericFormatType(spec.type) || _hasNumericOptions(spec)) {
-    throw UnsupportedFormatValueException(context, value);
-  }
   throw UnsupportedFormatValueException(context, value);
 }
 
@@ -191,33 +188,6 @@ bool _isFloatingFormatType(String? type) => switch (type) {
   'e' || 'E' || 'f' || 'F' || 'g' || 'G' || '%' => true,
   _ => false,
 };
-
-bool _isNumericFormatType(String? type) => switch (type) {
-  'b' ||
-  'd' ||
-  'e' ||
-  'E' ||
-  'f' ||
-  'F' ||
-  'g' ||
-  'G' ||
-  'n' ||
-  'o' ||
-  'x' ||
-  'X' ||
-  '%' => true,
-  _ => false,
-};
-
-bool _hasNumericOptions(_FormatSpec spec) =>
-    spec.sign != null ||
-    spec.normalizeNegativeZero ||
-    spec.alternate ||
-    spec.zero ||
-    spec.grouping != null ||
-    spec.precision != null ||
-    spec.fractionalGrouping != null ||
-    spec.align == '=';
 
 String _formatText(
   String value,
