@@ -1,3 +1,10 @@
+// ARCHIVED design probe. It compared three sprintf parser strategies once, to
+// pick one; the decision is recorded in `benchmark/results/parser_strategy.json`
+// (selected: scanner; commit 682c37f, 2026-08-02) and is implemented in the
+// package's parser. Template caching and the template IR later moved parsing
+// off the hot path entirely, so this probe informs no further decisions. It is
+// kept runnable for provenance only -- do not treat its numbers as a gate.
+
 import 'dart:convert';
 import 'dart:math';
 

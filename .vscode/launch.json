@@ -80,8 +80,7 @@
         "Benchmark: original example",
         "Benchmark: double modes",
         "Benchmark: template IR vs legacy",
-        "Benchmark: release harness smoke",
-        "Benchmark: parser strategy JIT"
+        "Benchmark: release harness smoke"
       ]
     }
   ]
