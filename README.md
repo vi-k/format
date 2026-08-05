@@ -106,8 +106,8 @@ For finite `double` values in the benchmark scenarios,
 `DoubleFormatMode.dartSdk` is faster than compatible mode or falls within the
 default 5% equivalence threshold. The report prints both formatted results and
 median times; this performance conclusion does not include `NaN` or
-`Infinity`. VS Code also provides **Benchmark: double modes** and includes it
-in **Benchmark: all**.
+`Infinity`. VS Code also provides the **Benchmark: double modes** launch
+configuration.
 
 In Dart SDK mode, non-finite values are `NaN` and `Infinity` by default. Their
 short spellings can be selected independently; compatible mode always uses

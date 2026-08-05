@@ -36,7 +36,6 @@ and notation changes are visible alongside performance. Timing differences up
 to 5% are reported as equal by default. Library callers may change that limit
 with the `equivalenceThresholdPercent` argument to `runDoubleModesBenchmark`.
 
-VS Code launch configurations are available for every benchmark. Use
-**Benchmark: all** to run the complete set (the archived parser-strategy
-probe has its own **Benchmark: parser strategy JIT** configuration and is
-deliberately left out of the compound).
+VS Code launch configurations are available for every benchmark (the
+archived parser-strategy probe has its own **Benchmark: parser strategy
+JIT** configuration).
