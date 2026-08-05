@@ -8,30 +8,29 @@
 
 ## Git-состояние
 
-Ветка `main`, рабочее дерево чистое. `origin/main` == `cc09e7b`,
-поэтому непушнутых коммитов ровно **пять** — связка hardening'а IR
-продвинула `HEAD` на пять коммитов поверх `origin/main`:
+Ветка `main`, рабочее дерево чистое. `origin/main` == `46d253d`,
+поэтому непушнутых коммитов ровно **три** — вся чистка бенчмарков этой
+сессии:
 
 ```text
-<новый>  docs: record IR hardening and parity fuzzer   (этот коммит)
-4128a3d  test: add seeded parity fuzzer against the legacy oracle   (Task 4)
-df6ac9b  test: pin locale, spelling, and edge-value double parity   (Task 3)
-696eb2a  perf: bake static double op parameters at compile time     (Task 2)
-0ced01f  refactor: probe validators in the double classifier        (Task 1)
+<новый>  docs: record benchmark cleanup                (этот коммит)
+5b087aa  docs: archive the parser strategy probe
+3905650  chore: retire the format2 gate benchmark
 --- граница origin/main: всё ниже УЖЕ в origin/main ---
-cc09e7b  docs: add IR hardening and fuzzer plan   (база связки, уже в origin/main)
-77f4f53  docs: record double op results and refresh handoff  (уже в origin/main)
+46d253d  docs: correct validation-shape and determinism claims  (уже в origin/main)
+5b94cdb  docs: record IR hardening and parity fuzzer   (уже в origin/main)
 ```
 
 Две нижние строки оставлены для контекста: они уже запушены и в счёт
-пяти непушнутых коммитов не входят. Предыдущий handoff фиксировал
-`origin/main` == `692f1fc` и шесть непушнутых коммитов — с тех пор
-владелец запушил всё вплоть до `cc09e7b`, так что тот счётчик устарел.
+трёх непушнутых коммитов не входят. Предыдущий handoff фиксировал
+`origin/main` == `cc09e7b` и пять непушнутых коммитов — с тех пор
+владелец запушил всю связку hardening'а IR вплоть до `46d253d`, так что
+тот счётчик устарел.
 
 Все коммиты содержат trailer `Co-Authored-By: Claude Fable 5
 <noreply@anthropic.com>` и авторство `nashol` (идентичность из истории
 репозитория; git-конфиг не трогался — она передаётся через `git -c`).
-Всё, что описано ниже, закоммичено; эти пять коммитов в `origin` не
+Всё, что описано ниже, закоммичено; эти три коммита в `origin` не
 пушились — следующей сессии решать, когда пушить.
 
 ## Template IR: спека завершена (Tasks 1–11)
@@ -252,6 +251,58 @@ precision rejection keeps parity`: границы precision в `dartSdk`
 - Стоимость: **~0.84 с на VM** (замер этой сессии), 4 теста; на node
   тоже проходит.
 
+## Чистка бенчмарков (связка из двух коммитов)
+
+Кода библиотеки эта связка не касается — только бенчмарк-инструментов,
+их тестов и `.vscode/launch.json`.
+
+**`3905650` — format2-гейт снят как избыточный.** Его роль PASS/FAIL
+перекрыта более строгим релизным харнесом (`benchmark/runner.dart` +
+`gates.dart`) и чувствительной A/B-матрицей `template_ir_benchmark`, а
+визуальную роль (посмотреть на 2.0 против 3.0) выполняет матрица
+`benchmark.dart`; после IR его порог 1.02 на мульти-плейсхолдерах не
+срабатывает вообще. Удалены `example/bin/format2_gate_benchmark.dart`,
+`example/lib/format2_gate_benchmark.dart`, каталог
+`example/lib/src/format2_gate/` (4 файла) и
+`example/test/format2_gate_benchmark_test.dart`; из `launch.json` убрана
+конфигурация «Benchmark: Format 2 gate» и её строка в compound
+«Benchmark: all»; из `example/README.md` — команда запуска.
+
+Единственный сценарий, который был **только** у гейта, — 50
+авто-нумерованных плейсхолдеров — перенесён в матрицу
+(`example/lib/src/tests/tests.dart`) обычным `BenchmarkScenario` по
+образцу соседнего 10-плейсхолдерного: шаблон `'{}'` ×50 через `|`,
+sprintf-сторона `'%d'` ×50 через `|`, значения `0..49`, ни один движок
+не пропускается. Сценариев в матрице стало **27** (было 26);
+интеграционный тест `example/test/restored_benchmark_test.dart` пинит
+новое число, форму перенесённого сценария (отдельным тестом) и его
+появление в живом выводе, а ожидание «ровно один намеренный ERROR»
+осталось прежним.
+
+**`5b087aa` — probe `benchmark/parser_strategy.dart` помечен как
+архивный.** Это одноразовый design-probe: он один раз сравнил три
+парсера sprintf и выбрал победителя. Решение записано в
+`benchmark/results/parser_strategy.json` (`selected: scanner`, коммит
+`682c37f`, 2026-08-02) и реализовано в парсере пакета; кэш шаблонов и
+IR потом вообще убрали парсинг с горячего пути, так что повторный
+прогон ничего изменить не может. В шапку файла добавлен комментарий об
+этом, **код не тронут** — probe остаётся запускаемым ради
+происхождения. Из compound «Benchmark: all» он убран (рутинные прогоны
+остаются на живых бенчмарках), отдельная конфигурация
+«Benchmark: parser strategy JIT» сохранена.
+
+Живой прогон матрицы после переноса (`dart run example/bin/benchmark.dart`,
+quick): **41.6 с** (порог 60 с), ERROR ровно один — намеренный
+(`sprintf 7.0` на минимальном int). Перенесённая строка:
+`sprintf 7.0` 65.032 µs, `format 2.0` 23.733 µs, `format 3.0 → format`
+**2.058 µs**, `format 3.0 → sprintf` **2.800 µs**, все четыре `OK`.
+Это функциональная проверка (сценарий виден, вывод сходится), а не
+гейт: `vm.loadavg` был `5.06` на старте и `4.60` на финише, то есть
+чуть выше проектного порога `< 5`, и сравнивать эти абсолютные числа с
+чем-либо не следует. Порядок величин, впрочем, ожидаемый — на 50
+плейсхолдерах 3.0 быстрее 2.0 примерно в 11 раз и sprintf 7.0
+примерно в 32 раза.
+
 ## Замеры: RED → GREEN
 
 ### A/B (IR против legacy на идентичных вызовах)
@@ -417,18 +468,23 @@ hardening'а гейтилась A/B-прогонами Task 2, см. разде�
 
 ```text
 dart test (корень): 396 прошли        (было 383 до связки hardening'а)
-dart test (example): 15 прошли
+dart test (example): 14 прошли        (было 15: −2 теста гейта, +1 тест
+  перенесённого 50-плейсхолдерного сценария)
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart
   test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart:
   53 прошли (12 char_sink + 16 template_ir_compile + 21
   template_ir_diff + 4 template_ir_fuzz)       (было 40 на трёх файлах)
 dart analyze lib test example: No issues found!
 Фаззер отдельно (VM): 4 теста, ~0.84 с, 1600 кейсов, seed 20260805
+Полная матрица (benchmark.dart) quick: 1 живой прогон этой сессии,
+  41.6 с, ERROR ровно 1 (намеренный), 27 сценариев включая
+  перенесённый 50-плейсхолдерный; loadavg 5.06 → 4.60 (проверка
+  функциональная, не гейт)
 --- ниже унаследовано с гейта double-op'ов, в этой сессии не пере-снято ---
 A/B (template_ir_benchmark.dart): 2 живых прогона по 15 сценариев,
   0 RESULTS DIFFER, 0 LEGACY FASTER, все 5 double-строк IR FASTER
-Полная матрица (benchmark.dart) quick: 2 живых прогона, 40.0 / 40.7 с,
-  ERROR ровно 1 в каждом (намеренный)
+Полная матрица (benchmark.dart) quick на гейте double-op'ов: 2 живых
+  прогона, 40.0 / 40.7 с, ERROR ровно 1 в каждом (намеренный)
 vm.loadavg на замерах (записанные значения): A/B — 4.07 и 3.93;
   фикс-раунд (третий прогон матрицы) — 4.08 (порог гейта < 5)
 ```
@@ -486,9 +542,11 @@ vm.loadavg на замерах (записанные значения): A/B — 
   ожидающая в `_single`, будет молча потеряна).
 - **`dart format` расходится со стилем, которым закоммичен репозиторий
   (не чинить походя — это решение владельца).** Локальный форматтер
-  SDK **3.12.2** переписал бы **21 файл** из 111 при `dart format .`
-  (в узкой области `lib test example` — **15** из 84). Замер этой
-  сессии, рабочее дерево при этом чистое. Важные детали:
+  SDK **3.12.2** переписал бы **21 файл** из 104 при `dart format .`
+  (в узкой области `lib test example` — **15** из 77). Пере-снято в
+  этой сессии после чистки бенчмарков, рабочее дерево чистое: удалённые
+  7 файлов гейта в расходящийся набор не входили, поэтому знаменатели
+  уменьшились (было 111 и 84), а числители не изменились. Важные детали:
   - `lib/` **не затронут вообще** — расходятся только тесты,
     бенчмарки и вендоренные baseline'ы (`benchmark/baselines/sprintf7`,
     `packages/format_intl`, `example/`), в том числе файлы, которых
