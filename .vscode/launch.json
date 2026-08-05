@@ -33,6 +33,14 @@
       "args": []
     },
     {
+      "name": "Benchmark: template IR vs legacy",
+      "request": "launch",
+      "type": "dart",
+      "program": "bin/template_ir_benchmark.dart",
+      "cwd": "${workspaceFolder}/example",
+      "args": []
+    },
+    {
       "name": "Benchmark: release harness smoke",
       "request": "launch",
       "type": "dart",
@@ -80,6 +88,7 @@
         "Benchmark: original example",
         "Benchmark: Format 2 gate",
         "Benchmark: double modes",
+        "Benchmark: template IR vs legacy",
         "Benchmark: release harness smoke",
         "Benchmark: parser strategy JIT"
       ]
