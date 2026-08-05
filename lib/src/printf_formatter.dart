@@ -49,14 +49,9 @@ String _formatPrintfString(
   Format engine,
   FormatExceptionContext context,
 ) {
-  late final String text;
-  try {
-    text = value.toString();
-  } on FormattingException {
-    rethrow;
-  } on Object catch (_) {
-    throw UnsupportedConversionException(context, value);
-  }
+  // Same contract as the brace path's _fallbackToString: a throwing
+  // toString() surfaces as FormatExtensionException with the cause kept.
+  final text = _fallbackToString(value, context);
   final truncated =
       conversion.precision == null
           ? text

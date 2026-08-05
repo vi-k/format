@@ -19,7 +19,7 @@ void main() {
         '{:x}': '2a',
         '{:X}': '2A',
         '{:c}': '*',
-        '{:#010_x}': '0x0000_002a',
+        '{:#010_x}': '0x000_002a',
       };
       for (final MapEntry(:key, :value) in integerFormats.entries) {
         expect(format(key, integer), value, reason: key);
@@ -42,6 +42,27 @@ void main() {
       expect(format('{:f}', integralDouble), '42.000000');
       expect(format('{:d}', BigInt.from(42)), '42');
       expect(format('{:f}', BigInt.from(42)), '42.000000');
+    });
+
+    test('prints exact decimal digits beyond 2^53 on every platform', () {
+      // 2^60: exactly representable as a double, so the literal compiles on
+      // dart2js too. JS String(n) would print the shortest-roundtrip form
+      // 1152921504606847000; the exact digits are required instead.
+      const big = 1152921504606846976;
+
+      expect(format('{:d}', big), '1152921504606846976');
+      expect(format('{}', big), '1152921504606846976');
+      expect(format('{:x}', big), '1000000000000000');
+      expect(sprintf('%d', big), '1152921504606846976');
+
+      if (isJavaScript) {
+        // 1e21 is an integral JavaScript number, so it dispatches as an
+        // integer on the web. JS String(n) switches to exponential notation
+        // at 1e21 ('1e+21'); exact digits are required instead.
+        expect(format('{:d}', 1e21), '1000000000000000000000');
+        expect(format('{:,d}', 1e21), '1,000,000,000,000,000,000,000');
+        expect(sprintf('%d', 1e21), '1000000000000000000000');
+      }
     });
 
     test('canonicalizes representation recursively only on JavaScript', () {

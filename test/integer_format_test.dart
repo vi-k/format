@@ -144,11 +144,20 @@ void main() {
     expect(format('{:#_X}', 0x12345678), '0X1234_5678');
   });
 
-  test('groups sign-aware zero padding after padding the magnitude', () {
+  test('fits sign-aware zero padding to the width after grouping', () {
+    // Python-parity pins: zero padding must target the minimal grouped
+    // length at or above the width, not pad the raw magnitude first.
     expect(format('{:08,d}', 1234), '0,001,234');
     expect(format('{:08_d}', 1234), '0_001_234');
-    expect(format('{:08_x}', 0x1234), '0000_1234');
-    expect(format('{:#010_x}', 0x1234), '0x0000_1234');
+    expect(format('{:08_x}', 0x1234), '000_1234');
+    expect(format('{:#010_x}', 0x1234), '0x000_1234');
+    expect(format('{:010,d}', 1234), '00,001,234');
+    expect(format('{:015,d}', 123456), '000,000,123,456');
+    expect(format('{:06,d}', -5), '-0,005');
+    expect(format('{:+09,d}', 1234), '+0,001,234');
+    expect(format('{:#014_x}', 0xabc), '0x00_0000_0abc');
+    expect(format('{:016_b}', 5), '0_0000_0000_0101');
+    expect(format('{:08,d}', 12345678), '12,345,678');
   });
 
   test('formats n through C and custom number locales', () {
@@ -166,9 +175,9 @@ void main() {
     final positive = localized.format('{:08n}', 1234);
     final negative = localized.format('{:08n}', -1234);
 
-    expect(positive, '٠٠.٠١.٢٣٤');
+    expect(positive, '٠.٠١.٢٣٤');
     expect(negative, '−٠.٠١.٢٣٤');
-    expect(positive.runes.length, 9);
+    expect(positive.runes.length, 8);
     expect(negative.runes.length, 9);
   });
 

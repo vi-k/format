@@ -16,11 +16,84 @@ final class FormatExceptionContext {
   });
 }
 
+/// Renders [value] for diagnostics without trusting its `toString()`:
+/// strings come back quoted and escaped, and a throwing `toString()` falls
+/// back to the safe default description.
+String _describeGuarded(Object? value) {
+  if (value is String) return Error.safeToString(value);
+  try {
+    return value.toString();
+  } on Object {
+    return Error.safeToString(value);
+  }
+}
+
 sealed class FormattingException implements Exception {
   final String message;
   final FormatExceptionContext context;
 
   const FormattingException(this.message, this.context);
+
+  @override
+  String toString() {
+    // Exhaustive over the sealed hierarchy: adding a subclass must extend
+    // this switch before it compiles, so no payload can go unreported.
+    final details = switch (this) {
+      InvalidFormatException(:final reason) => ['reason: $reason'],
+      InvalidSpecifierException(:final reason) => ['reason: $reason'],
+      MissingFormatArgumentException(:final key) => [
+        'key: ${_describeGuarded(key)}',
+      ],
+      FormatLookupException(:final segment, :final value) => [
+        'segment: ${_describeGuarded(segment)}',
+        'value: ${_describeGuarded(value)}',
+      ],
+      UnsupportedConversionException(:final value) => [
+        'value: ${_describeGuarded(value)}',
+      ],
+      UnsupportedFormatValueException(:final value) => [
+        'value: ${_describeGuarded(value)}',
+      ],
+      FormatConfigurationException(:final reason, :final name) => [
+        'reason: $reason',
+        if (name != null) 'name: $name',
+      ],
+      AmbiguousFormatterException(:final value, :final matches) => [
+        'value: ${_describeGuarded(value)}',
+        'matches: ${matches.join(', ')}',
+      ],
+      FormatExtensionException(
+        extension: final extensionName,
+        error: final error,
+      ) =>
+        ['extension: $extensionName', 'error: ${_describeGuarded(error)}'],
+    };
+    final parts = [
+      ...details,
+      if (context.specifier != null)
+        'specifier: ${Error.safeToString(context.specifier)}',
+      if (context.conversion != null) 'conversion: ${context.conversion}',
+      if (context.argumentIndex != null)
+        'argument index: ${context.argumentIndex}',
+      if (context.fragment != null)
+        'fragment: ${Error.safeToString(context.fragment)}',
+      if (context.offset != null) 'offset: ${context.offset}',
+      if (context.template != null)
+        'template: ${Error.safeToString(context.template)}',
+    ];
+    final buffer =
+        StringBuffer()
+          ..write(runtimeType)
+          ..write(': ')
+          ..write(message);
+    if (parts.isNotEmpty) {
+      buffer
+        ..write(' (')
+        ..write(parts.join('; '))
+        ..write(')');
+    }
+    return buffer.toString();
+  }
 }
 
 final class InvalidFormatException extends FormattingException {

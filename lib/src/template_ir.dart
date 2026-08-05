@@ -76,9 +76,9 @@ final class _BraceDynamicValueOp extends _BraceOp {
       if (value.isNegative) sink.writeCharCode(0x2d);
       if (_isWebInt && _exceedsWebSafeInt(value)) {
         // On the web, int is a JS double, so the digit-by-digit `~/ 10`
-        // extraction below is inexact above 2^53-1. value.toString() (used
-        // by _formatIntMagnitude) prints exactly, mirroring the legacy
-        // formatBraceInteger path for '{}' on an int.
+        // extraction below is inexact above 2^53-1. _formatIntMagnitude
+        // materializes exact digits through BigInt there, mirroring the
+        // legacy formatBraceInteger path for '{}' on an int.
         sink.writeString(_formatIntMagnitude(value, 10));
       } else {
         sink.writeMagnitude(value, 10);
@@ -939,10 +939,14 @@ final class _PrintfStringOp extends _PrintfOp {
       text = argument.toString();
     } on FormattingException {
       rethrow;
-    } on Object catch (_) {
-      throw UnsupportedConversionException(
+    } catch (error, stackTrace) {
+      // Transliteration of _fallbackToString (the context stays lazy: this
+      // is a hot op, so it must not allocate on the success path).
+      throw FormatExtensionException(
         _printfContext(frame.template, node, argumentIndex: valueArgIndex),
-        argument,
+        argument.runtimeType.toString(),
+        error,
+        stackTrace,
       );
     }
     final truncated = precision == null ? text : textUnit.take(text, precision);
@@ -1053,8 +1057,8 @@ final class _PrintfIntOp extends _PrintfOp {
       if (_isWebInt && _exceedsWebSafeInt(argument)) {
         // Same reasoning as the brace int ops: digit-by-digit extraction is
         // inexact above 2^53-1 on the web, so mirror the BigInt branch and
-        // materialize exact digits via _formatIntMagnitude (value.toString()
-        // /toRadixString() print exactly on JS doubles).
+        // materialize exact digits via _formatIntMagnitude, which goes
+        // through BigInt at these magnitudes.
         digitsAsString = true;
         magnitudeString = _formatIntMagnitude(
           argument,
@@ -1342,8 +1346,8 @@ _PrintfOp? _classifyPrintfConversion(
     var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
     var staticWidth = 0;
     if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafePrintfOption ||
-          value > _maximumSafePrintfOption) {
+      if (value < -_maximumSafeFormatOption ||
+          value > _maximumSafeFormatOption) {
         return null; // Unsafe static width keeps today's per-call error.
       }
       staticWidth = value < 0 ? -value : value;
@@ -1352,7 +1356,7 @@ _PrintfOp? _classifyPrintfConversion(
     var staticPrecision = 0;
     var hasPrecision = precision != null;
     if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafePrintfOption) return null;
+      if (value > _maximumSafeFormatOption) return null;
       if (value < 0) hasPrecision = false;
       staticPrecision = value < 0 ? 0 : value;
     }
@@ -1375,8 +1379,8 @@ _PrintfOp? _classifyPrintfConversion(
     var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
     var staticWidth = 0;
     if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafePrintfOption ||
-          value > _maximumSafePrintfOption) {
+      if (value < -_maximumSafeFormatOption ||
+          value > _maximumSafeFormatOption) {
         return null; // Unsafe static width keeps today's per-call error.
       }
       staticWidth = value < 0 ? -value : value;
@@ -1385,7 +1389,7 @@ _PrintfOp? _classifyPrintfConversion(
     var staticPrecision = 0;
     var hasPrecision = precision != null;
     if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafePrintfOption) return null;
+      if (value > _maximumSafeFormatOption) return null;
       if (value < 0) hasPrecision = false;
       staticPrecision = value < 0 ? 0 : value;
     }
@@ -1421,8 +1425,8 @@ _PrintfOp? _classifyPrintfConversion(
     var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
     var staticWidth = 0;
     if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafePrintfOption ||
-          value > _maximumSafePrintfOption) {
+      if (value < -_maximumSafeFormatOption ||
+          value > _maximumSafeFormatOption) {
         return null; // Unsafe static width keeps today's per-call error.
       }
       staticWidth = value < 0 ? -value : value;
@@ -1431,7 +1435,7 @@ _PrintfOp? _classifyPrintfConversion(
     var staticPrecision = 0;
     var hasPrecision = precision != null;
     if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafePrintfOption) return null;
+      if (value > _maximumSafeFormatOption) return null;
       if (value < 0) hasPrecision = false;
       staticPrecision = value < 0 ? 0 : value;
     }

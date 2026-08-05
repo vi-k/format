@@ -64,4 +64,72 @@ void main() {
 
     expect(() => error.matches.add('second'), throwsUnsupportedError);
   });
+
+  test('toString reports the type, message, payload, and context', () {
+    const error = InvalidSpecifierException(context, 'unknown specifier');
+    final text = error.toString();
+
+    expect(text, contains('InvalidSpecifierException'));
+    expect(text, contains('The format specifier is invalid.'));
+    expect(text, contains('unknown specifier'));
+    expect(text, contains('"{value:q}"'));
+    expect(text, contains('offset: 0'));
+  });
+
+  test('toString carries each domain-specific payload', () {
+    final stackTrace = StackTrace.current;
+
+    expect(
+      const InvalidFormatException(context, 'unmatched brace').toString(),
+      contains('unmatched brace'),
+    );
+    expect(
+      const MissingFormatArgumentException(context, 'value').toString(),
+      contains('"value"'),
+    );
+    expect(
+      const FormatLookupException(context, 'field', 42).toString(),
+      allOf(contains('"field"'), contains('42')),
+    );
+    expect(
+      const UnsupportedConversionException(context, 42).toString(),
+      contains('42'),
+    );
+    expect(
+      const UnsupportedFormatValueException(context, 42).toString(),
+      contains('42'),
+    );
+    expect(
+      const FormatConfigurationException(
+        'invalid option',
+        name: 'locale',
+      ).toString(),
+      allOf(contains('invalid option'), contains('locale')),
+    );
+    expect(
+      AmbiguousFormatterException(context, 42, ['first', 'second']).toString(),
+      allOf(contains('first'), contains('second')),
+    );
+    expect(
+      FormatExtensionException(
+        context,
+        'custom',
+        StateError('broken'),
+        stackTrace,
+      ).toString(),
+      allOf(contains('custom'), contains('broken')),
+    );
+  });
+
+  test('toString survives payload values whose own toString throws', () {
+    final error = UnsupportedConversionException(context, _ThrowingToString());
+
+    expect(error.toString, returnsNormally);
+    expect(error.toString(), contains('_ThrowingToString'));
+  });
+}
+
+final class _ThrowingToString {
+  @override
+  String toString() => throw StateError('boom');
 }

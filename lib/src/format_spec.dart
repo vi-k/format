@@ -89,6 +89,12 @@ _FormatSpec _parseFormatSpecGeneral(
   }
   if (index < units.length && _isAsciiDigit(units[index])) {
     width = _readDecimal(units, index, () => index++, context);
+    if (width > _maximumSafeFormatOption) {
+      throw _invalidSpecifier(
+        context,
+        'The width is too large to format safely.',
+      );
+    }
   }
   if (index < units.length && _isGrouping(units[index])) grouping = take();
   if (at('.')) {
@@ -295,7 +301,12 @@ _FormatSpec? _simpleAsciiFlagWidthSpec(String source, int length) {
     if (++digits > 6) return null;
     index++;
   }
-  if (digits > 0) width = value;
+  if (digits > 0) {
+    // Widths above the safety ceiling fall back to the general parser,
+    // which reports them with the full context.
+    if (value > _maximumSafeFormatOption) return null;
+    width = value;
+  }
   String? type;
   if (index < length) {
     if (index != length - 1) return null;

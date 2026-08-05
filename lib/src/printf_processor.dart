@@ -1,10 +1,10 @@
 part of 'engine.dart';
 
 /// Upper bound for a resolved printf width/precision (and lower bound,
-/// negated, for width). Shared by the legacy per-call resolver and the
-/// hot-op classifier, which gates static literal options against it at
-/// compile time.
-const _maximumSafePrintfOption = 100000;
+/// negated, for width), and for a brace-specification width. Shared by the
+/// legacy per-call resolver, the hot-op classifier (which gates static
+/// literal options against it at compile time), and the brace spec parser.
+const _maximumSafeFormatOption = 100000;
 
 final class _PrintfProcessor {
   final String template;
@@ -123,9 +123,9 @@ final class _PrintfProcessor {
   }) {
     final unsafe =
         role == 'width'
-            ? value < -_maximumSafePrintfOption ||
-                value > _maximumSafePrintfOption
-            : value > _maximumSafePrintfOption;
+            ? value < -_maximumSafeFormatOption ||
+                value > _maximumSafeFormatOption
+            : value > _maximumSafeFormatOption;
     if (unsafe) {
       throw InvalidSpecifierException(
         _printfContext(

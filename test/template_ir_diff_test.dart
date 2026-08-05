@@ -327,6 +327,10 @@ void main() {
     expectPrintfParity('%*.*s', [8, 2, 'dynamic']);
     expectPrintfParity('%*s', ['not int', 'dyn']);
     expectPrintfParity('%s', []);
+    // A throwing toString() must surface as the same FormatExtensionException
+    // (with the cause kept) on both paths.
+    expectPrintfParity('%s', [_ThrowingToString()]);
+    expectPrintfParity('%10.3s', [_ThrowingToString()]);
   });
 
   test('printf int op matches the legacy path', () {
@@ -565,4 +569,9 @@ void main() {
     debugClearTemplateCaches();
     expect(format('{:10d}|{:<6s}', 42, 'ab'), before);
   });
+}
+
+final class _ThrowingToString {
+  @override
+  String toString() => throw StateError('broken toString');
 }

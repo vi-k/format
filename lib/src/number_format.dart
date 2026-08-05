@@ -62,6 +62,7 @@ String formatBraceInteger(
       digits: digits,
       spec: spec,
       textUnit: settings.textUnit,
+      fitRegroupedZeroPadding: true,
       formatDigits: (asciiDigits) {
         final grouped =
             grouping == null
@@ -92,6 +93,7 @@ String formatBraceInteger(
     digits: digits,
     spec: spec,
     textUnit: settings.textUnit,
+    fitRegroupedZeroPadding: true,
     formatDigits: grouping,
   );
 }
@@ -103,6 +105,18 @@ String formatMagnitude(BigInt magnitude, int radix, {bool uppercase = false}) {
 }
 
 String _formatIntMagnitude(int value, int radix, {bool uppercase = false}) {
+  if (_isWebInt && _exceedsWebSafeInt(value)) {
+    // On the web an int is a JS double, and JS String(n) prints the
+    // shortest-roundtrip form above 2^53-1 and switches to exponential
+    // notation at 1e21. BigInt.from carries the double's exact value, so
+    // its digits are exact at every magnitude.
+    final magnitude = BigInt.from(value);
+    return formatMagnitude(
+      magnitude.isNegative ? -magnitude : magnitude,
+      radix,
+      uppercase: uppercase,
+    );
+  }
   final raw = radix == 10 ? value.toString() : value.toRadixString(radix);
   final digits = value.isNegative ? raw.substring(1) : raw;
   return uppercase ? digits.toUpperCase() : digits;

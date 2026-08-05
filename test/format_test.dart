@@ -58,6 +58,29 @@ void main() {
     expect(format('{:{}} {}', 'value', 8, 'tail'), 'value    tail');
   });
 
+  test('rejects brace widths above the safety ceiling', () {
+    // Same contract as the printf options limit: a single field must not
+    // be able to demand an arbitrarily large allocation.
+    expect(format('{:100000d}', 1).length, 100000);
+    expect(
+      () => format('{:100001d}', 1),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => format('{:100001s}', 'x'),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => format('{:2000000000}', 1),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(format('{:{}d}', 1, 100000).length, 100000);
+    expect(
+      () => format('{:{}d}', 1, 100001),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
   test('a formatting failure never returns partial output', () {
     expect(
       () => formatWith(

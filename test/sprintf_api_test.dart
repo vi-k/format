@@ -148,11 +148,16 @@ void main() {
     }
   });
 
-  test('sprintf contains toString failures in a typed error', () {
+  test('sprintf preserves the cause when toString fails', () {
+    // Same contract as the brace path: the original error and stack trace
+    // survive inside FormatExtensionException instead of being swallowed.
     try {
       sprintf('%s', _BrokenToString());
-      fail('Expected UnsupportedConversionException.');
-    } on UnsupportedConversionException catch (error) {
+      fail('Expected FormatExtensionException.');
+    } on FormatExtensionException catch (error) {
+      expect(error.error, isA<StateError>());
+      expect((error.error as StateError).message, 'broken');
+      expect(error.extension, '_BrokenToString');
       expect(error.context.template, '%s');
       expect(error.context.offset, 0);
       expect(error.context.fragment, '%s');
