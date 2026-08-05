@@ -190,7 +190,6 @@ String _formatPrintfDouble(
       type,
       conversion.precision,
       _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate),
-      context,
     );
   } else {
     final precision = conversion.precision ?? 6;

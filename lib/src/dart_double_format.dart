@@ -19,7 +19,6 @@ _AsciiFloat _formatDartDouble(
   String? type,
   int? precision,
   bool alternate,
-  FormatExceptionContext context,
 ) {
   final magnitude = value.abs();
   var body = switch (type) {

@@ -220,7 +220,6 @@ String formatBraceDouble(
       type,
       spec.precision,
       spec.alternate,
-      context,
     );
   } else if (type == null && spec.precision == null) {
     formatted = _formatShortest(converted, spec.alternate);

@@ -102,13 +102,7 @@ final class _BraceDynamicValueOp extends _BraceOp {
       if (!value.isFinite) {
         formatted = _formatSpecialDouble(value, false, engine);
       } else if (engine.doubleFormatMode == DoubleFormatMode.dartSdk) {
-        formatted = _formatDartDouble(
-          value,
-          null,
-          null,
-          false,
-          _context(frame),
-        );
+        formatted = _formatDartDouble(value, null, null, false);
       } else {
         formatted = _formatShortest(value, false);
       }
@@ -476,7 +470,6 @@ final class _BraceDoubleOp extends _BraceOp {
         type,
         precision,
         alternate,
-        _context(frame),
       );
     } else if (type == null && precision == null) {
       formatted = _formatShortest(converted, alternate);
