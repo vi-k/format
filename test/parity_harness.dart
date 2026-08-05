@@ -66,7 +66,9 @@ void expectBraceParity(
   List<Object?> positional = const [],
   Map<String, Object?> named = const {},
   Format? engine,
+  String? label,
 }) {
+  final where = label == null ? template : '$template [$label]';
   final format = engine ?? defaultFormat;
   Object? irError;
   String? ir;
@@ -87,15 +89,15 @@ void expectBraceParity(
   } on FormattingException catch (error) {
     legacyError = error;
   }
-  expect(ir, legacy, reason: template);
-  expect(
-    irError.runtimeType,
-    legacyError.runtimeType,
-    reason: '$template errors',
-  );
+  expect(ir, legacy, reason: where);
+  expect(irError.runtimeType, legacyError.runtimeType, reason: '$where errors');
   if (irError is FormattingException && legacyError is FormattingException) {
-    expect(irError.toString(), legacyError.toString(), reason: template);
-    expectContextParity(irError.context, legacyError.context, template);
+    expect(
+      describeErrorPayload(irError),
+      describeErrorPayload(legacyError),
+      reason: '$where payload',
+    );
+    expectContextParity(irError.context, legacyError.context, where);
   }
 }
 
@@ -103,7 +105,9 @@ void expectPrintfParity(
   String template,
   List<Object?> values, {
   Format? engine,
+  String? label,
 }) {
+  final where = label == null ? template : '$template [$label]';
   final format = engine ?? defaultFormat;
   Object? irError;
   String? ir;
@@ -119,43 +123,78 @@ void expectPrintfParity(
   } on FormattingException catch (error) {
     legacyError = error;
   }
-  expect(ir, legacy, reason: template);
-  expect(
-    irError.runtimeType,
-    legacyError.runtimeType,
-    reason: '$template errors',
-  );
+  expect(ir, legacy, reason: where);
+  expect(irError.runtimeType, legacyError.runtimeType, reason: '$where errors');
   if (irError is FormattingException && legacyError is FormattingException) {
-    expect(irError.toString(), legacyError.toString(), reason: template);
-    expectContextParity(irError.context, legacyError.context, template);
+    expect(
+      describeErrorPayload(irError),
+      describeErrorPayload(legacyError),
+      reason: '$where payload',
+    );
+    expectContextParity(irError.context, legacyError.context, where);
+  }
+}
+
+/// Renders the type-specific payload of a [FormattingException].
+///
+/// FormattingException overrides no toString(), so comparing `toString()`
+/// between the two paths restated the runtimeType check and nothing else:
+/// two rejections of the same type with different reasons, keys or values
+/// were indistinguishable. This switch is exhaustive over the sealed
+/// hierarchy and deliberately has NO default arm, so a new subclass in
+/// lib/src/errors.dart breaks compilation here instead of silently dropping
+/// out of the parity comparison.
+String describeErrorPayload(FormattingException error) => switch (error) {
+  InvalidFormatException(:final reason) => 'invalidFormat($reason)',
+  InvalidSpecifierException(:final reason) => 'invalidSpecifier($reason)',
+  MissingFormatArgumentException(:final key) =>
+    'missingArgument(${_describeValue(key)})',
+  FormatLookupException(:final segment, :final value) =>
+    'lookup(${_describeValue(segment)}, ${_describeValue(value)})',
+  UnsupportedConversionException(:final value) =>
+    'unsupportedConversion(${_describeValue(value)})',
+  UnsupportedFormatValueException(:final value) =>
+    'unsupportedValue(${_describeValue(value)})',
+  FormatConfigurationException(:final reason, :final name) =>
+    'configuration($reason, name: $name)',
+  AmbiguousFormatterException(:final value, :final matches) =>
+    'ambiguous(${_describeValue(value)}, $matches)',
+  // Name only: the wrapped error and its stack trace come from user code and
+  // carry no guarantee of being identical (or even stable) between paths.
+  FormatExtensionException(:final extension) => 'extension($extension)',
+};
+
+/// Describes a value carried inside an exception payload.
+///
+/// The type is part of the description because `'1'` and `1` are different
+/// rejections that stringify the same. `toString()` of an arbitrary value can
+/// itself throw (the representation path guards exactly that), and a payload
+/// comparison must never turn a parity check into that failure.
+String _describeValue(Object? value) {
+  if (value == null) return 'null';
+  try {
+    return '${value.runtimeType}:$value';
+  } on Object catch (_) {
+    return '${value.runtimeType}:<toString threw>';
   }
 }
 
 /// Compares every FormatExceptionContext field between the IR and legacy
-/// paths. FormattingException does not override toString(), so without this
-/// the toString() comparison above only ever compares runtimeType — it adds
-/// nothing on its own. These fields are what error consumers actually read.
+/// paths. These fields, together with the per-type payload above, are what
+/// error consumers actually read.
 void expectContextParity(
   FormatExceptionContext ir,
   FormatExceptionContext legacy,
-  String template,
+  String where,
 ) {
-  expect(ir.template, legacy.template, reason: '$template context.template');
-  expect(ir.offset, legacy.offset, reason: '$template context.offset');
-  expect(ir.fragment, legacy.fragment, reason: '$template context.fragment');
-  expect(
-    ir.specifier,
-    legacy.specifier,
-    reason: '$template context.specifier',
-  );
-  expect(
-    ir.conversion,
-    legacy.conversion,
-    reason: '$template context.conversion',
-  );
+  expect(ir.template, legacy.template, reason: '$where context.template');
+  expect(ir.offset, legacy.offset, reason: '$where context.offset');
+  expect(ir.fragment, legacy.fragment, reason: '$where context.fragment');
+  expect(ir.specifier, legacy.specifier, reason: '$where context.specifier');
+  expect(ir.conversion, legacy.conversion, reason: '$where context.conversion');
   expect(
     ir.argumentIndex,
     legacy.argumentIndex,
-    reason: '$template context.argumentIndex',
+    reason: '$where context.argumentIndex',
   );
 }

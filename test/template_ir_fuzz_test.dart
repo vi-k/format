@@ -185,8 +185,15 @@ void main() {
       final engine = _engines[random.nextInt(_engines.length)];
       templates.add(template);
       // Invalid specs are wanted, not filtered: both paths must reject them
-      // identically, contexts included.
-      expectBraceParity(template, positional: [value], engine: engine);
+      // identically, contexts included. The label carries the case index, the
+      // engine index and the value so a failure is triageable from the report
+      // alone, without re-instrumenting the generator.
+      expectBraceParity(
+        template,
+        positional: [value],
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} v=$value',
+      );
     }
     // Guards against a degenerate generator silently collapsing the corpus.
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
@@ -204,7 +211,12 @@ void main() {
       ];
       final engine = _engines[random.nextInt(_engines.length)];
       templates.add(template);
-      expectPrintfParity(template, values, engine: engine);
+      expectPrintfParity(
+        template,
+        values,
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} v=$values',
+      );
     }
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
   });
@@ -219,7 +231,12 @@ void main() {
       final value = _matchedValue(random, spec);
       final engine = _engines[random.nextInt(_engines.length)];
       templates.add(template);
-      expectBraceParity(template, positional: [value], engine: engine);
+      expectBraceParity(
+        template,
+        positional: [value],
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} v=$value',
+      );
       if (_renders(() => engine.formatWith(template, positional: [value]))) {
         rendered++;
       }
@@ -245,7 +262,12 @@ void main() {
       ];
       final engine = _engines[random.nextInt(_engines.length)];
       templates.add(template);
-      expectPrintfParity(template, values, engine: engine);
+      expectPrintfParity(
+        template,
+        values,
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} v=$values',
+      );
       if (_renders(() => engine.vsprintf(template, values))) rendered++;
     }
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));

@@ -1,4 +1,3 @@
-import 'package:format/format.dart';
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 

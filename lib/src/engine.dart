@@ -16,8 +16,24 @@ export 'double_format.dart' show DoubleFormatMode, DoubleSpecialValueSpelling;
 // template-IR differential tests accessed via `package:format/src/engine.dart`:
 // the parity helpers compare exception context fields (offset, fragment,
 // specifier, conversion, argumentIndex) between the IR and legacy paths, not
-// just runtimeType.
-export 'errors.dart' show FormatExceptionContext, FormattingException;
+// just runtimeType. The concrete subclasses come with them because the
+// harness also compares per-type payloads (reason, key, value, ...) through a
+// switch that must stay exhaustive over the sealed hierarchy — every leaf has
+// to be nameable there (all of them are also separately exported by the
+// public `format.dart` library).
+export 'errors.dart'
+    show
+        AmbiguousFormatterException,
+        FormatConfigurationException,
+        FormatExceptionContext,
+        FormatExtensionException,
+        FormatLookupException,
+        FormattingException,
+        InvalidFormatException,
+        InvalidSpecifierException,
+        MissingFormatArgumentException,
+        UnsupportedConversionException,
+        UnsupportedFormatValueException;
 
 // NumberLocale is part of the same seam surface: the template-IR
 // differential tests build an engine on a deliberately non-default locale to
