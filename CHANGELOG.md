@@ -2,6 +2,9 @@
 
 ## 3.0.0
 
+Upgrading from the published 1.6.0 also includes the changes of the
+unpublished 2.0.0 below.
+
 * Added a brace-formatting engine using the Python mini-language, with
   positional, named, item, and attribute lookup; conversions; nested fields;
   and typed errors.
@@ -18,9 +21,14 @@
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Defined consistent JavaScript number semantics and optimized decimal integer
-  formatting, including large values and the minimum VM integer.
+  formatting, including large values and the minimum VM integer; decimal
+  digits beyond 2^53 print exactly on the web instead of the JavaScript
+  shortest or exponential forms.
+* Rejected widths and printf options above 100000 with typed errors instead
+  of attempting arbitrarily large allocations.
 * Added cross-runtime compatibility fixtures and a reproducible JIT, AOT, and
-  JavaScript benchmark harness with frozen Format 2 and sprintf baselines.
+  JavaScript benchmark harness, measured against the frozen Format 2 gate
+  baseline and the published sprintf 7.0.0 and format 1.6.0 packages.
 * Added an ANSI-colored example benchmark that displays the result and timing
   of both decimal `double` profiles side by side.
 * Replaced `formatNamed` with `formatWith`; direct `format` and `sprintf` calls
@@ -29,8 +37,9 @@
 * Formatting exceptions render their type, payload, and full template context
   in `toString()`, and a value whose own `toString()` throws is reported
   safely.
+* Documented the whole public API surface with dartdoc.
 
-## 2.0.0
+## 2.0.0 (unpublished)
 
 * Replaced the legacy and experimental engines with one `format`/`formatNamed`
   implementation.

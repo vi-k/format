@@ -18,30 +18,19 @@
 
 ## Git-состояние
 
-Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
-**восемнадцать** — ревью-раунд и реструктуризация этой сессии:
+Ветка `main`. Ревью-раунд и реструктуризация (19 коммитов) запушены:
+`origin/main` == `e8e9bc5`, первый живой прогон CI на нём зелёный.
+Непушнутых коммитов ровно **шесть** — пост-ревьюшная закалка:
 
 ```text
-<новый>  docs: record the CI pipeline
-4b7f96e  ci: add the GitHub Actions pipeline
-576bca0  docs: record the format 2.0 matrix removal
-<новый>  bench: drop the format 2.0 runner from the comparison matrix
-ba68be7  docs: record the 1.6 competitor and the runner renames
-<новый>  bench: add pub format 1.6.0 to the matrix, version-suffix runners
-03d652e  docs: record the sprintf pub pin and the Kazakh locale swap
-4cdf9a1  chore: switch the showcase locale from Ukrainian to Kazakh
-f038f7e  refactor: take sprintf from pub instead of the vendored baseline
-1d10d6a  docs: refresh handoff and TODO after the restructuring
-89f48dd  chore: add pub.dev topics to both packages
-639d752  style: format the repository with the Dart 3.12.2 formatter
-f26d0a4  refactor: unify benchmarks under benchmark/, real example in example/
-5fa8402  docs: refresh handoff, TODO and changelog
-1b886b4  chore: publication and repo hygiene from the review
-65e8c9e  test: pin the {:010,d} scenario in both benchmarks
-6da4107  fix: grouped zero padding, exact web ints, richer typed errors
-78df492  docs: flatten docs/ into dated names and add review report
+<новый>  docs: prepare the changelog, record the hardening round
+9b6ce5d  refactor: FIFO cache eviction, registry entries for low divergences
+3da1c41  test: executable divergence registries, one test per fixture case
+f6a1215  ci: bump actions/checkout to v5
+fa77157  docs: record the dartSdk double-profile divergence and the 2.0.0 note
+6e91fc8  docs: add dartdoc across the public API surface
 --- граница origin/main: всё ниже УЖЕ в origin/main ---
-98dc98b  docs: state the corpus-split rate analytically (уже в origin/main)
+e8e9bc5  chore: drop the Benchmark-all compound and its README mentions
 ```
 
 Все коммиты содержат trailer `Co-Authored-By: Claude Fable 5
@@ -433,9 +422,40 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
   клона (полный analyze возможен только после fetch+resolve — в
   свежем клоне без них 102 uri-ошибки, поэтому он в suite-job'е).
   Живой прогон на GitHub увидим после пуша.
-- Осталось из плана ревью (см. отчёт): исполняемые реестры
-  дивергенций, dartdoc на публичный API, заметка о непубликовавшейся
-  2.0.0.
+- Осталось из плана ревью: ничего блокирующего — все High и Medium
+  закрыты (см. раздел «Закалка после ревью» ниже).
+
+## Закалка после ревью (2026-08-05, ночь)
+
+- **dartdoc** (`6e91fc8`): вся публичная поверхность задокументирована,
+  `dart doc` — 0 warnings/errors.
+- **Реестры дивергенций стали исполняемыми** (`3da1c41`): каждая
+  запись обоих реестров обязана иметь исполняемый экземпляр,
+  пиняющий заявленное Dart-поведение (python: 10 id, JS-запись —
+  явное платформенное исключение, она пинится js_number_dispatch на
+  node; sprintf: 8 result- + 6 error-экземпляров). Тест равенства
+  id ↔ экземпляры не даст добавить запись без пина. Корпуса (56
+  python + 41 sprintf) разбиты на test() на кейс; загрузчики стали
+  синхронными фабриками. Корень: 401 → 519 тестов.
+- **Новые записи реестров** (`9b6ce5d`): юникод-цифры в
+  width/precision (отказ), `{:c}` на одиночном суррогате и с
+  нулевым заполнением (отказ), spelling subnormal в `%a`
+  (фиксированная экспонента p-1022, glibc-стиль); запись
+  `dartsdk-default-double-profile` (`fa77157`) + пример `%e` в README
+  и заметка о непубликовавшейся 2.0.0 в разделе миграции.
+- **Кэш шаблонов: FIFO-вытеснение** (`9b6ce5d`) вместо обвального
+  сброса: переполнение вытесняет одну старейшую запись, хиты без
+  бухгалтерии (горячий путь не тронут), неудачный парс ничего не
+  вытесняет; ёмкость — через шов `debugTemplateCacheCapacity`;
+  printf-кэш покрыт тестом переполнения.
+- Мёртвая ветка `formatParsedValue` и два её хелпера удалены; единый
+  источник зарезервированных имён (`_builtInTypes`);
+  `_staticBraceSpecification` больше не дублируется.
+- CHANGELOG подготовлен к релизу: заголовок «2.0.0 (unpublished)»,
+  вводная фраза для мигрирующих с 1.6.0, потолок 100000, точные
+  web-цифры, dartdoc.
+- Расширение фаззера отложено в TODO.md с объёмом (нужна пересъёмка
+  порогов корпуса на VM и node).
 
 ## Реструктуризация и подготовка к публикации (2026-08-05, поздний вечер)
 
@@ -681,8 +701,9 @@ single-string путь (для самого числа `writeString` не зов
 hardening'а гейтилась A/B-прогонами Task 2, см. раздел выше).
 
 ```text
-dart test (корень): 401 прошли        (+5 к прошлой сессии: 1 web-digits,
-  3 toString исключений, 1 потолок ширины)
+dart test (корень): 519 прошли        (401 после багфикс-раунда; +118
+  от закалки: корпуса по test() на кейс + экземпляры реестров +
+  printf-кэш)
 dart test (benchmark/suite): 14 прошли  (бывший example; пины {:010,d}
   дописаны в существующие тесты, новых test() нет)
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart
