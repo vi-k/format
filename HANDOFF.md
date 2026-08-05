@@ -19,10 +19,12 @@
 ## Git-состояние
 
 Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
-**четырнадцать** — ревью-раунд и реструктуризация этой сессии:
+**шестнадцать** — ревью-раунд и реструктуризация этой сессии:
 
 ```text
-<новый>  docs: record the 1.6 competitor and the runner renames
+<новый>  docs: record the format 2.0 matrix removal
+<новый>  bench: drop the format 2.0 runner from the comparison matrix
+ba68be7  docs: record the 1.6 competitor and the runner renames
 <новый>  bench: add pub format 1.6.0 to the matrix, version-suffix runners
 03d652e  docs: record the sprintf pub pin and the Kazakh locale swap
 4cdf9a1  chore: switch the showcase locale from Ukrainian to Kazakh
@@ -487,6 +489,16 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
   `legacy_format_baseline.dart` → `format20_baseline.dart`; ключи
   provenance раннера — `format20Baseline`/`sprintf70Baseline`.
   Отображаемые имена в отчётах не менялись (`format 2.0 → format`).
+- **format 2.0 удалён из визуальной матрицы** (по решению владельца):
+  никогда не публиковавшаяся 2.0 ничего не добавляет рядом с pub-1.6;
+  колонка `format 2.0 → format` и 825-строчная приватная копия движка
+  2.0 в suite (`format20_baseline.dart` — та самая
+  «вторая вендоренная копия» из ревью, M11) удалены; флаг
+  `skipFormat20` упразднён; suite похудел на зависимости
+  `characters`/`intl`/`meta`. **Релизный гейт НЕ тронут**:
+  `benchmark/baselines/format20` остаётся его откалиброванным
+  baseline'ом и контрольной группой шума — пороги ≤1.02/≤1.05 сняты
+  относительно него.
 - **Локаль-витрина: kk_KZ вместо uk_UA** (`4cdf9a1`): README-примеры,
   `example/format_example.dart` (заполнение `🇰🇿`, слово
   `Қазақстан`), format_intl (README, example, тесты), golden-intl
