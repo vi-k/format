@@ -19,10 +19,12 @@
 ## Git-состояние
 
 Ветка `main`. `origin/main` == `98dc98b`. Непушнутых коммитов ровно
-**шестнадцать** — ревью-раунд и реструктуризация этой сессии:
+**восемнадцать** — ревью-раунд и реструктуризация этой сессии:
 
 ```text
-<новый>  docs: record the format 2.0 matrix removal
+<новый>  docs: record the CI pipeline
+4b7f96e  ci: add the GitHub Actions pipeline
+576bca0  docs: record the format 2.0 matrix removal
 <новый>  bench: drop the format 2.0 runner from the comparison matrix
 ba68be7  docs: record the 1.6 competitor and the runner renames
 <новый>  bench: add pub format 1.6.0 to the matrix, version-suffix runners
@@ -422,9 +424,18 @@ quick): **41.6 с** (порог 60 с), ERROR ровно один — намер
   (строки 66–67) документирует запуск через
   `npx node-bin-darwin-arm64@24.8.0` при системной другой версии —
   это осознанный воспроизводимый дизайн. Код гейта не менялся.
-- Осталось из плана ревью (см. отчёт): CI (главный системный риск),
-  исполняемые реестры дивергенций, dartdoc на публичный API,
-  заметка о непубликовавшейся 2.0.0.
+- ~~CI~~ — **закрыт** (`4b7f96e`): GitHub Actions
+  `.github/workflows/ci.yaml`, два job'а (checks: формат, zero-info
+  analyze lib/test/example, полный VM-сьют, node-набор из 57 тестов
+  включая js_number_dispatch, пример, format_intl, pub dry-run;
+  benchmark-suite: fetch format16 из pub → pub get suite → полный
+  analyze → тесты сьюта). Каждый шаг верифицирован симуляцией свежего
+  клона (полный analyze возможен только после fetch+resolve — в
+  свежем клоне без них 102 uri-ошибки, поэтому он в suite-job'е).
+  Живой прогон на GitHub увидим после пуша.
+- Осталось из плана ревью (см. отчёт): исполняемые реестры
+  дивергенций, dartdoc на публичный API, заметка о непубликовавшейся
+  2.0.0.
 
 ## Реструктуризация и подготовка к публикации (2026-08-05, поздний вечер)
 
