@@ -1,16 +1,14 @@
-import 'dart:typed_data';
-
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('writeCodeUnits copies a prepared literal', () {
-    final units = Uint16List.fromList('lit'.codeUnits);
+  test('a repeated literal accumulates past single-string mode', () {
     final sink =
         CharSink(1)
-          ..writeCodeUnits(units)
-          ..writeCodeUnits(units);
+          ..writeString('lit')
+          ..writeString('lit');
     expect(sink.toString(), 'litlit');
+    expect(sink.length, 6);
   });
 
   test('writes strings, chars and fill with growth', () {
