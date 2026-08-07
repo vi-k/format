@@ -1,5 +1,4 @@
 import 'package:format/format.dart';
-import 'package:format/src/text_unit.dart' show TextUnitOperations;
 import 'package:test/test.dart';
 
 final class MapAttributeLookup extends AttributeLookup<Map<String, Object?>> {
