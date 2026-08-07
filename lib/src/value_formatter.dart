@@ -49,7 +49,7 @@ String formatParsedValue(
       throw AmbiguousFormatterException(
         context,
         value,
-        matches.map((formatter) => formatter.specifier),
+        matches.map(_describeExtension),
       );
     }
     if (matches.length == 1) {
@@ -78,6 +78,34 @@ String _formatExplicitCustom(
   return _formatCustom(formatter, value, spec, engine, context);
 }
 
+/// Reads a formatter's specifier, converting a failure in that user-written
+/// getter into the same typed failure the rest of the engine promises.
+String _readExtensionSpecifier(Formatter<dynamic> formatter) {
+  try {
+    return formatter.specifier;
+  } on FormattingException {
+    rethrow;
+  } catch (error, stackTrace) {
+    throw FormatExtensionException(
+      const FormatExceptionContext(),
+      formatter.runtimeType.toString(),
+      error,
+      stackTrace,
+    );
+  }
+}
+
+/// Names a formatter for a failure report. Reporting must never fail, so a
+/// specifier that throws here degrades to the type name instead of replacing
+/// the failure being reported.
+String _describeExtension(Formatter<dynamic> formatter) {
+  try {
+    return formatter.specifier;
+  } on Object {
+    return formatter.runtimeType.toString();
+  }
+}
+
 bool _canFormat(
   Formatter<dynamic> formatter,
   Object? value,
@@ -90,7 +118,7 @@ bool _canFormat(
   } catch (error, stackTrace) {
     throw FormatExtensionException(
       context,
-      formatter.specifier,
+      _describeExtension(formatter),
       error,
       stackTrace,
     );
@@ -147,7 +175,7 @@ String _invokeFormatter(
   } catch (error, stackTrace) {
     throw FormatExtensionException(
       context,
-      formatter.specifier,
+      _describeExtension(formatter),
       error,
       stackTrace,
     );

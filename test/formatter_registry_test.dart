@@ -32,6 +32,37 @@ final class EmptyRepresentation extends Representation<Object?> {
   String represent(Object? value) => '';
 }
 
+/// A formatter whose specifier getter fails the way a `late final` field
+/// left uninitialized would.
+final class ThrowingSpecifierFormatter extends Formatter<Object?> {
+  @override
+  String get specifier => throw StateError('specifier boom');
+
+  @override
+  bool canFormat(Object? value) => true;
+
+  @override
+  String format(Object? value, FormatOptions options) => '$value';
+}
+
+/// A formatter whose specifier survives configuration and fails afterwards,
+/// so a failure report cannot rely on reading it a second time.
+final class DecayingSpecifierFormatter extends Formatter<Object?> {
+  var _reads = 0;
+
+  @override
+  String get specifier {
+    if (_reads++ > 0) throw StateError('specifier decayed');
+    return 'decaying';
+  }
+
+  @override
+  bool canFormat(Object? value) => throw StateError('canFormat boom');
+
+  @override
+  String format(Object? value, FormatOptions options) => '$value';
+}
+
 final class SingleUseFormatters extends IterableBase<Formatter<dynamic>> {
   final Formatter<dynamic> formatter;
   var _hasIterated = false;
@@ -108,5 +139,38 @@ void main() {
     final configured = Format(formatters: SingleUseFormatters(formatter));
 
     expect(configured.format('{:singleUse}', 42), 'singleUse:42');
+  });
+
+  test('Format reports a throwing specifier as a formatting failure', () {
+    // Configuration reads user code, so it owes the same typed-failure
+    // contract as formatting itself.
+    Object? caught;
+    try {
+      Format(formatters: [ThrowingSpecifierFormatter()]);
+    } on FormattingException catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<FormatExtensionException>());
+    final failure = caught! as FormatExtensionException;
+    expect(failure.error, isA<StateError>());
+    expect(failure.extension, contains('ThrowingSpecifierFormatter'));
+  });
+
+  test('A decaying specifier does not mask the original extension failure', () {
+    final configured = Format(formatters: [DecayingSpecifierFormatter()]);
+
+    Object? caught;
+    try {
+      // Built-in kinds never consult custom formatters, so the value has to
+      // be one only the extension loop can reach.
+      configured.format('{}', Object());
+    } on FormattingException catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<FormatExtensionException>());
+    final failure = caught! as FormatExtensionException;
+    expect((failure.error as StateError).message, 'canFormat boom');
   });
 }
