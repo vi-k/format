@@ -1,10 +1,7 @@
 part of 'engine.dart';
 
 sealed class _BraceNode {
-  final int offset;
-  final String fragment;
-
-  const _BraceNode(this.offset, this.fragment);
+  const _BraceNode();
 }
 
 final class _BraceTemplate {
@@ -42,25 +39,40 @@ List<T> _sealedInDebug<T>(List<T> list) {
 final class _LiteralNode extends _BraceNode {
   final String text;
 
-  const _LiteralNode(super.offset, super.fragment, this.text);
+  const _LiteralNode(this.text);
 }
 
 final class _FieldNode extends _BraceNode {
+  // Only a field ever reports a position: an error names the field it came
+  // from, never the literal text around it, so carrying an offset and a
+  // fragment on a literal meant slicing the template for nobody to read.
+  final int offset;
+
+  /// The template this field was parsed from, kept so that [fragment] can be
+  /// sliced when something fails rather than for every field that parses.
+  final String _template;
+  final int _end;
+
+  /// The field's own text, as it appears in the template.
+  String get fragment => _template.substring(offset, _end);
+
   final _FieldRoot root;
   final List<_FieldAccess> accesses;
   final String? conversion;
   final List<_BraceNode> specification;
 
   _FieldNode({
-    required int offset,
-    required String fragment,
+    required this.offset,
+    required String template,
+    required int end,
     required this.root,
     required List<_FieldAccess> accesses,
     required this.conversion,
     required List<_BraceNode> specification,
-  }) : accesses = _sealedInDebug(accesses),
-       specification = _sealedInDebug(specification),
-       super(offset, fragment);
+  }) : _template = template,
+       _end = end,
+       accesses = _sealedInDebug(accesses),
+       specification = _sealedInDebug(specification);
 
   // Lazily memoized parse of a static specification, one slot per TextUnit.
   // Nodes are shared through the template cache, so the slots make repeated
