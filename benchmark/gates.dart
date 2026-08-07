@@ -751,9 +751,19 @@ void main(List<String> arguments) {
   }
 }
 
-GateBaseline _loadBaseline(String path) => GateBaseline.fromJson(
-  Map<String, Object?>.from(jsonDecode(File(path).readAsStringSync()) as Map),
-);
+GateBaseline _loadBaseline(String path) {
+  final file = File(path);
+  if (!file.existsSync()) {
+    throw FormatException(
+      'No recorded reference at $path. Record one with --record=YYYY-MM-DD '
+      'from a full set of reports; see benchmark/results/README.md.',
+    );
+  }
+
+  return GateBaseline.fromJson(
+    Map<String, Object?>.from(jsonDecode(file.readAsStringSync()) as Map),
+  );
+}
 
 List<BenchmarkReport> _parseReports(List<String> arguments) {
   final paths = _reportsArgument(arguments);
