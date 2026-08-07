@@ -5,14 +5,12 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-  # The nightly schedule for the performance gate stays off until the
-  # reference is re-recorded on this hardware: the committed one was measured
-  # on a laptop, and a ratio taken on one CPU can drift on another by more
-  # than the tolerances allow. A job that is red every morning stops being
-  # read. Dispatch the workflow manually to produce the reports to re-record
-  # from; see benchmark/results/README.md.
-  # schedule:
-  #   - cron: '0 3 * * *'
+  schedule:
+    # The reference is recorded on this hardware, so the nightly gate compares
+    # like with like. Measured drift between a laptop and a runner reached
+    # 16.2% on a phase mean, against a 15% tolerance — close enough that the
+    # two are not interchangeable.
+    - cron: '0 3 * * *'
 
 permissions:
   contents: read
