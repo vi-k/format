@@ -3,6 +3,9 @@ part of 'engine.dart';
 /// True when running on the web, where int is a JS double.
 const bool _isWebInt = identical(1, 1.0);
 
+/// Stands in for the literal representation the running platform ignores.
+final Uint16List _noUnits = Uint16List(0);
+
 /// True when |value| exceeds the largest integer magnitude a JS double can
 /// represent exactly (2^53 - 1). Runs in negative space so `minInt` (which
 /// has no positive counterpart) never overflows, and uses only comparison,
@@ -28,13 +31,23 @@ final class _BraceProgram {
 }
 
 final class _BraceLiteralOp extends _BraceOp {
+  // Both representations are prepared once, and each platform reads only its
+  // own: the VM copies prepared units as a block, while a web target wants
+  // the string it will concatenate. The unused one costs a field, never a
+  // conversion, because the branch below folds at compile time.
+  final String text;
   final Uint16List units;
 
-  _BraceLiteralOp(String text) : units = Uint16List.fromList(text.codeUnits);
+  _BraceLiteralOp(this.text)
+    : units = _isWeb ? _noUnits : Uint16List.fromList(text.codeUnits);
 
   @override
   void write(CharSink sink, _BraceProcessor frame) {
-    sink.writeCodeUnits(units);
+    if (_isWeb) {
+      sink.writeString(text);
+    } else {
+      sink.writeCodeUnits(units);
+    }
   }
 
   @override
@@ -770,13 +783,23 @@ final class _PrintfProgram {
 }
 
 final class _PrintfLiteralOp extends _PrintfOp {
+  // Both representations are prepared once, and each platform reads only its
+  // own: the VM copies prepared units as a block, while a web target wants
+  // the string it will concatenate. The unused one costs a field, never a
+  // conversion, because the branch below folds at compile time.
+  final String text;
   final Uint16List units;
 
-  _PrintfLiteralOp(String text) : units = Uint16List.fromList(text.codeUnits);
+  _PrintfLiteralOp(this.text)
+    : units = _isWeb ? _noUnits : Uint16List.fromList(text.codeUnits);
 
   @override
   void write(CharSink sink, _PrintfProcessor frame) {
-    sink.writeCodeUnits(units);
+    if (_isWeb) {
+      sink.writeString(text);
+    } else {
+      sink.writeCodeUnits(units);
+    }
   }
 
   @override
