@@ -41,6 +41,23 @@ void runComparisonBenchmark({
     benchmark.durations = resolved;
   }
 
+  // Only format 3.0 caches parsed templates, so only format 3.0 has two
+  // numbers to report. A comparator parses on every call by construction, and
+  // its single figure already is a first parse — measuring it twice would
+  // print the same number under two headings.
+  final coldBenchmarks = [
+    BenchmarkFormat30ColdFormat(),
+    BenchmarkFormat30ColdSprintf(),
+  ];
+  for (final benchmark in coldBenchmarks) {
+    benchmark.durations = resolved;
+  }
+
+  emit('');
+  emit('A time is per call. A "no cache" row is the same call with the');
+  emit('template cache switched off, so it parses every time — which is what');
+  emit('a comparator does anyway, having no cache of its own.');
+
   final stopwatch = Stopwatch()..start();
   for (final scenario in benchmarkScenarios) {
     emit('');
@@ -89,46 +106,19 @@ void runComparisonBenchmark({
           );
         }
       }
-    }
-  }
 
-  emit('');
-  emit(h1('----------------------------------------'));
-  emit('Cold: unique template per call (no cache hits)');
-  final coldBenchmarks = [
-    BenchmarkFormat16ColdFormat(),
-    BenchmarkFormat30ColdFormat(),
-    BenchmarkFormat30ColdSprintf(),
-    BenchmarkSprintf70Cold(),
-  ];
-  for (final benchmark in coldBenchmarks) {
-    benchmark.durations = resolved;
-  }
-
-  for (final scenario in coldScenarios) {
-    emit('');
-    emit('Format template: ${h1(scenario.brace ?? '—')}');
-    emit('Sprintf template: ${h1(scenario.sprintf ?? '—')}');
-    for (final (values, expected) in scenario.cases) {
-      emit('');
-      emit('Values: ${h2(values.join(', '))}');
       for (final benchmark in coldBenchmarks) {
         final template =
             benchmark.isSprintf ? scenario.sprintf : scenario.brace;
-        final skipped =
-            template == null ||
-            (benchmark.isSprintf70 && scenario.skipSprintf70) ||
-            (benchmark.isFormat16 && scenario.skipFormat16);
-        if (skipped) {
-          emit('${accent(benchmark.name)}: —');
-          continue;
-        }
+        if (template == null) continue;
         try {
-          final score = benchmark.goCold(template, values, expected);
+          final score = benchmark.go(template, values);
+          final message =
+              benchmark.output == expected ? ok('OK') : accentError('ERROR');
           emit(
             '${accent(benchmark.name)}:'
             ' ${format('{:.3f}', score)} µs'
-            ' <- ${benchmark.mismatched ? accentError('ERROR') : ok('OK')}',
+            ' <- $message',
           );
         } on Object catch (errorValue) {
           emit(
