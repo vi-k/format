@@ -108,9 +108,12 @@ error rather than a silently skipped check:
 dart run benchmark/gates.dart --reports=<the same six paths> --record=$(date +%F) --output=benchmark/results/gate-baseline.json
 ```
 
-Record and evaluate on comparable machines. A reference taken on one CPU and
-evaluated on another can drift by more than the tolerances allow; when the
-gate runs in CI, re-record it from a CI run rather than from a laptop.
+Record and evaluate on comparable machines. The committed reference is
+recorded on CI hardware, because that is where the nightly gate runs; the
+same reports evaluated on a laptop drifted by up to 16.2% on a phase mean,
+against a 15% tolerance. Treat a local gate run as indicative and the CI one
+as authoritative, and re-record from a CI run — dispatch the workflow, then
+take the reports from its artifact.
 
 Each round is timed to a duration rather than to a fixed operation count, so
 the two engines run different counts and a ratio is read per operation. The
