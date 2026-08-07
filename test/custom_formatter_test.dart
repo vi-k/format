@@ -179,8 +179,8 @@ void main() {
         () => engine.format('{}', const _Value('x')),
         throwsA(
           isA<AmbiguousFormatterException>().having(
-            (error) => error.specifiers,
-            'specifiers',
+            (error) => error.matches,
+            'matches',
             ['first', 'second'],
           ),
         ),

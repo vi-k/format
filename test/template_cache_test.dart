@@ -73,6 +73,47 @@ void main() {
     expect(hits, greaterThan(lookups ~/ 2));
   });
 
+  test('the capacity is public, and lowering it discards entries now', () {
+    for (var index = 0; index < 40; index++) {
+      engine.format('sized $index {}', 1);
+    }
+    expect(engine.templateCacheSize, 40);
+
+    engine.templateCacheCapacity = 10;
+    expect(engine.templateCacheCapacity, 10);
+    expect(
+      engine.templateCacheSize,
+      10,
+      reason: 'a smaller capacity has to take effect before the next call',
+    );
+
+    engine.format('sized fresh {}', 1);
+    expect(engine.templateCacheSize, 10, reason: 'and has to hold');
+    expect(() => engine.templateCacheCapacity = -1, throwsArgumentError);
+  });
+
+  test('a zero capacity formats without keeping anything', () {
+    engine.templateCacheCapacity = 0;
+
+    // Templates that never repeat only pay to be evicted, so a workload made
+    // of them must be able to opt out rather than churn the cache.
+    expect(engine.format('zero {}', 7), 'zero 7');
+    expect(engine.sprintf('%d zero', 7), '7 zero');
+    expect(engine.format('zero {}', 8), 'zero 8');
+    expect(engine.templateCacheSize, 0);
+  });
+
+  test('clearing is public and counted across both mini-languages', () {
+    engine.format('counted {}', 1);
+    engine.sprintf('%d counted', 1);
+    expect(engine.templateCacheSize, 2);
+
+    engine.clearTemplateCache();
+    expect(engine.templateCacheSize, 0);
+    expect(engine.format('counted {}', 1), 'counted 1');
+    expect(engine.templateCacheSize, 1);
+  });
+
   test('does not cache templates that fail to parse', () {
     expect(() => engine.format('{:d', 1), throwsA(isA<FormattingException>()));
     expect(() => engine.format('{:d', 1), throwsA(isA<FormattingException>()));

@@ -20,6 +20,12 @@ unpublished 2.0.0 below.
   lookups, representations, number locales, and Unicode text units.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
+* Cache parsed templates, and expose `templateCacheCapacity`,
+  `templateCacheSize`, and `clearTemplateCache()` so an application whose
+  working set is larger than the default can widen it, one whose templates
+  never repeat can switch it off, and either can tell the two cases apart.
+* Exported `TextUnitOperations`, so a configured `TextUnit` can measure and
+  truncate text the same way the engine does.
 * Defined consistent JavaScript number semantics and optimized decimal integer
   formatting, including large values and the minimum VM integer; decimal
   digits beyond 2^53 print exactly on the web instead of the JavaScript

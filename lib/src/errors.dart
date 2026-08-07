@@ -232,7 +232,8 @@ final class AmbiguousFormatterException extends FormattingException {
   /// The value that several extensions accept.
   final Object? value;
 
-  /// Descriptions of the competing extensions.
+  /// Names the competing extensions: a formatter's specifier, or the type
+  /// name of a lookup or representation, which have no specifier.
   final List<String> matches;
 
   AmbiguousFormatterException(
@@ -241,9 +242,6 @@ final class AmbiguousFormatterException extends FormattingException {
     Iterable<String> matches,
   ) : matches = List.unmodifiable(matches),
       super('Multiple formatting extensions accept this value.', context);
-
-  /// An alias of [matches].
-  List<String> get specifiers => matches;
 }
 
 /// User-provided code threw during formatting: a custom formatter,
