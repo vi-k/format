@@ -5,10 +5,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
-  schedule:
-    # The performance gate is too slow and too noise-sensitive for every
-    # pull request, so it runs nightly instead.
-    - cron: '0 3 * * *'
+  # The nightly schedule for the performance gate is commented out until a
+  # reference is recorded: without one the job can only fail, and a job that
+  # is red every morning stops being read.
+  # schedule:
+  #   - cron: '0 3 * * *'
 
 permissions:
   contents: read
@@ -91,9 +92,12 @@ jobs:
         working-directory: benchmark/suite
 
   performance-gate:
-    # Nightly and on demand only: six full measurement runs take minutes, and
-    # shared runners are noisy enough that gating every pull request on them
-    # would cost more trust than it buys.
+    # On demand, and nightly once the schedule above is enabled: six full
+    # measurement runs take minutes, and shared runners are noisy enough that
+    # gating every pull request on them would cost more trust than it buys.
+    #
+    # Run this manually to produce the reports a first reference is recorded
+    # from; see benchmark/results/README.md.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 45
