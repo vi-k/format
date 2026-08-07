@@ -62,7 +62,16 @@ final class BenchmarkScenario {
   final BenchmarkPhase phase;
   final bool keyScenario;
   final BenchmarkOutcome expected;
-  final List<String> templates;
+
+  /// The template this scenario formats on a given iteration.
+  ///
+  /// A cold scenario has to answer with one nobody has parsed yet, so it
+  /// builds the template from the iteration rather than cycling a prepared
+  /// list: a round now runs for a duration, and a list long enough for one
+  /// machine's count would be short on the next, quietly turning cold
+  /// measurements into cache hits.
+  final String Function(int iteration) templateFor;
+
   final BenchmarkOperation candidate;
   final BenchmarkOperation? baseline;
   final BenchmarkComparisonKind comparisonKind;
@@ -78,7 +87,7 @@ final class BenchmarkScenario {
     required this.phase,
     required this.keyScenario,
     required this.expected,
-    required Iterable<String> templates,
+    required this.templateFor,
     required this.candidate,
     this.baseline,
     this.comparisonKind = BenchmarkComparisonKind.performance,
@@ -87,24 +96,28 @@ final class BenchmarkScenario {
     this.fieldCount = 1,
     this.referenceKind = BenchmarkReferenceKind.executable,
     this.referenceLabel,
-  }) : templates = List.unmodifiable(templates) {
+  }) {
     if (id.isEmpty) throw ArgumentError.value(id, 'id', 'Must not be empty.');
     if (fieldCount < 1) throw ArgumentError.value(fieldCount, 'fieldCount');
-    if (this.templates.isEmpty) {
-      throw ArgumentError.value(templates, 'templates', 'Must not be empty.');
+    // Sampled rather than counted: what separates the phases is whether a
+    // later iteration brings work the engine has already done.
+    final first = templateFor(0);
+    final second = templateFor(1);
+    if (first.isEmpty) {
+      throw ArgumentError.value(first, 'templateFor', 'Must not be empty.');
     }
-    if (phase == BenchmarkPhase.hot && this.templates.length != 1) {
+    if (phase == BenchmarkPhase.hot && first != second) {
       throw ArgumentError.value(
-        templates,
-        'templates',
-        'Hot scenarios use exactly one stable template.',
+        templateFor,
+        'templateFor',
+        'Hot scenarios repeat one stable template.',
       );
     }
-    if (phase == BenchmarkPhase.cold && this.templates.length < 200) {
+    if (phase == BenchmarkPhase.cold && first == second) {
       throw ArgumentError.value(
-        templates,
-        'templates',
-        'Cold scenarios pre-create at least 200 templates.',
+        templateFor,
+        'templateFor',
+        'Cold scenarios need a template no iteration has used before.',
       );
     }
     if (comparisonKind == BenchmarkComparisonKind.informational &&
