@@ -26,7 +26,7 @@ String formatBraceInteger(
     _ =>
       throw _invalidSpecifier(
         context,
-        'This integer presentation type is not supported yet.',
+        'Integer values accept the presentation types b, d, n, o, x, and X.',
       ),
   };
   final negative = switch (value) {
@@ -634,7 +634,8 @@ void _validateDoubleSpec(
   if (!doubleTypes.contains(type)) {
     throw _invalidSpecifier(
       context,
-      'This floating-point presentation type is not supported.',
+      'Double values accept the presentation types e, E, f, F, g, G, n, '
+      'and %, or none at all.',
     );
   }
   if (type == 'n' &&
@@ -661,7 +662,7 @@ void _validateIntegerSpec(
   if (!integerTypes.contains(type)) {
     throw _invalidSpecifier(
       context,
-      'This integer presentation type is not supported yet.',
+      'Integer values accept the presentation types b, d, n, o, x, and X.',
     );
   }
   if (spec.normalizeNegativeZero ||

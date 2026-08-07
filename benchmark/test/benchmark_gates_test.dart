@@ -3,63 +3,52 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../benchmark/gates.dart';
-import '../benchmark/model.dart';
-import '../benchmark/scenarios.dart';
+import '../gates.dart';
+import '../model.dart';
+import '../scenarios.dart';
 
 void main() {
-  test('brace gates accept exact mean and key boundaries', () {
-    final result = evaluateBraceGates(
-      ratios: const {'hot': 1.02, 'cold-key': 1.05},
-      hotScenarioIds: const {'hot'},
-      keyScenarioIds: const {'cold-key'},
-      reproducedRatios: const {'hot': 1.02, 'cold-key': 1.05},
-    );
-
-    expect(result.geometricMeanPassed, isTrue);
-    expect(result.keyScenariosPassed, isTrue);
-    expect(result.passed, isTrue);
-  });
-
-  test('brace failures require the same threshold violation in both runs', () {
-    final unreproduced = evaluateBraceGates(
-      ratios: const {'hot': 1.0201, 'key': 1.0501},
-      hotScenarioIds: const {'hot'},
-      keyScenarioIds: const {'key'},
-      reproducedRatios: const {'hot': 1.0, 'key': 1.0},
-    );
-    final reproduced = evaluateBraceGates(
-      ratios: const {'hot': 1.0201, 'key': 1.0501},
-      hotScenarioIds: const {'hot'},
-      keyScenarioIds: const {'key'},
-      reproducedRatios: const {'hot': 1.0201, 'key': 1.0501},
-    );
-
-    expect(unreproduced.passed, isTrue);
-    expect(reproduced.geometricMeanPassed, isFalse);
-    expect(reproduced.keyScenariosPassed, isFalse);
-    expect(reproduced.passed, isFalse);
-  });
-
-  test('printf gates distinguish exact cold and hot mean boundaries', () {
-    expect(evaluatePrintfMean(BenchmarkPhase.cold, 0.90), isTrue);
-    expect(evaluatePrintfMean(BenchmarkPhase.cold, 0.9001), isFalse);
-    expect(evaluatePrintfMean(BenchmarkPhase.hot, 0.80), isTrue);
-    expect(evaluatePrintfMean(BenchmarkPhase.hot, 0.8001), isFalse);
-  });
-
-  test('printf key boundary requires reproduction in both runs', () {
+  test('limits are the recorded reference times a tolerance', () {
+    // A key scenario is held to a tighter tolerance than an ordinary one,
+    // and an aggregate to the tightest of the three.
+    expect(gateLimitFor(0.20, keyScenario: false), closeTo(0.28, 1e-12));
+    expect(gateLimitFor(0.20, keyScenario: true), closeTo(0.25, 1e-12));
+    expect(gateMeanLimitFor(0.20), closeTo(0.23, 1e-12));
     expect(
-      evaluatePrintfKeyScenarios(const {'key': 1.02}, const {'key': 1.02}),
+      gateLimitFor(0.20, keyScenario: true),
+      lessThan(gateLimitFor(0.20, keyScenario: false)),
+    );
+  });
+
+  test('a limit is breached only when both runs breach it', () {
+    expect(clearsGate(0.10, 0.10, 0.20), isTrue);
+    expect(
+      clearsGate(0.20, 0.20, 0.20),
       isTrue,
+      reason: 'exactly at the limit',
     );
-    expect(
-      evaluatePrintfKeyScenarios(const {'key': 1.0201}, const {'key': 1.02}),
-      isTrue,
+    expect(clearsGate(0.21, 0.10, 0.20), isTrue, reason: 'one run only');
+    expect(clearsGate(0.10, 0.21, 0.20), isTrue, reason: 'the other run only');
+    expect(clearsGate(0.21, 0.21, 0.20), isFalse);
+  });
+
+  test('a recorded baseline survives a round trip and rejects gaps', () {
+    final baseline = recordGateBaseline(_completeReports(), '2026-01-01');
+    final restored = GateBaseline.fromJson(
+      Map<String, Object?>.from(
+        jsonDecode(jsonEncode(baseline.toJson())) as Map,
+      ),
     );
+
+    expect(restored.recordedAt, '2026-01-01');
+    expect(restored.sourceRevision, baseline.sourceRevision);
+    final key = GateBaseline.keyFor('jit', BenchmarkDialect.braces);
+    expect(restored.phaseMean(key, BenchmarkPhase.hot), closeTo(1.0, 1e-12));
+    // A matrix that grew since the reference was taken must say so instead
+    // of silently gating nothing.
     expect(
-      evaluatePrintfKeyScenarios(const {'key': 1.0201}, const {'key': 1.0201}),
-      isFalse,
+      () => restored.scenarioRatio(key, 'brace.invented.hot'),
+      throwsFormatException,
     );
   });
 
@@ -70,18 +59,21 @@ void main() {
   });
 
   test('merged gates accept exactly two complete reproducible runs', () {
-    final result = evaluateGateReports(_completeReports());
+    final result = evaluateGateReports(_completeReports(), _baseline());
 
     expect(result.passed, isTrue);
     expect(result.toJson()['aotExecutableSizeBytes'], 123456);
-    expect(result.toJson()['gates'], hasLength(5));
+    expect(result.toJson()['gates'], hasLength(6));
   });
 
   test('gates reject absent or mismatched runtime provenance', () {
     final mismatched = _completeReports();
     final jit = mismatched.indexWhere((report) => report.runtime == 'jit');
     mismatched[jit] = _copyReport(mismatched[jit], detectedRuntime: 'aot');
-    expect(() => evaluateGateReports(mismatched), throwsFormatException);
+    expect(
+      () => evaluateGateReports(mismatched, _baseline()),
+      throwsFormatException,
+    );
 
     final missingCompiler = _completeReports();
     final js = missingCompiler.indexWhere((report) => report.runtime == 'js');
@@ -92,7 +84,10 @@ void main() {
         'dartCompilerVersion': 'unavailable',
       },
     );
-    expect(() => evaluateGateReports(missingCompiler), throwsFormatException);
+    expect(
+      () => evaluateGateReports(missingCompiler, _baseline()),
+      throwsFormatException,
+    );
   });
 
   test('gates require Node 24.8.0 and one canonical source revision', () {
@@ -106,7 +101,10 @@ void main() {
         'nodeVersion': 'v26.5.0',
       },
     );
-    expect(() => evaluateGateReports(wrongNode), throwsFormatException);
+    expect(
+      () => evaluateGateReports(wrongNode, _baseline()),
+      throwsFormatException,
+    );
 
     final mismatchedCompiler = _completeReports();
     final secondJs = mismatchedCompiler.lastIndexWhere(
@@ -121,24 +119,33 @@ void main() {
       },
     );
     expect(
-      () => evaluateGateReports(mismatchedCompiler),
+      () => evaluateGateReports(mismatchedCompiler, _baseline()),
       throwsFormatException,
     );
 
     final missing = _completeReports();
     missing[0] = _copyReport(missing[0], sourceRevision: '');
-    expect(() => evaluateGateReports(missing), throwsFormatException);
+    expect(
+      () => evaluateGateReports(missing, _baseline()),
+      throwsFormatException,
+    );
 
     final malformed = _completeReports();
     malformed[0] = _copyReport(malformed[0], sourceRevision: 'not-a-sha');
-    expect(() => evaluateGateReports(malformed), throwsFormatException);
+    expect(
+      () => evaluateGateReports(malformed, _baseline()),
+      throwsFormatException,
+    );
 
     final mismatched = _completeReports();
     mismatched[0] = _copyReport(
       mismatched[0],
       sourceRevision: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     );
-    expect(() => evaluateGateReports(mismatched), throwsFormatException);
+    expect(
+      () => evaluateGateReports(mismatched, _baseline()),
+      throwsFormatException,
+    );
   });
 
   test(
@@ -146,11 +153,17 @@ void main() {
     () {
       final smoke = _completeReports();
       smoke[0] = _copyReport(smoke[0], smoke: true, gateable: false);
-      expect(() => evaluateGateReports(smoke), throwsFormatException);
+      expect(
+        () => evaluateGateReports(smoke, _baseline()),
+        throwsFormatException,
+      );
 
       final nonGateable = _completeReports();
       nonGateable[0] = _copyReport(nonGateable[0], gateable: false);
-      expect(() => evaluateGateReports(nonGateable), throwsFormatException);
+      expect(
+        () => evaluateGateReports(nonGateable, _baseline()),
+        throwsFormatException,
+      );
 
       final short = _completeReports();
       expect(
@@ -171,13 +184,16 @@ void main() {
         ],
       );
       expect(
-        () => evaluateGateReports(mismatchedDialect),
+        () => evaluateGateReports(mismatchedDialect, _baseline()),
         throwsFormatException,
       );
 
       final duplicateRun = _completeReports();
       duplicateRun[1] = _copyReport(duplicateRun[1], run: 1);
-      expect(() => evaluateGateReports(duplicateRun), throwsFormatException);
+      expect(
+        () => evaluateGateReports(duplicateRun, _baseline()),
+        throwsFormatException,
+      );
     },
   );
 
@@ -195,39 +211,83 @@ void main() {
     altered['scenarios'] = scenarios;
     expect(() {
       reports[0] = BenchmarkReport.fromJson(altered);
-      evaluateGateReports(reports);
+      evaluateGateReports(reports, _baseline());
     }, throwsArgumentError);
   });
 
-  test('gate command exits one when a reproduced threshold fails', () async {
-    final reports = _completeReports();
-    reports[0] = _withPerformanceRatio(
-      reports[0],
-      'brace.double.fixed.compatible.hot',
-      1.06,
-    );
-    reports[1] = _withPerformanceRatio(
-      reports[1],
-      'brace.double.fixed.compatible.hot',
-      1.06,
-    );
-    final directory = await Directory.systemTemp.createTemp('format-gates-');
-    try {
-      final paths = <String>[];
-      for (var index = 0; index < reports.length; index++) {
-        final file = File('${directory.path}/report-$index.json');
-        await file.writeAsString(jsonEncode(reports[index].toJson()));
-        paths.add(file.path);
+  test(
+    'gate command passes an unchanged build and fails a regressed one',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('format-gates-');
+      try {
+        final baseline = File('${directory.path}/baseline.json');
+        await baseline.writeAsString(jsonEncode(_baseline().toJson()));
+
+        Future<ProcessResult> runGates(List<BenchmarkReport> reports) async {
+          final paths = <String>[];
+          for (var index = 0; index < reports.length; index++) {
+            final file = File('${directory.path}/report-$index.json');
+            await file.writeAsString(jsonEncode(reports[index].toJson()));
+            paths.add(file.path);
+          }
+
+          return Process.run(Platform.resolvedExecutable, [
+            'benchmark/gates.dart',
+            '--reports=${paths.join(',')}',
+            '--baseline=${baseline.path}',
+          ]);
+        }
+
+        // Without this control, a gate that fails for an unrelated reason —
+        // a missing argument, say — would still look like it was working.
+        final unchanged = await runGates(_completeReports());
+        expect(unchanged.exitCode, 0, reason: unchanged.stderr.toString());
+
+        final regressed = _completeReports();
+        const id = 'brace.double.fixed.compatible.hot';
+        regressed[0] = _withPerformanceRatio(regressed[0], id, 1.6);
+        regressed[1] = _withPerformanceRatio(regressed[1], id, 1.6);
+        final result = await runGates(regressed);
+        expect(result.exitCode, 1, reason: result.stderr.toString());
+        expect(result.stdout, contains(id));
+      } finally {
+        await directory.delete(recursive: true);
       }
-      final result = await Process.run(Platform.resolvedExecutable, [
-        'benchmark/gates.dart',
-        '--reports=${paths.join(',')}',
-      ]);
-      expect(result.exitCode, 1, reason: result.stderr.toString());
-    } finally {
-      await directory.delete(recursive: true);
-    }
-  });
+    },
+  );
+
+  test(
+    'gate command records a baseline it can then evaluate against',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('format-record-');
+      try {
+        final reports = _completeReports();
+        final paths = <String>[];
+        for (var index = 0; index < reports.length; index++) {
+          final file = File('${directory.path}/report-$index.json');
+          await file.writeAsString(jsonEncode(reports[index].toJson()));
+          paths.add(file.path);
+        }
+        final recorded = File('${directory.path}/baseline.json');
+        final record = await Process.run(Platform.resolvedExecutable, [
+          'benchmark/gates.dart',
+          '--reports=${paths.join(',')}',
+          '--record=2026-01-01',
+          '--output=${recorded.path}',
+        ]);
+        expect(record.exitCode, 0, reason: record.stderr.toString());
+
+        final evaluate = await Process.run(Platform.resolvedExecutable, [
+          'benchmark/gates.dart',
+          '--reports=${paths.join(',')}',
+          '--baseline=${recorded.path}',
+        ]);
+        expect(evaluate.exitCode, 0, reason: evaluate.stderr.toString());
+      } finally {
+        await directory.delete(recursive: true);
+      }
+    },
+  );
 }
 
 List<BenchmarkReport> _completeReports() => [
@@ -243,13 +303,14 @@ List<BenchmarkReport> _completeReports() => [
     _report(
       runtime: 'js',
       run: run,
-      scenarios:
-          benchmarkScenarios
-              .where((scenario) => scenario.dialect == BenchmarkDialect.printf)
-              .map(_scenarioFor)
-              .toList(),
+      scenarios: benchmarkScenarios.map(_scenarioFor).toList(),
     ),
 ];
+
+/// A reference recorded from the same synthetic reports the tests evaluate,
+/// so an unchanged build sits exactly on its own recorded numbers.
+GateBaseline _baseline() =>
+    recordGateBaseline(_completeReports(), '2026-01-01');
 
 BenchmarkScenarioResult _scenarioFor(BenchmarkScenario scenario) {
   final candidate = switch ((scenario.dialect, scenario.phase)) {
@@ -266,7 +327,13 @@ BenchmarkScenarioResult _scenarioFor(BenchmarkScenario scenario) {
     comparisonRationale: scenario.comparisonRationale,
     referenceLabel: scenario.referenceLabel,
     candidateMedianNanoseconds: candidate,
-    baselineMedianNanoseconds: scenario.includeRatio ? 100 : null,
+    baselineMedianNanoseconds: scenario.includeRatio ? 200 : null,
+    // Deliberately unequal: the engines are timed to a duration, so a report
+    // whose counts happened to match would not exercise the normalization.
+    // Per operation the comparator still costs 0.1 ns, so the ratios the
+    // other tests reason about are unchanged.
+    candidateOperations: 1000,
+    baselineOperations: scenario.includeRatio ? 2000 : null,
     ratio: scenario.includeRatio ? candidate / 100 : null,
   );
 }
@@ -312,7 +379,10 @@ BenchmarkReport _report({
                 engine == 'candidate'
                     ? scenario.candidateMedianNanoseconds!
                     : scenario.baselineMedianNanoseconds!,
-            operations: 1,
+            operations:
+                engine == 'candidate'
+                    ? scenario.candidateOperations!
+                    : scenario.baselineOperations!,
             round: round,
           ),
   ],
@@ -361,7 +431,9 @@ BenchmarkReport _withPerformanceRatio(
           scenarios[scenarioIndex]! as Map<String, Object?>,
         )
         ..['candidateMedianNanoseconds'] = candidate
-        ..['baselineMedianNanoseconds'] = 100
+        ..['baselineMedianNanoseconds'] = 200
+        ..['candidateOperations'] = 1000
+        ..['baselineOperations'] = 2000
         ..['ratio'] = candidate / 100;
   scenarios[scenarioIndex] = scenario;
   final samples =

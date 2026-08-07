@@ -233,7 +233,8 @@ final class _BraceIntOp extends _BraceOp {
     if (value is double) {
       throw InvalidSpecifierException(
         _context(frame),
-        'This floating-point presentation type is not supported.',
+        'Double values accept the presentation types e, E, f, F, g, G, n, '
+        'and %, or none at all.',
       );
     }
     throw UnsupportedFormatValueException(_context(frame), value);

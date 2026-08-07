@@ -185,6 +185,16 @@ final class BenchmarkScenarioResult {
   final String? referenceLabel;
   final int? candidateMedianNanoseconds;
   final int? baselineMedianNanoseconds;
+
+  /// How many operations each median covers.
+  ///
+  /// The two engines are timed for a comparable duration rather than for a
+  /// fixed number of operations, so a slow comparator does not force the fast
+  /// candidate into a round too short to measure. That makes the counts
+  /// differ, and makes them necessary for reading a median: [ratio] is the
+  /// quotient of the per-operation times, not of these medians.
+  final int? candidateOperations;
+  final int? baselineOperations;
   final double? ratio;
 
   const BenchmarkScenarioResult({
@@ -197,8 +207,23 @@ final class BenchmarkScenarioResult {
     required this.referenceLabel,
     required this.candidateMedianNanoseconds,
     required this.baselineMedianNanoseconds,
+    required this.candidateOperations,
+    required this.baselineOperations,
     required this.ratio,
   });
+
+  /// The candidate's time for one operation, or null when it was not timed.
+  double? get candidateNanosecondsPerOperation =>
+      _perOperation(candidateMedianNanoseconds, candidateOperations);
+
+  /// The comparator's time for one operation, or null when there is none.
+  double? get baselineNanosecondsPerOperation =>
+      _perOperation(baselineMedianNanoseconds, baselineOperations);
+
+  static double? _perOperation(int? elapsed, int? operations) =>
+      elapsed == null || operations == null || operations < 1
+          ? null
+          : elapsed / operations;
 
   Map<String, Object?> toJson() {
     if (comparisonKind != BenchmarkComparisonKind.performance &&
@@ -215,6 +240,8 @@ final class BenchmarkScenarioResult {
       'referenceLabel': referenceLabel,
       'candidateMedianNanoseconds': candidateMedianNanoseconds,
       'baselineMedianNanoseconds': baselineMedianNanoseconds,
+      'candidateOperations': candidateOperations,
+      'baselineOperations': baselineOperations,
       'ratio': ratio,
     };
   }
@@ -232,6 +259,8 @@ final class BenchmarkScenarioResult {
         referenceLabel: json['referenceLabel'] as String?,
         candidateMedianNanoseconds: json['candidateMedianNanoseconds'] as int?,
         baselineMedianNanoseconds: json['baselineMedianNanoseconds'] as int?,
+        candidateOperations: json['candidateOperations'] as int?,
+        baselineOperations: json['baselineOperations'] as int?,
         ratio: (json['ratio'] as num?)?.toDouble(),
       ).._validate();
 
@@ -239,6 +268,12 @@ final class BenchmarkScenarioResult {
     if (comparisonKind != BenchmarkComparisonKind.performance &&
         ratio != null) {
       throw ArgumentError('Only performance scenarios may have ratios.');
+    }
+    if (candidateMedianNanoseconds != null && candidateOperations == null) {
+      throw ArgumentError('A median without its operation count is unusable.');
+    }
+    if (baselineMedianNanoseconds != null && baselineOperations == null) {
+      throw ArgumentError('A median without its operation count is unusable.');
     }
   }
 }

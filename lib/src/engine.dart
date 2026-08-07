@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'dart:typed_data';
+
 import 'binary64.dart';
 import 'double_format.dart';
 import 'errors.dart';

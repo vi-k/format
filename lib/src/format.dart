@@ -37,7 +37,9 @@ final class Format {
   final DoubleSpecialValueSpelling doubleSpecialValueSpelling;
 
   /// Creates an engine; throws [FormatConfigurationException] when the
-  /// configuration is invalid (reserved or duplicated formatter names).
+  /// configuration is invalid (reserved or duplicated formatter names), and
+  /// [FormatExtensionException] when a formatter's own `specifier` getter
+  /// throws.
   Format({
     Iterable<Formatter<dynamic>> formatters = const [],
     Iterable<AttributeLookup<dynamic>> lookups = const [],
@@ -49,9 +51,12 @@ final class Format {
   }) : formatters = List.unmodifiable(formatters),
        lookups = List.unmodifiable(lookups),
        representations = List.unmodifiable(representations) {
-    _validateConfiguration();
+    // Every specifier is read exactly once, here: the getter is user code,
+    // so a second read could disagree with the one validation approved.
+    final specifiers = _validateConfiguration();
     _formattersBySpecifier = Map.unmodifiable({
-      for (final formatter in this.formatters) formatter.specifier: formatter,
+      for (var index = 0; index < this.formatters.length; index++)
+        specifiers[index]: this.formatters[index],
     });
   }
 
@@ -142,12 +147,14 @@ final class Format {
         engine: this,
       ).format();
 
-  void _validateConfiguration() {
+  List<String> _validateConfiguration() {
     final names = <String>{};
     final instances = Set<Formatter<dynamic>>.identity();
+    final specifiers = <String>[];
 
     for (final formatter in formatters) {
-      final name = formatter.specifier;
+      final name = _readExtensionSpecifier(formatter);
+      specifiers.add(name);
       if (!_formatterNamePattern.hasMatch(name)) {
         throw FormatConfigurationException(
           'Formatter names must be ASCII identifiers.',
@@ -175,5 +182,7 @@ final class Format {
         );
       }
     }
+
+    return specifiers;
   }
 }

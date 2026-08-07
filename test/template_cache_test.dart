@@ -23,48 +23,54 @@ void main() {
     expect(engine.debugPrintfTemplateCacheSize(), 1);
   });
 
-  test('evicts only the oldest brace entry when capacity overflows', () {
+  test('overflowing the capacity evicts exactly one entry at a time', () {
     final capacity = engine.debugTemplateCacheCapacity();
-    final first = engine.debugCachedBraceTemplate('unique 0 {}');
-    final second = engine.debugCachedBraceTemplate('unique 1 {}');
-    for (var index = 2; index < capacity; index++) {
+    for (var index = 0; index < capacity; index++) {
       engine.debugCachedBraceTemplate('unique $index {}');
-    }
-    expect(engine.debugBraceTemplateCacheSize(), capacity);
-
-    engine.debugCachedBraceTemplate('overflow {}');
-    expect(engine.debugBraceTemplateCacheSize(), capacity);
-    // The second-oldest entry survived (identity hit)...
-    expect(
-      identical(engine.debugCachedBraceTemplate('unique 1 {}'), second),
-      isTrue,
-    );
-    // ...while the oldest one was evicted and reparses to a fresh AST.
-    expect(
-      identical(engine.debugCachedBraceTemplate('unique 0 {}'), first),
-      isFalse,
-    );
-  });
-
-  test('evicts only the oldest printf entry when capacity overflows', () {
-    final capacity = engine.debugTemplateCacheCapacity();
-    final first = engine.debugCachedPrintfTemplate('unique 0 %d');
-    final second = engine.debugCachedPrintfTemplate('unique 1 %d');
-    for (var index = 2; index < capacity; index++) {
       engine.debugCachedPrintfTemplate('unique $index %d');
     }
+    expect(engine.debugBraceTemplateCacheSize(), capacity);
     expect(engine.debugPrintfTemplateCacheSize(), capacity);
 
+    engine.debugCachedBraceTemplate('overflow {}');
     engine.debugCachedPrintfTemplate('overflow %d');
+
+    // The cache stays full rather than being flushed wholesale: a burst of
+    // one-off templates costs one warm entry each, not the whole set.
+    expect(engine.debugBraceTemplateCacheSize(), capacity);
     expect(engine.debugPrintfTemplateCacheSize(), capacity);
-    expect(
-      identical(engine.debugCachedPrintfTemplate('unique 1 %d'), second),
-      isTrue,
-    );
-    expect(
-      identical(engine.debugCachedPrintfTemplate('unique 0 %d'), first),
-      isFalse,
-    );
+  });
+
+  test('a working set just past the capacity keeps most of its entries', () {
+    // The regression this pins: under FIFO (or LRU) a cyclic working set one
+    // template larger than the cache evicts precisely the entry needed next,
+    // so every single call reparses. Random replacement must not do that.
+    final capacity = engine.debugTemplateCacheCapacity();
+    final templates = [
+      for (var index = 0; index <= capacity; index++) 'cyclic $index {}',
+    ];
+    // The first lap fills the cache; an entry that survives a later lap
+    // comes back as the same instance, an evicted one comes back reparsed.
+    final previous = {
+      for (final template in templates)
+        template: engine.debugCachedBraceTemplate(template),
+    };
+
+    var hits = 0;
+    var lookups = 0;
+    for (var lap = 0; lap < 4; lap++) {
+      for (final template in templates) {
+        final current = engine.debugCachedBraceTemplate(template);
+        lookups++;
+        if (identical(current, previous[template])) hits++;
+        previous[template] = current;
+      }
+    }
+
+    // FIFO scores exactly zero here. The bar is deliberately far below what
+    // random replacement actually achieves, so the test pins the policy
+    // rather than a particular random stream.
+    expect(hits, greaterThan(lookups ~/ 2));
   });
 
   test('does not cache templates that fail to parse', () {

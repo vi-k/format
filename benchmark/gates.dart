@@ -5,79 +5,112 @@ import 'dart:math' as math;
 import 'model.dart';
 import 'scenarios.dart';
 
-const double _braceHotMeanLimit = 1.02;
-const double _braceKeyLimit = 1.05;
-const double _printfColdMeanLimit = 0.90;
-const double _printfHotMeanLimit = 0.80;
-const double _printfKeyLimit = 1.02;
+// The gate compares this build against a recorded measurement of an earlier
+// build of this package, not against a fixed number.
+//
+// A single set of constants cannot serve every runtime: measured against the
+// same frozen comparators, the candidate's ratios differ by an order of
+// magnitude between the VM and dart2js, so any constant tight enough to mean
+// something on the VM fires immediately on JavaScript. Ratios, on the other
+// hand, are measured candidate-against-comparator in one process, which makes
+// them portable across machines in a way absolute times are not — so a
+// recorded ratio is a usable reference, and drift away from it is a
+// regression regardless of runtime.
+//
+// The recorded numbers are a statement of fact, not of approval: where a
+// runtime is known to be slow today, the baseline says so, and the gate then
+// keeps it from getting worse.
+const double _meanTolerance = 1.15;
+const double _scenarioTolerance = 1.40;
+const double _keyScenarioTolerance = 1.25;
 
 const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   'jit': {BenchmarkDialect.braces, BenchmarkDialect.printf},
   'aot': {BenchmarkDialect.braces, BenchmarkDialect.printf},
-  'js': {BenchmarkDialect.printf},
+  // Braces run under dart2js like any other dialect; leaving them out here
+  // would hide the runtime where they cost the most.
+  'js': {BenchmarkDialect.braces, BenchmarkDialect.printf},
 };
 
-/// The per-run brace decision. A failure becomes actionable only when the
-/// same aggregate or key limit is also exceeded in `reproducedRatios`.
-final class BraceGateResult {
-  final double geometricMean;
-  final double reproducedGeometricMean;
-  final bool geometricMeanPassed;
-  final bool keyScenariosPassed;
-  final Set<String> reproducedKeyFailures;
+/// The recorded per-scenario and per-phase ratios an evaluation compares
+/// against, keyed `runtime/dialect` and, within that, by phase name and by
+/// scenario id.
+final class GateBaseline {
+  final String sourceRevision;
+  final String recordedAt;
+  final Map<String, Map<String, double>> phaseMeans;
+  final Map<String, Map<String, double>> scenarioRatios;
 
-  const BraceGateResult({
-    required this.geometricMean,
-    required this.reproducedGeometricMean,
-    required this.geometricMeanPassed,
-    required this.keyScenariosPassed,
-    required this.reproducedKeyFailures,
+  const GateBaseline({
+    required this.sourceRevision,
+    required this.recordedAt,
+    required this.phaseMeans,
+    required this.scenarioRatios,
   });
 
-  bool get passed => geometricMeanPassed && keyScenariosPassed;
-}
+  static String keyFor(String runtime, BenchmarkDialect dialect) =>
+      '$runtime/${dialect.name}';
 
-BraceGateResult evaluateBraceGates({
-  required Map<String, double> ratios,
-  required Set<String> hotScenarioIds,
-  required Set<String> keyScenarioIds,
-  required Map<String, double> reproducedRatios,
-}) {
-  final geometric = geometricMean(_valuesFor(ratios, hotScenarioIds));
-  final reproducedGeometric = geometricMean(
-    _valuesFor(reproducedRatios, hotScenarioIds),
-  );
-  final reproducedKeyFailures = <String>{
-    for (final id in keyScenarioIds)
-      if (_ratioFor(ratios, id) > _braceKeyLimit &&
-          _ratioFor(reproducedRatios, id) > _braceKeyLimit)
-        id,
-  };
-  return BraceGateResult(
-    geometricMean: geometric,
-    reproducedGeometricMean: reproducedGeometric,
-    geometricMeanPassed:
-        !(geometric > _braceHotMeanLimit &&
-            reproducedGeometric > _braceHotMeanLimit),
-    keyScenariosPassed: reproducedKeyFailures.isEmpty,
-    reproducedKeyFailures: Set.unmodifiable(reproducedKeyFailures),
-  );
-}
+  factory GateBaseline.fromJson(Map<String, Object?> json) {
+    if (json['schemaVersion'] != 1) {
+      throw const FormatException('Unsupported gate baseline schema.');
+    }
+    Map<String, Map<String, double>> read(String field) => {
+      for (final entry in (json[field]! as Map).entries)
+        entry.key as String: {
+          for (final inner in (entry.value as Map).entries)
+            inner.key as String: (inner.value as num).toDouble(),
+        },
+    };
 
-bool evaluatePrintfMean(BenchmarkPhase phase, double value) => switch (phase) {
-  BenchmarkPhase.cold => value <= _printfColdMeanLimit,
-  BenchmarkPhase.hot => value <= _printfHotMeanLimit,
-};
-
-bool evaluatePrintfKeyScenarios(
-  Map<String, double> ratios,
-  Map<String, double> reproducedRatios,
-) =>
-    !ratios.keys.any(
-      (id) =>
-          _ratioFor(ratios, id) > _printfKeyLimit &&
-          _ratioFor(reproducedRatios, id) > _printfKeyLimit,
+    return GateBaseline(
+      sourceRevision: json['sourceRevision']! as String,
+      recordedAt: json['recordedAt']! as String,
+      phaseMeans: read('phaseMeans'),
+      scenarioRatios: read('scenarioRatios'),
     );
+  }
+
+  Map<String, Object?> toJson() => {
+    'schemaVersion': 1,
+    'sourceRevision': sourceRevision,
+    'recordedAt': recordedAt,
+    'phaseMeans': phaseMeans,
+    'scenarioRatios': scenarioRatios,
+  };
+
+  double phaseMean(String key, BenchmarkPhase phase) =>
+      _require(phaseMeans[key]?[phase.name], '$key ${phase.name} mean');
+
+  double scenarioRatio(String key, String scenarioId) =>
+      _require(scenarioRatios[key]?[scenarioId], '$key $scenarioId');
+
+  static double _require(double? value, String what) {
+    if (value == null || !value.isFinite || value <= 0) {
+      throw FormatException(
+        'The gate baseline has no usable entry for $what. Re-record it '
+        'after changing the benchmark matrix.',
+      );
+    }
+
+    return value;
+  }
+}
+
+/// The tolerated ratio for one recorded reference value.
+double gateLimitFor(double baselineRatio, {required bool keyScenario}) =>
+    baselineRatio * (keyScenario ? _keyScenarioTolerance : _scenarioTolerance);
+
+/// The tolerated ratio for a recorded phase geometric mean.
+double gateMeanLimitFor(double baselineMean) => baselineMean * _meanTolerance;
+
+/// Whether a measurement clears its recorded reference.
+///
+/// A single run never decides: a limit counts as breached only when both
+/// independent runs breach it, which is what keeps a noisy sample from
+/// failing a release on its own.
+bool clearsGate(double run1, double run2, double limit) =>
+    !(run1 > limit && run2 > limit);
 
 int medianNanoseconds(Iterable<int> measurements) {
   final values = measurements.toList()..sort();
@@ -130,7 +163,10 @@ final class GateReport {
   };
 }
 
-GateReport evaluateGateReports(Iterable<BenchmarkReport> input) {
+GateReport evaluateGateReports(
+  Iterable<BenchmarkReport> input,
+  GateBaseline baseline,
+) {
   final reports = input.toList(growable: false);
   final byRuntime = <String, List<BenchmarkReport>>{};
   for (final report in reports) {
@@ -159,7 +195,9 @@ GateReport evaluateGateReports(Iterable<BenchmarkReport> input) {
       aotSize = sizes.single;
     }
     for (final dialect in entry.value) {
-      gates.add(_evaluateDialect(entry.key, dialect, pair[0], pair[1]));
+      gates.add(
+        _evaluateDialect(entry.key, dialect, pair[0], pair[1], baseline),
+      );
     }
   }
   return GateReport(
@@ -260,8 +298,8 @@ void _validateReport(BenchmarkReport report) {
       }
       continue;
     }
-    final candidate = scenario.candidateMedianNanoseconds;
-    final baseline = scenario.baselineMedianNanoseconds;
+    final candidate = scenario.candidateNanosecondsPerOperation;
+    final baseline = scenario.baselineNanosecondsPerOperation;
     final ratio = scenario.ratio;
     if (candidate == null ||
         candidate <= 0 ||
@@ -274,10 +312,12 @@ void _validateReport(BenchmarkReport report) {
         '${scenario.scenarioId} has an invalid performance ratio.',
       );
     }
+    // Per operation: the engines are timed to a duration, so their operation
+    // counts differ and the medians alone do not reconstruct the ratio.
     final observedRatio = candidate / baseline;
-    if ((ratio - observedRatio).abs() > 1e-12) {
+    if ((ratio - observedRatio).abs() > 1e-9 * ratio) {
       throw FormatException(
-        '${scenario.scenarioId} ratio does not match absolute times.',
+        '${scenario.scenarioId} ratio does not match its measured times.',
       );
     }
     _validateSamples(report, scenario);
@@ -349,6 +389,17 @@ void _validateSamples(
         '${scenario.scenarioId} $engine median differs from raw samples.',
       );
     }
+    // The ratio is read per operation, so a count that disagrees with the
+    // samples it claims to describe would silently rescale the comparison.
+    final operations =
+        engine == 'candidate'
+            ? scenario.candidateOperations
+            : scenario.baselineOperations;
+    if (samples.any((sample) => sample.operations != operations)) {
+      throw FormatException(
+        '${scenario.scenarioId} $engine operations differ from raw samples.',
+      );
+    }
   }
 }
 
@@ -412,6 +463,7 @@ DialectGate _evaluateDialect(
   BenchmarkDialect dialect,
   BenchmarkReport first,
   BenchmarkReport second,
+  GateBaseline baseline,
 ) {
   final one = _performanceById(first, dialect);
   final two = _performanceById(second, dialect);
@@ -420,139 +472,79 @@ DialectGate _evaluateDialect(
       '$runtime ${dialect.name} has no performance scenarios.',
     );
   }
-  return switch (dialect) {
-    BenchmarkDialect.braces => _evaluateBraces(runtime, one, two),
-    BenchmarkDialect.printf => _evaluatePrintf(runtime, one, two),
-  };
+
+  return _evaluateDialectAgainst(runtime, dialect, one, two, baseline);
 }
 
-DialectGate _evaluateBraces(
+DialectGate _evaluateDialectAgainst(
   String runtime,
+  BenchmarkDialect dialect,
   Map<String, BenchmarkScenarioResult> first,
   Map<String, BenchmarkScenarioResult> second,
+  GateBaseline baseline,
 ) {
-  final hot = {
-    for (final entry in first.entries)
-      if (entry.value.phase == BenchmarkPhase.hot) entry.key,
-  };
-  final keys = {
-    for (final entry in first.entries)
-      if (entry.value.keyScenario) entry.key,
-  };
-  final result = evaluateBraceGates(
-    ratios: _ratios(first),
-    hotScenarioIds: hot,
-    keyScenarioIds: keys,
-    reproducedRatios: _ratios(second),
-  );
+  final key = GateBaseline.keyFor(runtime, dialect);
   final failures = <GateFailure>[];
-  if (!result.geometricMeanPassed) {
-    failures.add(
-      GateFailure(
-        kind: 'geometricMean',
-        phase: BenchmarkPhase.hot,
-        threshold: _braceHotMeanLimit,
-        run1: result.geometricMean,
-        run2: result.reproducedGeometricMean,
-      ),
-    );
-  }
-  for (final id in result.reproducedKeyFailures) {
-    failures.add(
-      GateFailure(
-        kind: 'keyScenario',
-        scenarioId: id,
-        phase: first[id]!.phase,
-        threshold: _braceKeyLimit,
-        run1: first[id]!.ratio!,
-        run2: second[id]!.ratio!,
-      ),
-    );
-  }
-  return DialectGate(
-    runtime: runtime,
-    dialect: BenchmarkDialect.braces,
-    passed: result.passed,
-    metrics: {
-      'hotGeometricMean': {
-        'threshold': _braceHotMeanLimit,
-        'run1': result.geometricMean,
-        'run2': result.reproducedGeometricMean,
-      },
-      'keyScenarioLimit': _braceKeyLimit,
-    },
-    scenarios: _scenarioEvidence(first, second),
-    failures: failures,
-  );
-}
+  final metrics = <String, Object?>{
+    'meanTolerance': _meanTolerance,
+    'scenarioTolerance': _scenarioTolerance,
+    'keyScenarioTolerance': _keyScenarioTolerance,
+  };
 
-DialectGate _evaluatePrintf(
-  String runtime,
-  Map<String, BenchmarkScenarioResult> first,
-  Map<String, BenchmarkScenarioResult> second,
-) {
-  final failures = <GateFailure>[];
-  final metrics = <String, Object?>{'keyScenarioLimit': _printfKeyLimit};
   for (final phase in BenchmarkPhase.values) {
     final ids = {
       for (final entry in first.entries)
         if (entry.value.phase == phase) entry.key,
     };
-    final firstMean = geometricMean(_valuesFor(_ratios(first), ids));
-    final secondMean = geometricMean(_valuesFor(_ratios(second), ids));
-    final passed =
-        evaluatePrintfMean(phase, firstMean) ||
-        evaluatePrintfMean(phase, secondMean);
+    if (ids.isEmpty) continue;
+    final run1 = geometricMean(_valuesFor(_ratios(first), ids));
+    final run2 = geometricMean(_valuesFor(_ratios(second), ids));
+    final recorded = baseline.phaseMean(key, phase);
+    final limit = gateMeanLimitFor(recorded);
     metrics['${phase.name}GeometricMean'] = {
-      'threshold':
-          phase == BenchmarkPhase.cold
-              ? _printfColdMeanLimit
-              : _printfHotMeanLimit,
-      'run1': firstMean,
-      'run2': secondMean,
+      'baseline': recorded,
+      'threshold': limit,
+      'run1': run1,
+      'run2': run2,
     };
-    if (!passed) {
+    if (!clearsGate(run1, run2, limit)) {
       failures.add(
         GateFailure(
           kind: 'geometricMean',
           phase: phase,
-          threshold:
-              phase == BenchmarkPhase.cold
-                  ? _printfColdMeanLimit
-                  : _printfHotMeanLimit,
-          run1: firstMean,
-          run2: secondMean,
+          threshold: limit,
+          run1: run1,
+          run2: run2,
         ),
       );
     }
   }
-  final keys = {
-    for (final entry in first.entries)
-      if (entry.value.keyScenario) entry.key,
-  };
-  if (!evaluatePrintfKeyScenarios(
-    _ratios(first, keys),
-    _ratios(second, keys),
-  )) {
-    for (final id in keys) {
-      if (first[id]!.ratio! > _printfKeyLimit &&
-          second[id]!.ratio! > _printfKeyLimit) {
-        failures.add(
-          GateFailure(
-            kind: 'keyScenario',
-            scenarioId: id,
-            phase: first[id]!.phase,
-            threshold: _printfKeyLimit,
-            run1: first[id]!.ratio!,
-            run2: second[id]!.ratio!,
-          ),
-        );
-      }
+
+  for (final id in first.keys.toList()..sort()) {
+    final scenario = first[id]!;
+    final limit = gateLimitFor(
+      baseline.scenarioRatio(key, id),
+      keyScenario: scenario.keyScenario,
+    );
+    final run1 = scenario.ratio!;
+    final run2 = second[id]!.ratio!;
+    if (!clearsGate(run1, run2, limit)) {
+      failures.add(
+        GateFailure(
+          kind: scenario.keyScenario ? 'keyScenario' : 'scenario',
+          scenarioId: id,
+          phase: scenario.phase,
+          threshold: limit,
+          run1: run1,
+          run2: run2,
+        ),
+      );
     }
   }
+
   return DialectGate(
     runtime: runtime,
-    dialect: BenchmarkDialect.printf,
+    dialect: dialect,
     passed: failures.isEmpty,
     metrics: metrics,
     scenarios: _scenarioEvidence(first, second),
@@ -683,23 +675,107 @@ final class GateFailure {
   };
 }
 
+/// Derives a reference from a full, validated set of reports.
+///
+/// Each recorded value is the geometric mean of the two independent runs, so
+/// a single noisy run cannot set the reference on its own.
+GateBaseline recordGateBaseline(
+  Iterable<BenchmarkReport> input,
+  String recordedAt,
+) {
+  final reports = input.toList(growable: false);
+  final byRuntime = <String, List<BenchmarkReport>>{};
+  for (final report in reports) {
+    _validateReport(report);
+    (byRuntime[report.runtime] ??= []).add(report);
+  }
+  final phaseMeans = <String, Map<String, double>>{};
+  final scenarioRatios = <String, Map<String, double>>{};
+  for (final entry in _requiredRuntimeDialects.entries) {
+    final pair = _validatePair(
+      entry.key,
+      byRuntime[entry.key] ?? const [],
+      entry.value,
+    );
+    for (final dialect in entry.value) {
+      final key = GateBaseline.keyFor(entry.key, dialect);
+      final first = _performanceById(pair[0], dialect);
+      final second = _performanceById(pair[1], dialect);
+      scenarioRatios[key] = {
+        for (final id in first.keys.toList()..sort())
+          id: geometricMean([first[id]!.ratio!, second[id]!.ratio!]),
+      };
+      phaseMeans[key] = {
+        for (final phase in BenchmarkPhase.values)
+          if (first.values.any((scenario) => scenario.phase == phase))
+            phase.name: geometricMean([
+              geometricMean(
+                _valuesFor(_ratios(first), {
+                  for (final e in first.entries)
+                    if (e.value.phase == phase) e.key,
+                }),
+              ),
+              geometricMean(
+                _valuesFor(_ratios(second), {
+                  for (final e in second.entries)
+                    if (e.value.phase == phase) e.key,
+                }),
+              ),
+            ]),
+      };
+    }
+  }
+
+  return GateBaseline(
+    sourceRevision: _sourceRevisionFor(reports),
+    recordedAt: recordedAt,
+    phaseMeans: phaseMeans,
+    scenarioRatios: scenarioRatios,
+  );
+}
+
 void main(List<String> arguments) {
   try {
     final reports = _parseReports(arguments);
-    final result = evaluateGateReports(reports);
     final output = _outputPath(arguments);
-    final encoded =
-        '${const JsonEncoder.withIndent('  ').convert(result.toJson())}\n';
+    final record = _recordArgument(arguments);
+    final Map<String, Object?> json;
+    var passed = true;
+    if (record != null) {
+      json = recordGateBaseline(reports, record).toJson();
+    } else {
+      final result = evaluateGateReports(
+        reports,
+        _loadBaseline(_baselineArgument(arguments)),
+      );
+      json = result.toJson();
+      passed = result.passed;
+    }
+    final encoded = '${const JsonEncoder.withIndent('  ').convert(json)}\n';
     if (output == null) {
       stdout.write(encoded);
     } else {
       File(output).writeAsStringSync(encoded);
     }
-    if (!result.passed) exitCode = 1;
+    if (!passed) exitCode = 1;
   } on Object catch (error) {
     stderr.writeln(error);
     exitCode = 1;
   }
+}
+
+GateBaseline _loadBaseline(String path) {
+  final file = File(path);
+  if (!file.existsSync()) {
+    throw FormatException(
+      'No recorded reference at $path. Record one with --record=YYYY-MM-DD '
+      'from a full set of reports; see benchmark/results/README.md.',
+    );
+  }
+
+  return GateBaseline.fromJson(
+    Map<String, Object?>.from(jsonDecode(file.readAsStringSync()) as Map),
+  );
 }
 
 List<BenchmarkReport> _parseReports(List<String> arguments) {
@@ -730,17 +806,54 @@ List<String> _reportsArgument(List<String> arguments) {
 }
 
 String? _outputPath(List<String> arguments) {
-  final output = arguments
-      .where((argument) => argument.startsWith('--output='))
-      .map((argument) => argument.substring('--output='.length))
-      .toList(growable: false);
-  if (output.length > 1 || output.any((value) => value.isEmpty)) {
+  final output = _optional(arguments, '--output=');
+  if (output.length > 1) {
     throw const FormatException('--output may be supplied once with a path.');
   }
-  final recognized = arguments.every(
-    (argument) =>
-        argument.startsWith('--reports=') || argument.startsWith('--output='),
-  );
-  if (!recognized) throw const FormatException('Unknown gates argument.');
+  const recognized = ['--reports=', '--output=', '--baseline=', '--record='];
+  if (!arguments.every((argument) => recognized.any(argument.startsWith))) {
+    throw const FormatException('Unknown gates argument.');
+  }
+
   return output.isEmpty ? null : output.single;
+}
+
+String _baselineArgument(List<String> arguments) {
+  final value = _optional(arguments, '--baseline=');
+  if (value.length != 1) {
+    throw const FormatException(
+      'Expected one --baseline=PATH argument, or --record=DATE to write one.',
+    );
+  }
+
+  return value.single;
+}
+
+/// The `--record=DATE` value, or null when the run evaluates instead.
+///
+/// The date is supplied rather than read from the clock so that recording is
+/// reproducible and the recorded file says when the measurement was taken.
+String? _recordArgument(List<String> arguments) {
+  final value = _optional(arguments, '--record=');
+  if (value.length > 1) {
+    throw const FormatException('--record may be supplied once with a date.');
+  }
+  if (value.isEmpty) return null;
+  if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value.single)) {
+    throw const FormatException('--record expects an ISO YYYY-MM-DD date.');
+  }
+
+  return value.single;
+}
+
+List<String> _optional(List<String> arguments, String prefix) {
+  final values = arguments
+      .where((argument) => argument.startsWith(prefix))
+      .map((argument) => argument.substring(prefix.length))
+      .toList(growable: false);
+  if (values.any((value) => value.isEmpty)) {
+    throw FormatException('$prefix requires a value.');
+  }
+
+  return values;
 }
