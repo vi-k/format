@@ -20,9 +20,23 @@ import 'scenarios.dart';
 // The recorded numbers are a statement of fact, not of approval: where a
 // runtime is known to be slow today, the baseline says so, and the gate then
 // keeps it from getting worse.
-const double _meanTolerance = 1.15;
-const double _scenarioTolerance = 1.40;
-const double _keyScenarioTolerance = 1.25;
+//
+// The tolerances have to cover the shared runner a nightly job lands on, and
+// that is a wider spread than the two runs inside one job suggest. Requiring
+// both runs to breach protects against noise within a job, but both runs
+// share a machine, so it does nothing about the difference between the job
+// that recorded the reference and the job that checks it. One such comparison
+// measured a phase mean moving 14.3% with no change in the code — verified by
+// an A/B of the same two revisions on one machine, where the same figure was
+// 1%. Set from that single observation, so worth revisiting once a run of
+// nightlies gives a real distribution.
+//
+// A regression worth failing a release over is large: the ones this package's
+// review turned up ran from 3x to 8x. Tolerances that admit a quarter keep
+// catching those while leaving the gate believable.
+const double _meanTolerance = 1.25;
+const double _scenarioTolerance = 1.60;
+const double _keyScenarioTolerance = 1.35;
 
 const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   'jit': {BenchmarkDialect.braces, BenchmarkDialect.printf},

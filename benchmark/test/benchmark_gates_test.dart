@@ -11,9 +11,9 @@ void main() {
   test('limits are the recorded reference times a tolerance', () {
     // A key scenario is held to a tighter tolerance than an ordinary one,
     // and an aggregate to the tightest of the three.
-    expect(gateLimitFor(0.20, keyScenario: false), closeTo(0.28, 1e-12));
-    expect(gateLimitFor(0.20, keyScenario: true), closeTo(0.25, 1e-12));
-    expect(gateMeanLimitFor(0.20), closeTo(0.23, 1e-12));
+    expect(gateLimitFor(0.20, keyScenario: false), closeTo(0.32, 1e-12));
+    expect(gateLimitFor(0.20, keyScenario: true), closeTo(0.27, 1e-12));
+    expect(gateMeanLimitFor(0.20), closeTo(0.25, 1e-12));
     expect(
       gateLimitFor(0.20, keyScenario: true),
       lessThan(gateLimitFor(0.20, keyScenario: false)),

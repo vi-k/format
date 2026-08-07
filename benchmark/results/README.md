@@ -92,9 +92,13 @@ anything on the VM fires immediately on JavaScript. A ratio, unlike an
 absolute time, is measured candidate-against-comparator inside one process,
 which is what makes a recorded one portable enough to compare against.
 
-Tolerances live in `gates.dart`, not in the file: 1.15 on a phase geometric
-mean, 1.25 on a key scenario, 1.40 on any other scenario. A limit fails only
-when both runs breach it.
+Tolerances live in `gates.dart`, not in the file: 1.25 on a phase geometric
+mean, 1.35 on a key scenario, 1.60 on any other scenario. A limit fails only
+when both runs breach it — which guards against noise inside a job, but not
+against the difference between the job that recorded the reference and the
+job that checks it, since both runs share one machine. One measured pair of
+jobs moved a phase mean by 14.3% with no change in the code, so the
+tolerances have to cover that.
 
 **The recorded numbers state what is, not what is acceptable.** Where a
 runtime is slow today the reference says so, and the gate's job is then to
