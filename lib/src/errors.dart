@@ -135,6 +135,12 @@ final class InvalidFormatException extends FormattingException {
 /// The template parses, but a format specification is not valid: an
 /// unknown presentation type, an option that the type does not accept, or
 /// a width/precision outside the supported range.
+///
+/// Brace formatting decides what a specification means from the value's
+/// own type, so a specification meant for another type lands here too:
+/// `format('{:d}', 'text')` and `format('{:d}', 1.5)` both raise this,
+/// not [UnsupportedFormatValueException]. Printf works the other way
+/// round; see [UnsupportedFormatValueException].
 final class InvalidSpecifierException extends FormattingException {
   /// Why the specification was rejected.
   final String reason;
@@ -182,8 +188,15 @@ final class UnsupportedConversionException extends FormattingException {
   ) : super('The conversion is not supported for this value.', context);
 }
 
-/// The format specification is valid, but not for this value's type: a
-/// numeric presentation for a string, `%d` for a double, and so on.
+/// A conversion or specification cannot render the value it was given:
+/// `sprintf('%d', 1.5)`, `sprintf('%d', 'text')`, an out-of-range scalar
+/// for `c`, or a value no configured formatter accepts.
+///
+/// Printf decides what to do from the conversion letter, so a value the
+/// conversion cannot render is reported here. Brace formatting decides
+/// from the value's type instead, so its counterpart is
+/// [InvalidSpecifierException]; this exception stays for values that no
+/// dispatch path accepts at all, such as `format('{:d}', true)`.
 final class UnsupportedFormatValueException extends FormattingException {
   /// The rejected value.
   final Object? value;
