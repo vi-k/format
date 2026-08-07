@@ -525,7 +525,7 @@ BenchmarkScenario _braceComparable(
   BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
   Format? candidateFormat,
 }) {
-  final templates = _templates(cold, template);
+  final templateFor = _templateFor(cold, template);
   final engine =
       candidateFormat ??
       (graphemes ? Format(textUnit: TextUnit.graphemeClusters) : null);
@@ -539,28 +539,27 @@ BenchmarkScenario _braceComparable(
     keyScenario: key,
     apiPath: apiPath,
     expected: TextOutcome(cold ? '$expected [0]' : expected),
-    templates: templates,
+    templateFor: templateFor,
     candidate:
         (iteration) => _capture(
           () => switch (apiPath) {
             BenchmarkApiPath.topLevel => format(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               values.first,
             ),
             BenchmarkApiPath.tearOff => _braceTearOff(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               values.first,
             ),
             _ => (engine?.formatWith ?? formatWith)(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               positional: values,
             ),
           },
         ),
     baseline:
-        (iteration) => _capture(
-          () => legacyFormat(templates[iteration % templates.length], values),
-        ),
+        (iteration) =>
+            _capture(() => legacyFormat(templateFor(iteration), values)),
   );
 }
 
@@ -574,7 +573,7 @@ BenchmarkScenario _printfComparable(
   BenchmarkApiPath apiPath = BenchmarkApiPath.withValues,
   Format? candidateFormat,
 }) {
-  final templates = _templates(cold, template);
+  final templateFor = _templateFor(cold, template);
   return BenchmarkScenario(
     id:
         name.contains('.cold') || name.contains('.hot')
@@ -585,32 +584,28 @@ BenchmarkScenario _printfComparable(
     keyScenario: key,
     apiPath: apiPath,
     expected: TextOutcome(cold ? '$expected [0]' : expected),
-    templates: templates,
+    templateFor: templateFor,
     candidate:
         (iteration) => _capture(
           () => switch (apiPath) {
             _ when candidateFormat != null => candidateFormat.vsprintf(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               values,
             ),
             BenchmarkApiPath.topLevel => sprintf(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               values.first,
             ),
             BenchmarkApiPath.tearOff => _printfTearOff(
-              templates[iteration % templates.length],
+              templateFor(iteration),
               values.first,
             ),
-            _ => vsprintf(templates[iteration % templates.length], values),
+            _ => vsprintf(templateFor(iteration), values),
           },
         ),
     baseline:
-        (iteration) => _capture(
-          () => sprintf70.sprintf(
-            templates[iteration % templates.length],
-            values,
-          ),
-        ),
+        (iteration) =>
+            _capture(() => sprintf70.sprintf(templateFor(iteration), values)),
   );
 }
 
@@ -626,7 +621,7 @@ BenchmarkScenario _braceInformation(
   phase: BenchmarkPhase.hot,
   keyScenario: false,
   expected: expected,
-  templates: [template],
+  templateFor: (_) => template,
   candidate: candidate,
   fieldCount: fieldCount,
   comparisonKind: BenchmarkComparisonKind.informational,
@@ -647,7 +642,7 @@ BenchmarkScenario _braceReference(
   phase: BenchmarkPhase.hot,
   keyScenario: false,
   expected: expected,
-  templates: [template],
+  templateFor: (_) => template,
   candidate: candidate,
   baseline: reference,
   comparisonKind: BenchmarkComparisonKind.correctnessOnly,
@@ -667,15 +662,19 @@ BenchmarkScenario _printfInformation(
   phase: BenchmarkPhase.hot,
   keyScenario: false,
   expected: expected,
-  templates: [template],
+  templateFor: (_) => template,
   candidate: candidate,
   comparisonKind: BenchmarkComparisonKind.informational,
 );
 
-List<String> _templates(bool cold, String template) =>
-    cold
-        ? List.unmodifiable(List.generate(200, (index) => '$template [$index]'))
-        : List.unmodifiable([template]);
+/// The template an iteration formats.
+///
+/// A cold scenario suffixes the iteration so that no two calls hand the
+/// engine the same template, and a hot one hands over the same template every
+/// time. Building the string costs both engines equally, so the ratio is
+/// unaffected.
+String Function(int) _templateFor(bool cold, String template) =>
+    cold ? (iteration) => '$template [$iteration]' : (_) => template;
 
 String _braceFields(int count) =>
     List.generate(count, (index) => '{$index:d}').join();

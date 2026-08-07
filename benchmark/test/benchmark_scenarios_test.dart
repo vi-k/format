@@ -38,7 +38,7 @@ void main() {
 
     expect(scenario.keyScenario, isTrue);
     expect(scenario.comparisonKind, BenchmarkComparisonKind.performance);
-    expect(scenario.templates, const ['{:d}']);
+    expect(scenario.templateFor(0), '{:d}');
     expect(
       scenario.expected,
       isA<TextOutcome>().having(
@@ -58,7 +58,7 @@ void main() {
 
     expect(scenario.keyScenario, isTrue);
     expect(scenario.comparisonKind, BenchmarkComparisonKind.performance);
-    expect(scenario.templates, const ['{:.2f}']);
+    expect(scenario.templateFor(0), '{:.2f}');
     expect(
       scenario.expected,
       isA<TextOutcome>().having(
@@ -106,14 +106,21 @@ void main() {
       expect(cold, isNotEmpty);
       expect(hot, isNotEmpty);
       for (final scenario in cold) {
-        expect(scenario.templates, hasLength(greaterThanOrEqualTo(200)));
-        expect(
-          scenario.templates.toSet(),
-          hasLength(scenario.templates.length),
-        );
+        // What makes a scenario cold is that no iteration repeats an
+        // earlier template, however many iterations a round turns out to
+        // need — a prepared list of any fixed length cannot promise that.
+        final seen = <String>{};
+        for (var iteration = 0; iteration < 1000; iteration++) {
+          expect(
+            seen.add(scenario.templateFor(iteration)),
+            isTrue,
+            reason: '${scenario.id} repeated a template at $iteration',
+          );
+        }
       }
       for (final scenario in hot) {
-        expect(scenario.templates, hasLength(1));
+        expect(scenario.templateFor(0), scenario.templateFor(1));
+        expect(scenario.templateFor(0), scenario.templateFor(999));
       }
     },
   );
@@ -306,7 +313,7 @@ void main() {
         (byId['brace.text.scalars.hot']!.expected as TextOutcome).value,
         'e',
       );
-      expect(byId['brace.text.scalars.hot']!.templates.single, '{:.1s}');
+      expect(byId['brace.text.scalars.hot']!.templateFor(0), '{:.1s}');
       expect(
         (byId['brace.graphemes.hot']!.expected as TextOutcome).value,
         'e\u0301',
@@ -365,7 +372,7 @@ void main() {
       phase: BenchmarkPhase.hot,
       keyScenario: false,
       expected: const TextOutcome('candidate'),
-      templates: const ['ignored'],
+      templateFor: (_) => 'ignored',
       candidate: (_) => const TextOutcome('candidate'),
       baseline: (_) => const TextOutcome('baseline'),
     );
