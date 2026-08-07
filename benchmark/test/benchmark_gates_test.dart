@@ -327,7 +327,13 @@ BenchmarkScenarioResult _scenarioFor(BenchmarkScenario scenario) {
     comparisonRationale: scenario.comparisonRationale,
     referenceLabel: scenario.referenceLabel,
     candidateMedianNanoseconds: candidate,
-    baselineMedianNanoseconds: scenario.includeRatio ? 100 : null,
+    baselineMedianNanoseconds: scenario.includeRatio ? 200 : null,
+    // Deliberately unequal: the engines are timed to a duration, so a report
+    // whose counts happened to match would not exercise the normalization.
+    // Per operation the comparator still costs 0.1 ns, so the ratios the
+    // other tests reason about are unchanged.
+    candidateOperations: 1000,
+    baselineOperations: scenario.includeRatio ? 2000 : null,
     ratio: scenario.includeRatio ? candidate / 100 : null,
   );
 }
@@ -373,7 +379,10 @@ BenchmarkReport _report({
                 engine == 'candidate'
                     ? scenario.candidateMedianNanoseconds!
                     : scenario.baselineMedianNanoseconds!,
-            operations: 1,
+            operations:
+                engine == 'candidate'
+                    ? scenario.candidateOperations!
+                    : scenario.baselineOperations!,
             round: round,
           ),
   ],
@@ -422,7 +431,9 @@ BenchmarkReport _withPerformanceRatio(
           scenarios[scenarioIndex]! as Map<String, Object?>,
         )
         ..['candidateMedianNanoseconds'] = candidate
-        ..['baselineMedianNanoseconds'] = 100
+        ..['baselineMedianNanoseconds'] = 200
+        ..['candidateOperations'] = 1000
+        ..['baselineOperations'] = 2000
         ..['ratio'] = candidate / 100;
   scenarios[scenarioIndex] = scenario;
   final samples =

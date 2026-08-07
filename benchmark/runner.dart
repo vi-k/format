@@ -6,8 +6,64 @@ import 'src/parser_platform.dart' as platform;
 
 const int _warmupRounds = 3;
 const int _minimumRecordedRounds = 7;
-const int _nativeOperations = 1000;
-const int _javascriptOperations = 10000;
+
+/// How many clock ticks a measured round should span, so that the clock's
+/// own quantum stays about a percent of the measurement.
+///
+/// A fixed operation count cannot serve both engines on both platforms. Under
+/// dart2js the clock advances in whole milliseconds, so a round of ten
+/// thousand operations resolved to a handful of ticks and every ratio became
+/// a quotient of small integers — two runs of the same build disagreed by up
+/// to 150% on a single scenario. Timing to a duration instead bounds that
+/// quantum on any clock, and lets a fast candidate and a slow comparator each
+/// run the count it needs.
+const int _targetRoundTicks = 100;
+
+/// A round this short measures the scheduler as much as the code, however
+/// fine the clock is, so the target never falls below it.
+const int _minimumRoundNanoseconds = 10000000;
+
+/// The floor for a smoke run: a quick check, but still long enough to
+/// register — a round that measures zero would make the ratio a division of
+/// zero by zero.
+const int _smokeRoundNanoseconds = 2000000;
+
+/// The target for a measured round on this machine, for tests to assert
+/// against without restating the arithmetic.
+int benchmarkTargetRoundNanoseconds({bool smoke = false}) {
+  final floor = smoke ? _smokeRoundNanoseconds : _minimumRoundNanoseconds;
+  final resolved = _clockResolutionNanoseconds() * _targetRoundTicks;
+
+  return resolved > floor ? resolved : floor;
+}
+
+/// Measures the smallest interval this clock can report.
+///
+/// The measurement stands in for `Stopwatch.frequency`, which names the unit
+/// the clock counts in rather than the step it actually advances by. Here the
+/// two happen to agree — a nanosecond frequency on the VM stepping by tens of
+/// nanoseconds, a millisecond frequency under dart2js stepping by one — but
+/// the target depends on the step, so the step is what gets measured.
+int _clockResolutionNanoseconds() {
+  final stopwatch = Stopwatch()..start();
+  var smallest = 0;
+  for (var probe = 0; probe < 5; probe++) {
+    final start = stopwatch.elapsedTicks;
+    var delta = 0;
+    while (delta == 0) {
+      delta = stopwatch.elapsedTicks - start;
+    }
+    if (smallest == 0 || delta < smallest) smallest = delta;
+  }
+
+  return smallest * 1000000000 ~/ stopwatch.frequency;
+}
+
+const int _minimumOperations = 64;
+
+/// A ceiling on the calibrated count, in case a clock never advances and the
+/// search would otherwise not terminate.
+const int _maximumOperations = 100000000;
 
 final class BenchmarkRunOptions {
   final BenchmarkDialect? dialect;
@@ -120,18 +176,16 @@ BenchmarkReport runBenchmark(
   selected.forEach(_validateScenario);
 
   final rawSamples = <BenchmarkSample>[];
-  final operations =
-      detectedRuntime == 'js'
-          ? _javascriptOperations
-          : options.smoke
-          ? 1
-          : _nativeOperations;
+  final operations = {
+    for (final scenario in selected)
+      scenario.id: _calibrateScenario(scenario, smoke: options.smoke),
+  };
   for (var round = 0; round < _warmupRounds; round++) {
     for (final scenario in selected) {
       _measureRound(
         scenario,
         round,
-        operations,
+        operations[scenario.id]!,
         record: false,
         sink: rawSamples,
       );
@@ -142,14 +196,16 @@ BenchmarkReport runBenchmark(
       _measureRound(
         scenario,
         round,
-        operations,
+        operations[scenario.id]!,
         record: true,
         sink: rawSamples,
       );
     }
   }
 
-  final results = selected.map((scenario) => _resultFor(scenario, rawSamples));
+  final results = selected.map(
+    (scenario) => _resultFor(scenario, rawSamples, operations[scenario.id]!),
+  );
   return BenchmarkReport(
     runtime: detectedRuntime,
     detectedRuntime: detectedRuntime,
@@ -194,42 +250,101 @@ void _validateScenario(BenchmarkScenario scenario) {
   }
 }
 
+/// The calibrated operation count for each engine of one scenario.
+final class _ScenarioOperations {
+  final int candidate;
+  final int? baseline;
+
+  const _ScenarioOperations(this.candidate, this.baseline);
+}
+
+_ScenarioOperations _calibrateScenario(
+  BenchmarkScenario scenario, {
+  required bool smoke,
+}) {
+  final baseline = scenario.includeRatio ? scenario.baseline : null;
+  final target = benchmarkTargetRoundNanoseconds(smoke: smoke);
+
+  return _ScenarioOperations(
+    _calibrate(scenario.candidate, target),
+    baseline == null ? null : _calibrate(baseline, target),
+  );
+}
+
+/// Finds an operation count whose round reaches [target] nanoseconds.
+///
+/// The estimate is extrapolated from the trial that fell short, but a single
+/// trial is noisy, so growth is held between doubling and eightfold: that
+/// converges in a few trials without letting one slow reading pick an
+/// enormous count. Calibration doubles as extra warm-up.
+int _calibrate(BenchmarkOperation operation, int target) {
+  var operations = _minimumOperations;
+  while (true) {
+    final elapsed = _timeRound(operation, 0, operations);
+    if (elapsed >= target || operations >= _maximumOperations) {
+      return operations;
+    }
+    // A clock too coarse to see this round says nothing about how much
+    // longer it needs, so grow by the maximum step instead of dividing by
+    // zero.
+    var next =
+        elapsed <= 0
+            ? operations * 8
+            : (operations * (target / elapsed)).ceil();
+    if (next < operations * 2) next = operations * 2;
+    if (next > operations * 8) next = operations * 8;
+    operations = next > _maximumOperations ? _maximumOperations : next;
+  }
+}
+
+int _timeRound(BenchmarkOperation operation, int seed, int operations) {
+  final stopwatch = Stopwatch()..start();
+  for (var index = 0; index < operations; index++) {
+    operation(seed + index);
+  }
+  stopwatch.stop();
+
+  return stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency;
+}
+
 void _measureRound(
   BenchmarkScenario scenario,
   int round,
-  int operations, {
+  _ScenarioOperations operations, {
   required bool record,
   required List<BenchmarkSample> sink,
 }) {
-  final candidateFirst = round.isEven;
-  if (candidateFirst) {
+  void measureCandidate() => _measure(
+    'candidate',
+    scenario.candidate,
+    scenario,
+    round,
+    operations.candidate,
+    record,
+    sink,
+  );
+  void measureBaseline() {
+    final baseline = scenario.baseline;
+    if (baseline == null || operations.baseline == null) return;
     _measure(
-      'candidate',
-      scenario.candidate,
+      'baseline',
+      baseline,
       scenario,
       round,
-      operations,
+      operations.baseline!,
       record,
       sink,
     );
-    final baseline = scenario.baseline;
-    if (baseline != null && scenario.includeRatio) {
-      _measure('baseline', baseline, scenario, round, operations, record, sink);
-    }
+  }
+
+  // Alternating by round keeps a drift in machine state from landing on one
+  // engine only.
+  if (round.isEven) {
+    measureCandidate();
+    measureBaseline();
   } else {
-    final baseline = scenario.baseline;
-    if (baseline != null && scenario.includeRatio) {
-      _measure('baseline', baseline, scenario, round, operations, record, sink);
-    }
-    _measure(
-      'candidate',
-      scenario.candidate,
-      scenario,
-      round,
-      operations,
-      record,
-      sink,
-    );
+    measureBaseline();
+    measureCandidate();
   }
 }
 
@@ -242,18 +357,13 @@ void _measure(
   bool record,
   List<BenchmarkSample> sink,
 ) {
-  final stopwatch = Stopwatch()..start();
-  for (var operationIndex = 0; operationIndex < operations; operationIndex++) {
-    operation(round * operations + operationIndex);
-  }
-  stopwatch.stop();
+  final elapsed = _timeRound(operation, round * operations, operations);
   if (!record) return;
   sink.add(
     BenchmarkSample(
       scenarioId: scenario.id,
       engine: engine,
-      elapsedNanoseconds:
-          stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency,
+      elapsedNanoseconds: elapsed,
       operations: operations,
       round: round,
     ),
@@ -263,13 +373,23 @@ void _measure(
 BenchmarkScenarioResult _resultFor(
   BenchmarkScenario scenario,
   List<BenchmarkSample> samples,
+  _ScenarioOperations operations,
 ) {
   final candidate = _median(samples, scenario.id, 'candidate');
   final baseline =
       !scenario.includeRatio || scenario.baseline == null
           ? null
           : _median(samples, scenario.id, 'baseline');
-  final ratio = scenario.includeRatio ? candidate / baseline! : null;
+  // Per operation, because the two engines were timed to a duration rather
+  // than to a shared count.
+  final ratio =
+      scenario.includeRatio
+          ? (candidate / operations.candidate) /
+              (baseline! / operations.baseline!)
+          : null;
+  final performance =
+      scenario.comparisonKind == BenchmarkComparisonKind.performance;
+
   return BenchmarkScenarioResult(
     scenarioId: scenario.id,
     dialect: scenario.dialect,
@@ -279,10 +399,9 @@ BenchmarkScenarioResult _resultFor(
     comparisonRationale: scenario.comparisonRationale,
     referenceLabel: scenario.referenceLabel,
     candidateMedianNanoseconds: candidate,
-    baselineMedianNanoseconds:
-        scenario.comparisonKind == BenchmarkComparisonKind.performance
-            ? baseline
-            : null,
+    baselineMedianNanoseconds: performance ? baseline : null,
+    candidateOperations: operations.candidate,
+    baselineOperations: performance ? operations.baseline : null,
     ratio: ratio,
   );
 }

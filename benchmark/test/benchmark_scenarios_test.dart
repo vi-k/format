@@ -175,9 +175,18 @@ void main() {
       );
 
       expect(report.gateable, isTrue);
-      expect(report.samples.map((sample) => sample.operations).toSet(), const {
-        1000,
-      });
+      // Each engine runs the count its own speed requires, so the counts
+      // differ; what has to hold is that every recorded round is long enough
+      // for the clock to resolve it.
+      for (final sample in report.samples) {
+        expect(
+          sample.elapsedNanoseconds,
+          greaterThanOrEqualTo(benchmarkTargetRoundNanoseconds() ~/ 2),
+          reason: '${sample.engine} round ${sample.round}',
+        );
+      }
+      final counts = report.samples.map((sample) => sample.operations).toSet();
+      expect(counts, hasLength(2), reason: 'one calibrated count per engine');
     },
   );
 

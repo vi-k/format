@@ -112,6 +112,17 @@ Record and evaluate on comparable machines. A reference taken on one CPU and
 evaluated on another can drift by more than the tolerances allow; when the
 gate runs in CI, re-record it from a CI run rather than from a laptop.
 
+Each round is timed to a duration rather than to a fixed operation count, so
+the two engines run different counts and a ratio is read per operation. The
+target is `max(10 ms, 100 clock ticks)`, measured per machine: under dart2js
+the clock advances in whole milliseconds, which is why a JavaScript run takes
+minutes where a VM run takes seconds.
+
+One consequence to keep in mind when reading a cold number: a longer round
+means far more operations over the same 200 templates, so the cold phase now
+sits even closer to the hot path than it did. Until the cold scenarios draw a
+fresh template per operation, treat their ratios as hot ones.
+
 The merge rejects smoke/non-gateable reports, fewer than seven or mismatched
 rounds, missing runtime/dialect/run pairs, missing or mismatched detected
 runtime provenance, omitted matrix scenarios, invalid ratios, missing raw

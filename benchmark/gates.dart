@@ -298,8 +298,8 @@ void _validateReport(BenchmarkReport report) {
       }
       continue;
     }
-    final candidate = scenario.candidateMedianNanoseconds;
-    final baseline = scenario.baselineMedianNanoseconds;
+    final candidate = scenario.candidateNanosecondsPerOperation;
+    final baseline = scenario.baselineNanosecondsPerOperation;
     final ratio = scenario.ratio;
     if (candidate == null ||
         candidate <= 0 ||
@@ -312,10 +312,12 @@ void _validateReport(BenchmarkReport report) {
         '${scenario.scenarioId} has an invalid performance ratio.',
       );
     }
+    // Per operation: the engines are timed to a duration, so their operation
+    // counts differ and the medians alone do not reconstruct the ratio.
     final observedRatio = candidate / baseline;
-    if ((ratio - observedRatio).abs() > 1e-12) {
+    if ((ratio - observedRatio).abs() > 1e-9 * ratio) {
       throw FormatException(
-        '${scenario.scenarioId} ratio does not match absolute times.',
+        '${scenario.scenarioId} ratio does not match its measured times.',
       );
     }
     _validateSamples(report, scenario);
@@ -385,6 +387,17 @@ void _validateSamples(
     if (median != reported) {
       throw FormatException(
         '${scenario.scenarioId} $engine median differs from raw samples.',
+      );
+    }
+    // The ratio is read per operation, so a count that disagrees with the
+    // samples it claims to describe would silently rescale the comparison.
+    final operations =
+        engine == 'candidate'
+            ? scenario.candidateOperations
+            : scenario.baselineOperations;
+    if (samples.any((sample) => sample.operations != operations)) {
+      throw FormatException(
+        '${scenario.scenarioId} $engine operations differ from raw samples.',
       );
     }
   }
