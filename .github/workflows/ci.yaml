@@ -5,29 +5,46 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # The performance gate is too slow and too noise-sensitive for every
+    # pull request, so it runs nightly instead.
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
 
 jobs:
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.7.2 is the minimum the pubspec claims; stable is what the
+        # repository is formatted and analyzed against. Steps that depend on
+        # the current formatter or linter run on stable only.
+        sdk: ['3.7.2', 'stable']
     steps:
       - uses: actions/checkout@v5
       - uses: dart-lang/setup-dart@v1
         with:
-          sdk: stable
+          sdk: ${{ matrix.sdk }}
       - name: Resolve dependencies
         run: dart pub get
       - name: Formatting
+        if: matrix.sdk == 'stable'
         # The format16 baseline is not materialized in this job, so the
         # whole checkout must be format-clean.
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze (zero-info baseline)
+        if: matrix.sdk == 'stable'
         # The full-repository pass lives in the benchmark-suite job:
         # here the suite and the format16 baseline are not resolved yet.
-        run: dart analyze --fatal-infos lib test example
+        run: dart analyze --fatal-infos lib test example tool
       - name: Tests (VM, includes dart2js/AOT/node runners)
         run: dart test
       - name: Tests (node platform)
+        if: matrix.sdk == 'stable'
         run: >-
           dart test -p node
           test/char_sink_test.dart
@@ -35,12 +52,21 @@ jobs:
           test/template_ir_diff_test.dart
           test/template_ir_fuzz_test.dart
           test/js_number_dispatch_test.dart
+      - name: Tests (harness, outside the published archive)
+        if: matrix.sdk == 'stable'
+        run: dart test benchmark/test tool/test
       - name: Example runs
         run: dart run example/format_example.dart
       - name: Tests (format_intl)
         run: dart test
         working-directory: packages/format_intl
+      - name: Published archive stands on its own
+        if: matrix.sdk == 'stable'
+        # Reconstructs what pub would ship and analyzes and tests it there:
+        # a local pass cannot see a .pubignore that drops a referenced path.
+        run: dart run tool/verify_package_archive.dart
       - name: Publish dry-run
+        if: matrix.sdk == 'stable'
         run: dart pub publish --dry-run
 
   benchmark-suite:
@@ -63,3 +89,57 @@ jobs:
       - name: Tests (benchmark suite)
         run: dart test
         working-directory: benchmark/suite
+
+  performance-gate:
+    # Nightly and on demand only: six full measurement runs take minutes, and
+    # shared runners are noisy enough that gating every pull request on them
+    # would cost more trust than it buys.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - uses: actions/setup-node@v4
+        with:
+          # Pinned exactly: the gate rejects reports from any other Node.
+          node-version: 24.8.0
+      - name: Resolve dependencies
+        run: dart pub get
+      - name: Measure
+        run: |
+          set -eux
+          revision="$(git rev-parse HEAD)"
+          define="-Dformat.benchmark.sourceRevision=$revision"
+          for run in 1 2; do
+            dart run "$define" benchmark/runner.dart \
+              --runtime=jit --run="$run" --output="jit-$run.json"
+          done
+          dart compile exe "$define" benchmark/runner.dart -o benchmark-aot
+          for run in 1 2; do
+            ./benchmark-aot --runtime=aot --run="$run" --output="aot-$run.json"
+          done
+          dart compile js -O4 \
+            "-Dformat.benchmark.dartCompilerVersion=$(dart --version 2>&1 | sed -E 's/.*version: ([^ ]+).*/\1/')" \
+            "$define" benchmark/runner.dart -o benchmark.js
+          for run in 1 2; do
+            node benchmark.js --runtime=js --run="$run" --output="js-$run.json"
+          done
+      - name: Evaluate against the recorded reference
+        run: >-
+          dart run benchmark/gates.dart
+          --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json
+          --baseline=benchmark/results/gate-baseline.json
+          --output=gate-report.json
+      - name: Upload the gate report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: performance-gate
+          path: |
+            gate-report.json
+            jit-*.json
+            aot-*.json
+            js-*.json
