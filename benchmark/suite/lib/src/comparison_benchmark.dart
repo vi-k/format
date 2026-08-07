@@ -95,15 +95,50 @@ void runComparisonBenchmark({
   emit('');
   emit(h1('----------------------------------------'));
   emit('Cold: unique template per call (no cache hits)');
-  emit('');
   final coldBenchmarks = [
+    BenchmarkFormat16ColdFormat(),
     BenchmarkFormat30ColdFormat(),
     BenchmarkFormat30ColdSprintf(),
+    BenchmarkSprintf70Cold(),
   ];
   for (final benchmark in coldBenchmarks) {
     benchmark.durations = resolved;
-    final score = benchmark.go('{:10d}', [12345]);
-    emit('${accent(benchmark.name)}: ${format('{:.3f}', score)} µs');
+  }
+
+  for (final scenario in coldScenarios) {
+    emit('');
+    emit('Format template: ${h1(scenario.brace ?? '—')}');
+    emit('Sprintf template: ${h1(scenario.sprintf ?? '—')}');
+    for (final (values, expected) in scenario.cases) {
+      emit('');
+      emit('Values: ${h2(values.join(', '))}');
+      for (final benchmark in coldBenchmarks) {
+        final template =
+            benchmark.isSprintf ? scenario.sprintf : scenario.brace;
+        final skipped =
+            template == null ||
+            (benchmark.isSprintf70 && scenario.skipSprintf70) ||
+            (benchmark.isFormat16 && scenario.skipFormat16);
+        if (skipped) {
+          emit('${accent(benchmark.name)}: —');
+          continue;
+        }
+        try {
+          final score = benchmark.goCold(template, values, expected);
+          emit(
+            '${accent(benchmark.name)}:'
+            ' ${format('{:.3f}', score)} µs'
+            ' <- ${benchmark.mismatched ? accentError('ERROR') : ok('OK')}',
+          );
+        } on Object catch (errorValue) {
+          emit(
+            '${accent(benchmark.name)}:'
+            ' <- ${accentError('ERROR')}'
+            '\n${error(errorValue.toString())}',
+          );
+        }
+      }
+    }
   }
 
   emit('');

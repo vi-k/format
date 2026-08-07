@@ -183,4 +183,32 @@ void main() {
     expect(output, contains('Cold: unique template per call'));
     expect(output, contains('(cold)'));
   });
+
+  test('a cold runner notices a wrong answer and forgets it afterwards', () {
+    // The cold section reports OK on its own say-so, so the check has to be
+    // known to fail: a runner that always agreed would make the whole phase
+    // decorative.
+    final runner =
+        BenchmarkFormat30ColdFormat()
+          ..durations = const BenchmarkDurations(
+            warmupMillis: 1,
+            measureMillis: 1,
+          );
+
+    runner.goCold('{:10d}', [12345], 'not what this formats to');
+    expect(runner.mismatched, isTrue);
+
+    runner.goCold('{:10d}', [12345], '     12345');
+    expect(
+      runner.mismatched,
+      isFalse,
+      reason: 'a failure must not carry into the next measurement',
+    );
+  });
+
+  test('a cold template is unique per call and lands in the output', () {
+    expect(coldTemplate('{:d}', 7), '{:d} [7]');
+    expect(coldTemplate('{:d}', 8), isNot(coldTemplate('{:d}', 7)));
+    expect(coldExpected('42', 7), '42 [7]');
+  });
 }
