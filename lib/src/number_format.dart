@@ -104,15 +104,28 @@ String formatMagnitude(BigInt magnitude, int radix, {bool uppercase = false}) {
   return uppercase ? digits.toUpperCase() : digits;
 }
 
+/// Where a web double stops printing its digits and starts printing an
+/// exponent. Below it, fixed-point conversion is exact and cheap; at it and
+/// above, only BigInt still spells the value out.
+const double _webFixedPointCeiling = 1e21;
+
 String _formatIntMagnitude(int value, int radix, {bool uppercase = false}) {
   if (_isWebInt && _exceedsWebSafeInt(value)) {
     // On the web an int is a JS double, and JS String(n) prints the
     // shortest-roundtrip form above 2^53-1 and switches to exponential
-    // notation at 1e21. BigInt.from carries the double's exact value, so
-    // its digits are exact at every magnitude.
-    final magnitude = BigInt.from(value);
+    // notation at 1e21.
+    final magnitude = (value as num).toDouble().abs();
+    if (radix == 10 && magnitude < _webFixedPointCeiling) {
+      // Fixed-point conversion names the integer nearest the double, which
+      // for a double that is already an integer is the double itself — the
+      // same digits BigInt produces, for a twentieth of the cost.
+      return magnitude.toStringAsFixed(0);
+    }
+    // BigInt.from carries the double's exact value, so its digits stay exact
+    // where fixed-point conversion has given up.
+    final exact = BigInt.from(value);
     return formatMagnitude(
-      magnitude.isNegative ? -magnitude : magnitude,
+      exact.isNegative ? -exact : exact,
       radix,
       uppercase: uppercase,
     );

@@ -26,30 +26,49 @@ final class _BraceParser {
 
   List<_BraceNode> _parseNodes({required int depth}) {
     final nodes = <_BraceNode>[];
-    final escapedOpeningOffsets = <int>[];
-    var literalStart = _index;
-    final literal = StringBuffer();
+
+    // A literal is normally a slice of the template, so scanning one only
+    // advances an index and the text is taken in one piece at the end.
+    // `{{` and `}}` are the exception: they stand for text the template does
+    // not contain verbatim, so the first of them starts a buffer that the
+    // slices either side are appended to.
+    var plainStart = _index;
+    StringBuffer? escaped;
+
+    // Only meaningful inside a specification, and most specifications have
+    // no escapes at all, so this stays unallocated until one appears.
+    List<int>? escapedOpeningOffsets;
+
+    void takeEscape(String character) {
+      final buffer = escaped ??= StringBuffer();
+      if (_index > plainStart) {
+        buffer.write(template.substring(plainStart, _index));
+      }
+      buffer.write(character);
+      _index += 2;
+      plainStart = _index;
+    }
 
     void flushLiteral() {
-      if (literal.isNotEmpty) {
-        nodes.add(
-          _LiteralNode(
-            literalStart,
-            template.substring(literalStart, _index),
-            literal.toString(),
-          ),
-        );
-        literal.clear();
+      final buffer = escaped;
+      if (buffer != null) {
+        if (_index > plainStart) {
+          buffer.write(template.substring(plainStart, _index));
+        }
+        nodes.add(_LiteralNode(buffer.toString()));
+        escaped = null;
+      } else if (_index > plainStart) {
+        nodes.add(_LiteralNode(template.substring(plainStart, _index)));
       }
+      plainStart = _index;
     }
 
     while (_index < template.length) {
       final codeUnit = template.codeUnitAt(_index);
       if (codeUnit == 0x7b) {
         if (_hasNextCodeUnit(0x7b)) {
-          if (depth > 0) escapedOpeningOffsets.add(_index);
-          literal.write('{');
-          _index += 2;
+          if (depth > 0) (escapedOpeningOffsets ??= <int>[]).add(_index);
+          takeEscape('{');
           continue;
         }
         flushLiteral();
@@ -61,18 +80,18 @@ final class _BraceParser {
           );
         }
         nodes.add(_parseField(depth: depth));
-        literalStart = _index;
+        plainStart = _index;
       } else if (codeUnit == 0x7d) {
         if (depth > 0) {
-          if (_hasNextCodeUnit(0x7d) && escapedOpeningOffsets.isNotEmpty) {
-            escapedOpeningOffsets.removeLast();
-            literal.write('}');
-            _index += 2;
+          final pending = escapedOpeningOffsets;
+          if (_hasNextCodeUnit(0x7d) && pending != null && pending.isNotEmpty) {
+            pending.removeLast();
+            takeEscape('}');
             continue;
           }
-          if (escapedOpeningOffsets.isNotEmpty) {
+          if (pending != null && pending.isNotEmpty) {
             throw _invalid(
-              escapedOpeningOffsets.last,
+              pending.last,
               _index + 1,
               'Escaped opening braces in a specification require }}.',
             );
@@ -81,8 +100,7 @@ final class _BraceParser {
           return nodes;
         }
         if (_hasNextCodeUnit(0x7d)) {
-          literal.write('}');
-          _index += 2;
+          takeEscape('}');
           continue;
         }
         throw _invalid(
@@ -91,15 +109,16 @@ final class _BraceParser {
           'Single closing brace is not allowed.',
         );
       } else {
-        literal.writeCharCode(codeUnit);
+        // Ordinary text: nothing to copy, the slice is taken on flush.
         _index++;
       }
     }
 
     if (depth > 0) {
-      if (escapedOpeningOffsets.isNotEmpty) {
+      final pending = escapedOpeningOffsets;
+      if (pending != null && pending.isNotEmpty) {
         throw _invalid(
-          escapedOpeningOffsets.last,
+          pending.last,
           template.length,
           'Escaped opening braces in a specification require }}.',
         );
@@ -171,7 +190,8 @@ final class _BraceParser {
     _index++;
     return _FieldNode(
       offset: fieldOffset,
-      fragment: template.substring(fieldOffset, _index),
+      template: template,
+      end: _index,
       root: root,
       accesses: accesses,
       conversion: conversion,

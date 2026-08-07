@@ -94,4 +94,34 @@ void main() {
       expect(compatible.format('{!r}', -0.0), '-0.0');
     });
   });
+
+  test('integers past the exact double range keep every digit', () {
+    // On the web these are doubles, so the digits have to come from
+    // somewhere other than the platform's own number-to-string, which
+    // switches to a shortest-roundtrip form here. Fixed-point conversion
+    // covers most of the range and BigInt the rest; both must agree with
+    // the value the double actually holds.
+    const beyondExact = 9007199254740992; // 2^53
+    expect(format('{}', beyondExact), '9007199254740992');
+    expect(format('{:d}', beyondExact), '9007199254740992');
+    expect(format('{}', -beyondExact), '-9007199254740992');
+    expect(sprintf('%d', beyondExact), '9007199254740992');
+
+    // Either side of the ceiling where fixed-point conversion gives up.
+    // Only the web can hold these as integers at all; on the VM toInt()
+    // saturates long before 1e21.
+    if (isJavaScript) {
+      for (final value in [999999999999999900000.0, 1e21, 1e22]) {
+        expect(
+          format('{:d}', value.toInt()),
+          BigInt.from(value).toString(),
+          reason: '$value',
+        );
+      }
+    }
+
+    // Grouping and width still see the same digits.
+    expect(format('{:,d}', beyondExact), '9,007,199,254,740,992');
+    expect(format('{:>20d}', beyondExact), '    9007199254740992');
+  });
 }
