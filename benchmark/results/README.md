@@ -67,11 +67,50 @@ npx -y node-bin-darwin-arm64@24.8.0 --version
 npx -y node-bin-darwin-arm64@24.8.0 /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
 ```
 
-Merge the reports after all six commands finish:
+Both JavaScript commands cover the whole matrix; `--dialect=printf` is for
+local diagnosis only. Braces compile and run under dart2js like any other
+dialect, and they are the runtime's most expensive scenarios, so the gate
+requires them.
+
+Merge the reports after all six commands finish, passing the recorded
+reference:
 
 ```sh
-dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --output=/private/tmp/format3-gates.json
+dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --baseline=benchmark/results/gate-baseline.json --output=/private/tmp/format3-gates.json
 ```
+
+## The recorded reference
+
+`benchmark/results/gate-baseline.json` holds the ratios an earlier build
+measured, per runtime, dialect, phase, and scenario. The gate asks whether
+this build drifted away from them, not whether it clears a fixed number.
+
+The reason is that one set of constants cannot serve three runtimes. Against
+the same frozen comparators, the candidate's ratios differ by an order of
+magnitude between the VM and dart2js, so a limit tight enough to mean
+anything on the VM fires immediately on JavaScript. A ratio, unlike an
+absolute time, is measured candidate-against-comparator inside one process,
+which is what makes a recorded one portable enough to compare against.
+
+Tolerances live in `gates.dart`, not in the file: 1.15 on a phase geometric
+mean, 1.25 on a key scenario, 1.40 on any other scenario. A limit fails only
+when both runs breach it.
+
+**The recorded numbers state what is, not what is acceptable.** Where a
+runtime is slow today the reference says so, and the gate's job is then to
+keep it from getting worse.
+
+Re-record after an intentional performance change, and after adding or
+renaming a scenario — a reference with no entry for a scenario is a hard
+error rather than a silently skipped check:
+
+```sh
+dart run benchmark/gates.dart --reports=<the same six paths> --record=$(date +%F) --output=benchmark/results/gate-baseline.json
+```
+
+Record and evaluate on comparable machines. A reference taken on one CPU and
+evaluated on another can drift by more than the tolerances allow; when the
+gate runs in CI, re-record it from a CI run rather than from a laptop.
 
 The merge rejects smoke/non-gateable reports, fewer than seven or mismatched
 rounds, missing runtime/dialect/run pairs, missing or mismatched detected
