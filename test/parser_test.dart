@@ -12,6 +12,40 @@ void main() {
     expect(debug, contains('nested=width'));
   });
 
+  test('accepts a padded index and rejects one past the 64-bit range', () {
+    expect(formatWith('{0000000005}', positional: [0, 1, 2, 3, 4, 5]), '5');
+    // 9223372036854775807 is the last index that fits; the next one, and
+    // any longer run of digits, must be rejected.
+    expect(
+      () => formatWith('{9223372036854775807}'),
+      throwsA(isA<MissingFormatArgumentException>()),
+    );
+    for (final index in ['9223372036854775808', '12345678901234567890']) {
+      expect(
+        () => formatWith('{$index}'),
+        throwsA(isA<InvalidFormatException>()),
+        reason: index,
+      );
+    }
+  });
+
+  test('rejects an unbounded digit run without parsing it as a number', () {
+    // A template is untrusted input, so the cost of rejecting it must not
+    // scale with the size of the number it spells.
+    for (final length in [1000, 100000]) {
+      expect(
+        () => formatWith('{${'9' * length}}'),
+        throwsA(isA<InvalidFormatException>()),
+        reason: '$length digits',
+      );
+      expect(
+        () => formatWith('{0[${'9' * length}]}', positional: const [<int>[]]),
+        throwsA(isA<InvalidFormatException>()),
+        reason: '$length digits in an item key',
+      );
+    }
+  });
+
   test('preserves an unknown conversion for typed processing errors', () {
     final debug = debugParseBraceTemplate('{value!q}');
 

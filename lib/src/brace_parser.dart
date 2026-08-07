@@ -12,6 +12,10 @@ enum _NumberingMode { unset, automatic, manual }
 final class _BraceParser {
   static final BigInt _maximumIndex = BigInt.parse('9223372036854775807');
 
+  /// The digit count of [_maximumIndex]: anything longer is out of range
+  /// without being parsed.
+  static const _maximumIndexDigits = 19;
+
   final String template;
   var _index = 0;
   var _numberingMode = _NumberingMode.unset;
@@ -304,17 +308,27 @@ final class _BraceParser {
     return digits;
   }
 
+  /// Converts a non-empty run of decimal digits into an argument index.
+  ///
+  /// The digits come from an untrusted template, so the number is never
+  /// materialized before its length has ruled it out: `BigInt.parse` costs
+  /// O(n^2), while no index wider than [_maximumIndexDigits] digits can fit
+  /// in a signed 64-bit integer anyway.
   int _decimalIndex(List<int> digits, int offset, int end) {
-    final asciiDigits = digits.join();
-    final value = BigInt.parse(asciiDigits);
-    if (value > _maximumIndex) {
-      throw _invalid(
-        offset,
-        end,
-        'Numeric indexes must fit in a signed 64-bit integer.',
-      );
+    var start = 0;
+    while (start < digits.length - 1 && digits[start] == 0) {
+      start++;
     }
-    return value.toInt();
+    if (digits.length - start <= _maximumIndexDigits) {
+      final value = BigInt.parse(digits.skip(start).join());
+      if (value <= _maximumIndex) return value.toInt();
+    }
+
+    throw _invalid(
+      offset,
+      end,
+      'Numeric indexes must fit in a signed 64-bit integer.',
+    );
   }
 
   void _useAutomaticNumbering(int offset) {
