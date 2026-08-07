@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../benchmark/model.dart';
-import '../benchmark/runner.dart';
-import '../benchmark/scenarios.dart';
+import '../model.dart';
+import '../runner.dart';
+import '../scenarios.dart';
 
 const _testSourceRevision = '0123456789abcdef0123456789abcdef01234567';
 

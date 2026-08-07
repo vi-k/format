@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 
-import '../benchmark/baselines/format20/format20.dart';
+import '../baselines/format20/format20.dart';
 
 void main() {
   test('benchmark baselines are absent from package:format public API', () {
