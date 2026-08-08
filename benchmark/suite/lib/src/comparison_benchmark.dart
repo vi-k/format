@@ -2,12 +2,8 @@ import 'dart:math';
 
 import 'package:format/format.dart';
 
-import 'benchmark_cold.dart';
-import 'benchmark_format16_format.dart';
-import 'benchmark_format30_format.dart';
-import 'benchmark_format30_sprintf.dart';
-import 'benchmark_sprintf70.dart';
 import 'double_modes_benchmark.dart' show BenchmarkLineWriter;
+import 'formatter_benchmark.dart';
 import 'my_benchmark_base.dart';
 import 'tests/tests.dart';
 import 'utils/output.dart';
@@ -31,15 +27,25 @@ void runComparisonBenchmark({
 }) {
   final resolved = durations ?? parseBenchmarkArgs(args);
   final emit = writeLine ?? print;
+  // One list, warm and no-cache together: each measurement sets the cache
+  // mode it needs, so the order here is presentation, not a dependency.
+  // Only format 3.0 keeps parsed templates, so only format 3.0 has a second
+  // number — a comparator parses on every call anyway, and printing its
+  // figure twice would say the same thing under two headings.
   final benchmarks = [
-    BenchmarkFormat16Format(),
-    BenchmarkFormat30Format(),
-    BenchmarkFormat30Sprintf(),
-    BenchmarkSprintf70(),
+    for (final engine in benchmarkEngines) ...[
+      FormatterBenchmark(engine),
+      if (engine.hasTemplateCache) FormatterBenchmark(engine, cached: false),
+    ],
   ];
   for (final benchmark in benchmarks) {
     benchmark.durations = resolved;
   }
+
+  emit('');
+  emit('A time is per call. A "no cache" row is the same call with the');
+  emit('template cache switched off, so it parses every time — which is what');
+  emit('a comparator does anyway, having no cache of its own.');
 
   final stopwatch = Stopwatch()..start();
   for (final scenario in benchmarkScenarios) {
@@ -90,20 +96,6 @@ void runComparisonBenchmark({
         }
       }
     }
-  }
-
-  emit('');
-  emit(h1('----------------------------------------'));
-  emit('Cold: unique template per call (no cache hits)');
-  emit('');
-  final coldBenchmarks = [
-    BenchmarkFormat30ColdFormat(),
-    BenchmarkFormat30ColdSprintf(),
-  ];
-  for (final benchmark in coldBenchmarks) {
-    benchmark.durations = resolved;
-    final score = benchmark.go('{:10d}', [12345]);
-    emit('${accent(benchmark.name)}: ${format('{:.3f}', score)} µs');
   }
 
   emit('');

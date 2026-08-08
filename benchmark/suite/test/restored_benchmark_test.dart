@@ -1,12 +1,15 @@
+import 'package:format/format.dart';
 import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';
 
 void main() {
   test('restored benchmark exposes Format 3, Format 1.6 and sprintf '
       'engines', () {
-    final format3 = BenchmarkFormat30Format();
-    final format16 = BenchmarkFormat16Format();
-    final printf = BenchmarkSprintf70();
+    BenchmarkEngine named(String name) =>
+        benchmarkEngines.singleWhere((engine) => engine.name == name);
+    final format3 = FormatterBenchmark(named('format 3.0 → format'));
+    final format16 = FormatterBenchmark(named('format 1.6 → format'));
+    final printf = FormatterBenchmark(named('sprintf 7.0 → sprintf'));
 
     format3.go('{:d}', [42]);
     format16.go('{:d}', [42]);
@@ -144,7 +147,7 @@ void main() {
     expect(BenchmarkDurations.full.warmupMillis, 100);
     expect(BenchmarkDurations.full.measureMillis, 2000);
 
-    final benchmark = BenchmarkFormat30Format();
+    final benchmark = FormatterBenchmark(benchmarkEngines.first);
     expect(benchmark.durations, BenchmarkDurations.quick);
     benchmark.durations = BenchmarkDurations.full;
     expect(benchmark.durations, BenchmarkDurations.full);
@@ -180,7 +183,51 @@ void main() {
     expect(plain, contains('sprintf 7.0'));
     expect(plain, contains('--9223372036854775808'));
 
-    expect(output, contains('Cold: unique template per call'));
-    expect(output, contains('(cold)'));
+    expect(output, contains('no cache'));
+    expect(output, contains('(no cache)'));
+  });
+
+  test('a measurement sets its own cache mode and restores what it found', () {
+    // The point of one class for both modes: the matrix may run them in any
+    // order, so neither may depend on what ran before it, nor leave a trace
+    // for what runs after.
+    const durations = BenchmarkDurations(warmupMillis: 1, measureMillis: 1);
+    final engine = benchmarkEngines.singleWhere(
+      (engine) => engine.name == 'format 3.0 → format',
+    );
+    final warm = FormatterBenchmark(engine)..durations = durations;
+    final cold = FormatterBenchmark(engine, cached: false)
+      ..durations = durations;
+
+    templateCacheCapacity = 64;
+    for (final order in [
+      [cold, warm],
+      [warm, cold],
+    ]) {
+      for (final benchmark in order) {
+        benchmark.go('{:10d}', [12345]);
+        expect(benchmark.output, '     12345', reason: benchmark.name);
+        expect(
+          templateCacheCapacity,
+          64,
+          reason: '${benchmark.name} did not put the capacity back',
+        );
+      }
+    }
+
+    clearTemplateCache();
+    cold.go('{:10d}', [12345]);
+    expect(
+      templateCacheSize,
+      0,
+      reason: 'a no-cache measurement must leave nothing cached',
+    );
+    warm.go('{:10d}', [12345]);
+    expect(
+      templateCacheSize,
+      greaterThan(0),
+      reason: 'a warm measurement must have had a cache to use',
+    );
+    templateCacheCapacity = 512;
   });
 }

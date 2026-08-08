@@ -251,3 +251,49 @@ final benchmarkScenarios = <BenchmarkScenario>[
     ],
   ),
 ];
+
+/// The templates the cold phase measures.
+///
+/// A deliberately small set: the cold phase runs every engine over each of
+/// these, so the cost is four measurements per case, and the point is to
+/// separate shapes of parsing work rather than to repeat the whole matrix.
+/// A field on its own, a field with a specification, a double, several
+/// fields, and a template that is mostly literal text — enough to tell "the
+/// parser walks the template" apart from "the parser handles a field".
+final coldScenarios = <BenchmarkScenario>[
+  BenchmarkScenario(
+    brace: '{}',
+    sprintf: '%d',
+    cases: [
+      ([42], '42'),
+    ],
+  ),
+  BenchmarkScenario(
+    brace: '{:10d}',
+    sprintf: '%10d',
+    cases: [
+      ([12345], '     12345'),
+    ],
+  ),
+  BenchmarkScenario(
+    brace: '{:.2f}',
+    sprintf: '%.2f',
+    cases: [
+      ([0.1], '0.10'),
+    ],
+  ),
+  BenchmarkScenario(
+    brace: '{}|{}|{}',
+    sprintf: '%d|%d|%d',
+    cases: [
+      ([1, 2, 3], '1|2|3'),
+    ],
+  ),
+  BenchmarkScenario(
+    brace: 'a mostly literal template with one {} in it',
+    sprintf: 'a mostly literal template with one %d in it',
+    cases: [
+      ([7], 'a mostly literal template with one 7 in it'),
+    ],
+  ),
+];
