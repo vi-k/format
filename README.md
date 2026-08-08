@@ -383,27 +383,46 @@ templates can come from data and an unbounded cache would be an unbounded
 leak.
 
 ```dart
-templateCacheCapacity;    // 512 by default, per mini-language
-templateCacheSize;        // how many parsed templates are resident
-clearTemplateCache();     // discard them all
+templateCacheCapacity;        // 512 entries by default, per mini-language
+templateCacheCharacterLimit;  // 1 Mi characters by default, per mini-language
+templateCacheSize;            // how many parsed templates are resident
+templateCacheCharacters;      // how much template text they hold
+clearTemplateCache();         // discard them all
 ```
 
-The capacity is per isolate and shared by every `Format` instance — a parsed
-template does not depend on the engine that parsed it. Raise it when the
-working set is larger than the default and templates repeat; a set that cycles
-past the capacity keeps roughly `capacity / size` of itself resident, because
-a full cache evicts at random rather than in order.
+There are two bounds because a count of entries says nothing about their size.
+A workload with a few very large generated templates stays well inside the
+capacity while holding hundreds of megabytes, so the second bound is on
+template text: whichever binds first evicts. The unit is characters, which is
+what you can see; a cached entry holds around 5.5 times that in memory, since
+the text is reachable from the key, the fragments, the literal nodes and the
+compiled literals. The default is therefore about 5.7 MiB per mini-language.
 
-Set it to zero when templates are generated and never repeat, so that caching
-would only pay to evict:
+A template longer than the whole budget is formatted but never cached —
+emptying the cache for one entry that still would not fit costs every other
+template its parse and gains nothing.
+
+Both bounds are per isolate and shared by every `Format` instance — a parsed
+template does not depend on the engine that parsed it. Raise the capacity when
+the working set is larger than the default and templates repeat; a set that
+cycles past it keeps roughly `capacity / size` of itself resident, because a
+full cache evicts at random rather than in order.
+
+Set either to zero when templates are generated and never repeat, so that
+caching would only pay to evict:
 
 ```dart
 templateCacheCapacity = 0;  // discards what is cached, and keeps nothing
 ```
 
+Lowering either bound discards entries immediately, rather than at the next
+insertion.
+
 `templateCacheSize` tells "the cache is too small for this workload" apart
 from "this workload never repeats a template", which otherwise look alike from
-the outside. To see the difference the cache makes on the current machine, the
+the outside. Read with `templateCacheCharacters`, it also tells a cache full of
+small templates from one held by a handful of large ones — the two need
+opposite adjustments. To see the difference the cache makes on the current machine, the
 benchmark measures every case with it on and off:
 
 ```console

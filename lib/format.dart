@@ -9,6 +9,8 @@ export 'src/engine.dart'
         formatWith,
         sprintf,
         templateCacheCapacity,
+        templateCacheCharacterLimit,
+        templateCacheCharacters,
         templateCacheSize,
         vsprintf;
 export 'src/errors.dart'
