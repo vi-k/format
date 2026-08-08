@@ -11,3 +11,9 @@ build/
 /benchmark/suite/pubspec.lock
 # Directory created by dartdoc
 doc/api/
+
+# Coverage output: the raw hits from `dart test --coverage` and the LCOV
+# report converted from them. Both are measurements of a checkout, not part
+# of it, and CI keeps the report as a build artifact instead.
+.coverage/
+coverage/

@@ -71,6 +71,72 @@ jobs:
         if: matrix.sdk == 'stable'
         run: dart pub publish --dry-run
 
+  generated-artifacts:
+    # Three committed files are produced by tools rather than written, and
+    # nothing about them announces that they are stale. This job regenerates
+    # each one and compares; it needs an interpreter and a compiler the other
+    # jobs do not, which is why it is separate rather than a step in `checks`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - uses: actions/setup-python@v5
+        with:
+          # The generators require CPython 3.14: the fixtures record what that
+          # version does, and the identifier tables come from the Unicode
+          # database it ships. A patch release is tolerated, a minor one is not.
+          python-version: '3.14'
+      - name: Resolve dependencies
+        run: dart pub get
+      - name: Comparison self-test
+        # A checker that reports success because it compared a file with
+        # itself would look exactly like a clean repository.
+        run: dart run tool/verify_generated_artifacts.dart --self-test
+      - name: Generated artifacts match their generators
+        run: dart run tool/verify_generated_artifacts.dart --python=python
+
+  coverage:
+    # A green run says nothing about which branches never executed. This job
+    # measures, prints the per-file table worst first, and holds the total to a
+    # floor. Separate from `checks` because it reruns the suite under the VM
+    # service, which is slower and would double the matrix.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - name: Resolve dependencies
+        run: dart pub get
+      - name: Report self-test
+        # A checker that reported 100% because it parsed nothing would look
+        # exactly like a well-covered repository.
+        run: dart run tool/check_coverage.dart --self-test
+      - name: Measure
+        # VM only: coverage is collected through the VM service, which dart2js
+        # output has none of. The web-only branches are unreachable here by
+        # construction and are pinned by the node run instead.
+        run: dart test --coverage=.coverage
+      - name: Convert to LCOV
+        run: >-
+          dart run coverage:format_coverage --lcov --in=.coverage
+          --out=coverage/lcov.info --report-on=lib
+          --packages=.dart_tool/package_config.json
+      - name: Report and enforce the floor
+        run: dart run tool/check_coverage.dart --lcov=coverage/lcov.info
+      - uses: actions/upload-artifact@v4
+        # Kept whether the floor held or not: the report is how the gap gets
+        # closed, and it is most wanted on the run that failed.
+        if: always()
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: error
+
   benchmark-suite:
     runs-on: ubuntu-latest
     timeout-minutes: 30

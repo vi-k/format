@@ -71,6 +71,11 @@ dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart \
   test/js_number_dispatch_test.dart          # 75 тестов
 dart test benchmark/test tool/test           # 32 теста, ~50 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
+dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
+dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
+  --in=.coverage --out=coverage/lcov.info --report-on=lib \
+  --packages=.dart_tool/package_config.json \
+  && dart run tool/check_coverage.dart --lcov=coverage/lcov.info  # 95.1%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run bin/benchmark.dart) # матрица, ~60 с
 ```
@@ -117,10 +122,6 @@ dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
 
 - **M5** — кэш шаблонов ограничен числом записей, а не байтами: на
   длинных шаблонах амплификация памяти ×5.5.
-- **M12** — сгенерированные артефакты (`python_format.json`,
-  `python_identifier.dart`, `sprintf_common.json`) не сверяются с
-  генераторами в CI; дрейфа сейчас нет, защиты от него нет.
-- **M13** — CI не измеряет покрытие.
 - **M18** — тройное дублирование числового layout'а и printf-обвязки.
 - **M19** — веб-специфичный код брейсов не бенчмаркается вообще.
 - **M20** — оверхед харнеса ~20 % и отсутствие защиты от DCE в
