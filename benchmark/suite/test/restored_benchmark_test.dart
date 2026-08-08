@@ -179,11 +179,11 @@ void main() {
 
     // Every row is scaled against format 1.6, which shows as the trivial
     // row rather than as a word of its own.
-    expect(plainOutput, contains('<- ×1.00 / 100%'));
-    expect(plainOutput, matches(RegExp(r'<- ×\d+\.\d\d / \d+(\.\d)?%')));
+    expect(plainOutput, contains('<- 1.00 (×1.00)'));
+    expect(plainOutput, matches(RegExp(r'<- \d+\.\d+ \(×\d+\.\d\d\)')));
     // A scenario format 1.6 does not run leaves nothing to scale against,
-    // so those rows still say what they know.
-    expect(plainOutput, contains('<- OK'));
+    // so those rows end at their own time.
+    expect(plainOutput, matches(RegExp(r'µs$', multiLine: true)));
 
     final errors = lines.where((line) => line.contains('ERROR')).toList();
     expect(errors, hasLength(1));

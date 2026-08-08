@@ -48,9 +48,9 @@ void runComparisonBenchmark({
   emit('a comparator does anyway, having no cache of its own.');
   emit('');
   emit('Each row is scaled against format 1.6 on the same values, which');
-  emit('shows as itself: ×2.00 / 50% is twice as fast as it, ×0.50 / 200%');
-  emit('half as fast. A row says OK instead when format 1.6 has no figure');
-  emit('to scale against.');
+  emit('shows as itself: 0.50 (×2.00) is half its time, twice as fast;');
+  emit('2.00 (×0.50) is twice its time, half as fast. A row ends at its own');
+  emit('time when format 1.6 has no figure to scale against.');
 
   final stopwatch = Stopwatch()..start();
   for (final scenario in benchmarkScenarios) {
@@ -155,22 +155,25 @@ final class _Row {
       return failure == null ? '$label: —' : '$label: <- $failure';
     }
 
+    final scale = failure ?? _scale(time, reference);
+
     return '$label:'
         ' ${format('{:.3f}', time)} µs'
-        ' <- ${failure ?? _scale(time, reference)}';
+        '${scale == null ? '' : ' <- $scale'}';
   }
 
-  String _scale(double time, double? reference) {
-    // Nothing to scale against, so the row falls back to saying what it
-    // still knows: the output was the expected one.
-    if (reference == null || time <= 0) return ok('OK');
+  /// Null when there is nothing to scale against: the row then ends at its
+  /// time rather than at a word that would say the same thing every time.
+  String? _scale(double time, double? reference) {
+    if (reference == null || time <= 0) return null;
+    final ratio = time / reference;
     final factor = reference / time;
-    final percent = time / reference * 100;
     final text =
-        '×${format('{:.2f}', factor)}'
-        // A tenth of a percent matters where the row is a fraction of the
-        // reference and says nothing where it is a multiple of it.
-        ' / ${format(percent < 10 ? '{:.1f}' : '{:.0f}', percent)}%';
+        // A third digit where the row is a fraction of the reference, where
+        // it is the difference between 0.061 and 0.06; two where the row is
+        // a multiple of it and the third would be noise.
+        '${format(ratio < 0.1 ? '{:.3f}' : '{:.2f}', ratio)}'
+        ' (×${format('{:.2f}', factor)})';
     // The reference is neither fast nor slow, and it reads as itself: the
     // trivial row, in the colour that marks it everywhere else.
     if (isReference) return h1(text);
