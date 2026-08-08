@@ -1,3 +1,30 @@
+// Seeded differential fuzzing of the IR against the legacy oracle.
+//
+// The hand-written parity matrices in `template_ir_diff_test.dart` cover what
+// their author thought to list. This file covers what nobody thought of: it
+// generates specifications by drawing each option independently, so
+// combinations appear that no one would write on purpose — a sign flag on a
+// string conversion, grouping with a Unicode fill and an `=` alignment, a
+// precision on a character. Those are the combinations where a hot op and the
+// general path are most likely to disagree.
+//
+// Invalid specifications are wanted, not filtered. Most generated draws are
+// invalid, and a rejection is a result like any other: both paths must refuse
+// with the same exception type, the same payload and the same offset. Keeping
+// them makes the fuzzer a test of the *error* contract as much as of the
+// output.
+//
+// The corpus is seeded so a failure is reproducible and identical on the VM and
+// on node — the two runtimes must draw the same values, or a divergence found
+// in one could not be investigated in the other. The seed comment below records
+// what that cost.
+//
+// Two guards keep the fuzzer from silently degenerating. Distinctness catches a
+// generator that collapsed to a handful of templates; the rendered count
+// catches the subtler failure where the corpus stays varied but every case
+// turns into an error, so the layout paths stop being exercised while
+// everything still passes.
+
 import 'dart:math';
 
 import 'package:format/src/engine.dart';
@@ -184,6 +211,10 @@ bool _renders(void Function() probe) {
 void main() {
   setUp(debugClearTemplateCaches);
 
+  // Random specification, random value, random engine — the two drawn
+  // independently, so the value usually does not suit the specification and
+  // most cases end in a rejection. That is the point: this pass fuzzes the
+  // error paths.
   test('brace fuzz: IR matches the legacy oracle', () {
     final random = Random(_seed);
     final templates = <String>{};
@@ -208,6 +239,10 @@ void main() {
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
   });
 
+  // The same, in the printf dialect, with one addition: the generator counts
+  // the asterisks it produced and supplies an integer for each, so dynamic
+  // widths and precisions are exercised rather than always failing as missing
+  // arguments.
   test('printf fuzz: IR matches the legacy oracle', () {
     final random = Random(_seed + 1);
     final templates = <String>{};
@@ -230,6 +265,10 @@ void main() {
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
   });
 
+  // The second pass draws a value that *suits* the generated specification, so
+  // most cases render instead of failing. Without it the fuzzer would be an
+  // elaborate test of the rejection paths only — hence the rendered-count guard
+  // at the end, which is what makes that claim checkable.
   test('brace fuzz with matched values: IR matches the legacy oracle', () {
     final random = Random(_seed + 2);
     final templates = <String>{};
@@ -257,6 +296,7 @@ void main() {
     expect(rendered, greaterThan(_casesPerDialect ~/ 2));
   });
 
+  // The matched-value pass for printf, with the same two guards.
   test('printf fuzz with matched values: IR matches the legacy oracle', () {
     final random = Random(_seed + 3);
     final templates = <String>{};

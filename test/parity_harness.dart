@@ -1,5 +1,25 @@
 /// Shared IR-vs-legacy parity harness.
 ///
+/// The compiled IR is an optimization of a path that already worked, so it has
+/// an oracle the rest of the suite does not: the legacy processors
+/// (`debugFormatBraceWithoutIr`, `debugFormatPrintfWithoutIr`), which are kept
+/// in the package for exactly this reason. Every specification the IR
+/// specializes can be run through both and compared, which is what makes it
+/// affordable to check hundreds of thousands of cases — no expectation has to
+/// be written by hand, and none can be wrong in the same way the code is.
+///
+/// Parity is defined here as more than equal strings. Two paths agree only if
+/// they produce the same output *or* fail the same way: same exception type,
+/// same type-specific payload, and the same `FormatExceptionContext` down to
+/// the offset. An IR op that rejected a specification with a different message,
+/// or pointed at a different position, would be a regression a
+/// string-comparison harness would miss entirely.
+///
+/// The engines below cover the configuration axes the ops behave differently
+/// on — text unit, double profile, special-value spelling, and a number locale
+/// where every symbol and digit differs from the default — because a hot op
+/// that silently ignored one of them still matches on a default engine.
+///
 /// Deliberately NOT named `*_test.dart`: the runner must not pick this file
 /// up as a suite, it only carries the engines and the comparison helpers that
 /// `template_ir_diff_test.dart` and `template_ir_fuzz_test.dart` share.
@@ -61,6 +81,13 @@ final shortSpellingFormat = Format(
   doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
 );
 
+/// Runs one brace template through both paths and requires they agree.
+///
+/// Both calls are wrapped, because a rejection is as much a result as a string:
+/// a case where one path formats and the other throws fails on the output
+/// comparison, and a case where both throw is compared by type, payload and
+/// context. [label] names the axis a case came from, so a failure in a
+/// generated matrix says which combination produced it.
 void expectBraceParity(
   String template, {
   List<Object?> positional = const [],
@@ -101,6 +128,11 @@ void expectBraceParity(
   }
 }
 
+/// The printf counterpart of [expectBraceParity], with the same contract.
+///
+/// Separate rather than shared: the dialects have separate parsers, separate
+/// processors and separate legacy paths, so a single generic helper would only
+/// hide which of them was being compared.
 void expectPrintfParity(
   String template,
   List<Object?> values, {

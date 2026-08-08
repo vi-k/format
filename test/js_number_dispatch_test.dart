@@ -1,3 +1,29 @@
+// What the two platforms disagree about, written down and checked on both.
+//
+// On the VM `int` and `double` are distinct types. Under dart2js they are the
+// same type: `42.0 is int` is true, `identical(1, 1.0)` is true, and there is
+// no way to ask which one the programmer meant. That difference reaches the
+// surface of this package — `format('{}', 42.0)` is `'42.0'` on the VM and
+// `'42'` on the web, and `%d` accepts an integral double on one and rejects it
+// on the other — so it cannot be hidden, only made explicit.
+//
+// This file is where it is made explicit. Every test asserts *both* answers,
+// keyed off `isJavaScript`, so neither platform's behaviour can drift
+// unnoticed and a reader can see the divergence rather than discover it. The
+// same cases are listed in the divergence registry the documentation is
+// generated from.
+//
+// The second theme is the web's number-to-string, which is not usable here.
+// JavaScript prints the shortest form that round-trips (`1152921504606847000`
+// for 2^60) and switches to exponential at 1e21 — neither of which is what an
+// integer conversion promises. The tests pin exact digits across the range
+// where the platform's own conversion would give something else.
+//
+// The third is the option-size ceiling, which used to be a divergence and no
+// longer is: a digit run too long to be an `int` rounds under dart2js instead
+// of failing to parse, so a template rejected on the VM was once accepted in a
+// browser. Both platforms now refuse at the same point, with the same type.
+
 import 'package:format/format.dart';
 import 'package:test/test.dart';
 
@@ -5,6 +31,12 @@ void main() {
   const isJavaScript = identical(1, 1.0);
 
   group('integral number dispatch', () {
+    // The core divergence, across every integer conversion. On the web an
+    // integral double *is* an integer, so all seven conversions accept it and
+    // give the same answer as the `int`; on the VM the same value is rejected.
+    // The floating conversions are the control: they accept both types
+    // everywhere, so the divergence is specific to integer dispatch and not a
+    // general looseness about number types.
     test('preserves VM types and canonicalizes JavaScript numbers', () {
       const integer = 42;
       const integralDouble = 42.0;
@@ -44,6 +76,11 @@ void main() {
       expect(format('{:f}', BigInt.from(42)), '42.000000');
     });
 
+    // Above 2^53 the web's own number-to-string stops being exact, so the
+    // digits have to come from somewhere else. The value and the notes in the
+    // body say which traps are being avoided; what matters is that both
+    // platforms print the same exact digits, through both dialects, in both
+    // decimal and hexadecimal.
     test('prints exact decimal digits beyond 2^53 on every platform', () {
       // 2^60: exactly representable as a double, so the literal compiles on
       // dart2js too. JS String(n) would print the shortest-roundtrip form
@@ -65,6 +102,11 @@ void main() {
       }
     });
 
+    // The divergence follows the value into a container: a list of `[42, 42.0]`
+    // represents as `[42, 42]` on the web and `[42, 42.0]` on the VM. Whichever
+    // rule the top level uses, the nested elements have to use the same one —
+    // a representation that canonicalized only at the outer level would be
+    // inconsistent with itself.
     test('canonicalizes representation recursively only on JavaScript', () {
       const integer = 42;
       const integralDouble = 42.0;
@@ -78,6 +120,12 @@ void main() {
       );
     });
 
+    // The values that are doubles on both platforms — infinities and negative
+    // zero — must not be dragged into the divergence. Their spelling depends on
+    // the configured profile, not on the backend, so every line here is the
+    // same on the VM and the web except the one that goes through empty
+    // formatting, where negative zero is integral and canonicalizes on the web
+    // like any other integral double.
     test('keeps distinguishable JavaScript doubles on floating paths', () {
       final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
 
@@ -95,6 +143,12 @@ void main() {
     });
   });
 
+  // The range where the digits stop being free. Two conversion strategies meet
+  // here — fixed-point up to a ceiling, `BigInt` beyond it — and the seam is
+  // crossed from both sides on the web, comparing against `BigInt` rather than
+  // a literal so the expectation is derived from the value the double actually
+  // holds. Grouping and width are checked at the end to pin that the layout
+  // sees the same digits the conversion produced.
   test('integers past the exact double range keep every digit', () {
     // On the web these are doubles, so the digits have to come from
     // somewhere other than the platform's own number-to-string, which
@@ -125,6 +179,9 @@ void main() {
     expect(format('{:>20d}', beyondExact), '    9007199254740992');
   });
 
+  // The assumptions the dispatch is built on, asserted directly rather than
+  // inferred from behaviour. If a backend ever answered differently, the tests
+  // above would fail in confusing ways; these two fail with a clear reason.
   group('platform integer predicates', () {
     test('states what the engine assumes about int on this platform', () {
       // The double dispatch reads `value is int` and then rules out a
@@ -170,6 +227,11 @@ void main() {
     });
   });
 
+  // The ceiling, from both dialects and both sources — a literal too long to be
+  // an `int` and one merely past the limit. One test per template so a
+  // regression names the shape it came back on. The last test is the other
+  // half of the contract: the ceiling value itself still works, so the limit is
+  // a limit and not an off-by-one.
   group('option sizes past the safety ceiling', () {
     // A digit run too long to be an int rounds under dart2js instead of
     // failing to parse, so these used to be rejected on the VM and accepted

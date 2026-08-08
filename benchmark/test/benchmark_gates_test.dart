@@ -1,3 +1,27 @@
+// The performance gate's own logic, tested as ordinary code.
+//
+// The gate decides whether a change may land, from benchmark reports produced
+// on CI. That makes it a piece of software with two ways to fail, and both are
+// expensive: passing a real regression, or failing an innocent change often
+// enough that people learn to override it. Neither can be discovered by running
+// it — a green gate looks the same whether it is working or asleep.
+//
+// So none of these tests measure anything. They build reports in memory, feed
+// them to the same functions the gate uses, and assert the decision: the
+// tolerance arithmetic, the rule that a scenario must breach in *both* runs
+// before it counts, and the provenance checks that make a report admissible at
+// all — right runtime, right Node version, one source revision across every
+// report, no smoke runs, no shortened ones.
+//
+// The provenance half is the larger one, and deliberately so. A wrong number
+// compared correctly is worse than no gate: reports from two different builds,
+// or from a JIT run mislabelled as AOT, produce ratios that mean nothing while
+// looking exactly like ratios that mean something.
+//
+// The last two tests run the command end to end in a temporary directory, on a
+// build that did not change and one that regressed, so the wiring between the
+// pieces above is checked as well as the pieces.
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +32,10 @@ import '../model.dart';
 import '../scenarios.dart';
 
 void main() {
+  // The arithmetic itself, at three tolerance levels — the tighter a scenario's
+  // classification, the less it may drift. The last expectation states the
+  // ordering as a property rather than as three separate numbers, so a
+  // reshuffle of the constants cannot invert it.
   test('limits are the recorded reference times a tolerance', () {
     // A key scenario is held to a tighter tolerance than an ordinary one,
     // and an aggregate to the tightest of the three.
@@ -20,6 +48,9 @@ void main() {
     );
   });
 
+  // Two runs are taken per configuration precisely so that a single noisy one
+  // cannot fail the build: a breach counts only when both runs breach. This is
+  // the rule that keeps the gate credible enough to be obeyed.
   test('a limit is breached only when both runs breach it', () {
     expect(clearsGate(0.10, 0.10, 0.20), isTrue);
     expect(
@@ -32,6 +63,10 @@ void main() {
     expect(clearsGate(0.21, 0.21, 0.20), isFalse);
   });
 
+  // The baseline is a file that outlives the process that wrote it, so it has
+  // to survive a write-and-read cycle unchanged — and a file missing a scenario
+  // must be rejected rather than treated as "nothing to compare", which would
+  // silently exempt whatever was dropped.
   test('a recorded baseline survives a round trip and rejects gaps', () {
     final baseline = recordGateBaseline(_completeReports(), '2026-01-01');
     final restored = GateBaseline.fromJson(
@@ -52,12 +87,19 @@ void main() {
     );
   });
 
+  // The two summary statistics, pinned because the choice is not arbitrary: the
+  // median is taken over sorted integer nanoseconds (no floating drift, no
+  // dependence on sample order), and the aggregate is a geometric mean, since
+  // the values being combined are ratios.
   test('median uses sorted integer nanoseconds and mean is geometric', () {
     expect(medianNanoseconds(const [10, 1, 3]), 3);
     expect(medianNanoseconds(const [10, 1, 3, 9]), 6);
     expect(geometricMean(const [0.5, 2]), closeTo(1, 1e-12));
   });
 
+  // The happy path, stated as a requirement: exactly two runs, complete, and
+  // agreeing on their provenance. Everything below is a way of falling short of
+  // this.
   test('merged gates accept exactly two complete reproducible runs', () {
     final result = evaluateGateReports(_completeReports(), _baseline());
 
@@ -66,6 +108,9 @@ void main() {
     expect(result.toJson()['gates'], hasLength(6));
   });
 
+  // A report that does not say what it ran on, or two reports that disagree,
+  // cannot be compared: the ratio would be between different machines. Rejected
+  // rather than merged.
   test('gates reject absent or mismatched runtime provenance', () {
     final mismatched = _completeReports();
     final jit = mismatched.indexWhere((report) => report.runtime == 'jit');
@@ -90,6 +135,11 @@ void main() {
     );
   });
 
+  // The two provenance facts that decide whether numbers are comparable at all:
+  // a pinned Node version — JavaScript performance moves between releases, so
+  // an upgrade invalidates the baseline rather than beating it — and a single
+  // source revision across every report, which is what stops two different
+  // builds from being compared to each other.
   test('gates require Node 24.8.0 and one canonical source revision', () {
     final wrongNode = _completeReports();
     final js = wrongNode.indexWhere((report) => report.runtime == 'js');
@@ -148,6 +198,10 @@ void main() {
     );
   });
 
+  // The four ways a report can be well-formed and still inadmissible: it was a
+  // smoke run, it declared itself non-gateable, it was cut short, or it does
+  // not match its partner. Each is silently plausible — the numbers look like
+  // numbers — which is why each is refused explicitly.
   test(
     'merged gates reject smoke, non-gateable, short, and mismatched runs',
     () {
@@ -197,6 +251,10 @@ void main() {
     },
   );
 
+  // A ratio only means something for a scenario the matrix declares as a
+  // performance measurement. One arriving for anything else is a sign the
+  // reports and the matrix have drifted apart, and is refused rather than
+  // averaged in.
   test('merged gates reject ratios outside performance scenarios', () {
     final reports = _completeReports();
     final altered = reports[0].toJson();
@@ -215,6 +273,9 @@ void main() {
     }, throwsArgumentError);
   });
 
+  // The gate end to end, in both directions — the only test here that proves
+  // the pieces are wired together, and the only one that would catch a gate
+  // that evaluates correctly and then ignores its own verdict.
   test(
     'gate command passes an unchanged build and fails a regressed one',
     () async {
@@ -256,6 +317,9 @@ void main() {
     },
   );
 
+  // Recording and evaluating are the same tool in two modes, and they have to
+  // agree about the file format: a baseline written by one and unreadable by
+  // the other would only surface on the next release.
   test(
     'gate command records a baseline it can then evaluate against',
     () async {

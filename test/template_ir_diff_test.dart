@@ -1,3 +1,34 @@
+// The hand-written half of the IR parity suite: every specification the
+// compiler specializes, run through both paths and compared.
+//
+// `template_ir_compile_test.dart` checks that a specification compiles to the
+// op it should. This file checks that the op then *behaves* like the path it
+// replaced — output, exception type, payload and offset alike (see
+// `parity_harness.dart` for what parity means here). Between them, a hot op
+// cannot go wrong silently: either it stops being selected, or it stops
+// agreeing.
+//
+// The tests are matrices rather than cases, because the interesting failures
+// live in combinations. A hot op is written once and then has to hold for every
+// value that can reach it — both integer types, both signs, zero, the special
+// doubles, values of the wrong type entirely — under every layout the option
+// grammar allows, and under every engine configuration the op is meant to
+// respect. Multiplying those axes is affordable precisely because the
+// expectations come from the oracle rather than from an author.
+//
+// A few matrices are large on purpose: grouped integer layouts, grouped double
+// layouts and locale-aware `n` each run into the hundreds of thousands of
+// comparisons. Those are the three areas where the hot ops reimplement
+// arithmetic the legacy path derives some other way — fitted padding by
+// formula instead of bisection, localization inline instead of as a tail — and
+// so the three where a hand-written matrix would be least likely to find the
+// disagreement.
+//
+// The values of the wrong type in each matrix are not padding. A hot op must
+// reject what it cannot format with the same complaint the general path makes,
+// and that is the easiest part of the contract to forget when writing a
+// specialization.
+
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
@@ -21,6 +52,11 @@ const _specialDoubles = <Object?>[
 void main() {
   setUp(debugClearTemplateCaches);
 
+  // The `dynamic` op dispatches on the runtime type, so the matrix is a type
+  // census: both integer kinds, strings, booleans, null, doubles including
+  // negative zero and NaN, and an arbitrary object that reaches the `toString`
+  // fallback. A type the op forgot would format through a different branch than
+  // the legacy path and show up here.
   test('dynamic value op matches the legacy path per runtime type', () {
     for (final value in <Object?>[
       'text',
@@ -44,6 +80,9 @@ void main() {
     }
   });
 
+  // A bare `{}` on a double picks its notation by threshold, and the thresholds
+  // differ between the two profiles — so the same values are compared under
+  // both rather than under the default alone.
   test('empty-spec doubles stay identical across modes', () {
     for (final value in <double>[
       // Spelled as double literals: the signed zero pair is the point of
@@ -66,6 +105,9 @@ void main() {
     }
   });
 
+  // The special values under the third configuration axis: how they are spelled
+  // is engine state, not a property of the op, and an op that hard-coded one
+  // spelling would still match on a default engine.
   test('empty-spec specials keep parity for short spelling', () {
     for (final value in [
       double.nan,
@@ -80,11 +122,19 @@ void main() {
     }
   });
 
+  // The op has to fail before it looks at a value, and with the same complaint:
+  // a missing argument is not something a specialization gets to report
+  // differently.
   test('dynamic value op keeps missing-argument errors', () {
     expectBraceParity('{} {}', positional: ['only one']);
     expectBraceParity('{name}', named: {});
   });
 
+  // Twenty-one integer layouts against twelve values, in both text units. The
+  // layouts cover every alignment, both padding modes, all three sign flags,
+  // every radix with and without the alternate prefix; the values cover both
+  // integer types, both signs, zero, the exact-double boundary, a `BigInt` far
+  // past any of it — and three values that are not integers at all.
   test('int op matches the legacy path across specs and values', () {
     const specs = [
       '{:d}',
@@ -131,6 +181,10 @@ void main() {
     }
   });
 
+  // Text layouts against values chosen where the unit choice matters: an empty
+  // string, precomposed accents, astral characters, a string exactly at the
+  // width, and two non-strings. Run under both text units, since width and
+  // precision count differently in each.
   test('text op matches the legacy path across specs and values', () {
     const specs = [
       '{:s}',
@@ -162,6 +216,11 @@ void main() {
     }
   });
 
+  // The largest of the per-op matrices: every double conversion, with and
+  // without a precision, under every alignment and fill, against the values
+  // that reach each branch of the pipeline. The percent cases are padded in
+  // every direction on purpose — its suffix rides along inside the digits, so
+  // padding is where it would be lost or misplaced.
   test('double op matches the legacy path across specs and values', () {
     const specs = [
       '{:f}',
@@ -231,6 +290,9 @@ void main() {
     }
   });
 
+  // A precision past the ceiling stays on the general path, and the refusal
+  // must be identical there — the compiler declining a specification is not a
+  // licence to fail differently.
   test('oversized double precision keeps the legacy error', () {
     expectBraceParity('{:.100001f}', positional: [2.5]);
     expectBraceParity(
@@ -240,6 +302,10 @@ void main() {
     );
   });
 
+  // The precision range the SDK imposes, at every boundary of both shapes —
+  // and the note below is why this test is long: two conversions do not follow
+  // the shape their syntax suggests. Every value in `_specialDoubles` is run
+  // through, because the rejection must fire before the value is looked at.
   test('brace dartSdk precision rejection keeps parity', () {
     // dartSdk rejects precision outside [0,20] for f/F/e/E and outside
     // [1,21] for g/G/n. The two remaining presentations split: the empty
@@ -273,6 +339,10 @@ void main() {
     }
   });
 
+  // A locale where every symbol and digit differs from the default, applied to
+  // conversions that must *ignore* it and to `n`, which must not. Both halves
+  // matter: an op that localized `%f` would be as wrong as one that failed to
+  // localize `n`.
   test('brace doubles keep parity under a custom locale', () {
     for (final spec in [
       // f/e/g/% stay ASCII in the brace dialect (only 'n' consults the
@@ -296,6 +366,9 @@ void main() {
     }
   });
 
+  // Two edges the matrices cannot reach: a negative value that becomes zero
+  // only after rounding, and a `BigInt` whose conversion to double overflows.
+  // Both are branch selectors rather than layout cases.
   test('double edge values keep parity', () {
     // Negative value that rounds to zero: exercises the z-flag suppression
     // through roundedZero, not the trivial -0.0 route.
@@ -308,6 +381,9 @@ void main() {
     expectBraceParity('{:.2f}', positional: [-huge]);
   });
 
+  // The printf string op across its layouts, with non-string values included:
+  // `%s` accepts anything, so the conversion to text is part of what has to
+  // match.
   test('%s op matches the legacy path', () {
     const templates = ['%s', '%10s', '%-10s', '%.3s', '%10.3s', '%-10.3s'];
     final values = <Object?>['hello', '', 'éé', 42, null, 3.5, true];
@@ -333,6 +409,9 @@ void main() {
     expectPrintfParity('%10.3s', [_ThrowingToString()]);
   });
 
+  // The printf integer matrix. Wider than the brace one because printf has
+  // flags the brace grammar has no equivalent for — repeated flags, integer
+  // precision, dynamic width — each of which the hot op resolves itself.
   test('printf int op matches the legacy path', () {
     const templates = [
       '%d',
@@ -387,6 +466,9 @@ void main() {
     expectPrintfParity('%*.*d', [10, 4, -42]);
   });
 
+  // The printf double matrix, with the same value axis as the brace one so the
+  // two dialects can be compared against each other as well as against the
+  // oracle.
   test('printf double op matches the legacy path', () {
     const templates = [
       '%f',
@@ -438,12 +520,17 @@ void main() {
     expectPrintfParity('%*.*f', [12, 3, -2.5]);
   });
 
+  // Two axes the double matrix above holds constant: the text unit, which
+  // affects padding, and a missing argument, which must fail before any of the
+  // layout runs.
   test('printf doubles keep parity for graphemes and missing args', () {
     expectPrintfParity('%10.2f', [2.5], engine: graphemeFormat);
     expectPrintfParity('%f', const []);
     expectPrintfParity('%*.2f', const []);
   });
 
+  // The SDK precision range in the printf dialect, where it is enforced by
+  // separate code and so can regress separately.
   test('printf static precision rejected by dartSdk keeps parity', () {
     const templates = [
       '%.21f', // f: max 20 -> rejected
@@ -478,6 +565,8 @@ void main() {
     }
   });
 
+  // And the same range when the precision arrives as an argument rather than
+  // in the template — a different code path to the same refusal.
   test('printf dynamic precision rejected by dartSdk keeps parity', () {
     // Precisions the option resolver accepts (it only rejects values past the
     // 100000 guard), so rejection has to happen inside the double conversion.
@@ -502,6 +591,11 @@ void main() {
     }
   });
 
+  // Where the printf double op declines and hands over. The hand-over is the
+  // risk: the slow branch has to reconstruct the resolved conversion from the
+  // op's own state, and a dynamic width that was negative at runtime has to
+  // become a left-alignment flag plus a magnitude on the way. Both signs, both
+  // dynamic positions and an over-ceiling width are compared.
   test('printf double op falls back to slow path for custom locales', () {
     for (final template in ['%.2f', '%10.2f', '%e', '%.3g']) {
       for (final value in [2.5, -2.5, double.nan, 1e21]) {
@@ -522,6 +616,9 @@ void main() {
     expectPrintfParity('%*.2f', [100001, 2.5], engine: localeFormat);
   });
 
+  // Above the exact-double range in both dialects and every radix. `int.parse`
+  // rather than literals so the file still compiles under dart2js, where these
+  // values exist but cannot be written down.
   test('integers beyond 2^53 keep legacy digits on every platform', () {
     final values = <Object?>[
       int.parse('9007199254740993'),
@@ -539,6 +636,11 @@ void main() {
     }
   });
 
+  // Realistic templates rather than isolated fields: hot and fallback ops in
+  // one program, automatic and manual numbering side by side, a field used
+  // twice, a nested specification between two automatic ones. A program is a
+  // sequence, and the ops share a cursor over the values — this is where a
+  // fallback that consumed an argument differently would surface.
   test('mixed templates with hot and fallback ops stay identical', () {
     expectBraceParity(
       'id={:08d} name={:<12s} score={:+.2f} raw={} hex={:#x}',
@@ -564,6 +666,10 @@ void main() {
     expectPrintfParity('%0*d/%.*s/%%', [6, 42, 2, 'abcdef']);
   });
 
+  // The exhaustive grouping sweep: both separators, every radix each one
+  // allows, eight layout prefixes and five widths, against values on both sides
+  // of every group boundary plus a `BigInt` far beyond them. Tens of thousands
+  // of comparisons, and the reason they are worth it is in the note below.
   test('grouped integer layouts match the legacy path', () {
     // Grouping and zero padding interact: under '=' with a '0' fill the
     // zeros are grouped with the digits, so the result can end up wider
@@ -597,6 +703,10 @@ void main() {
     }
   });
 
+  // The same exhaustive sweep for doubles: every conversion, layout, width and
+  // precision that can carry grouping, under both profiles. Grouping applies
+  // after rounding and around a decimal point, so the arithmetic is not the
+  // integer one with a different constant.
   test('grouped double layouts match the legacy path', () {
     const values = <Object?>[
       0.0,
@@ -628,6 +738,11 @@ void main() {
     }
   });
 
+  // `n` under four engines, because the op is compiled once and then has to
+  // decide per call — including the case that catches an identity check written
+  // too narrowly: a non-const `CNumberLocale()`, which is the default locale by
+  // value but not by reference. Values include several the op cannot write at
+  // all, which must reach the legacy path rather than be mangled.
   test('locale-aware n matches the legacy path per engine', () {
     // A compiled program is shared by every engine, so the n op decides per
     // call: the C locale writes digits directly, anything else — and any
@@ -668,6 +783,9 @@ void main() {
     }
   });
 
+  // A compiled program is cached, so this pins that recompiling from scratch
+  // gives the same answer — the compilation is a pure function of the template,
+  // with no state accumulated on first use.
   test('cache clearing does not change IR results', () {
     final before = format('{:10d}|{:<6s}', 42, 'ab');
     debugClearTemplateCaches();
