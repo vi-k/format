@@ -106,6 +106,12 @@ _FormatSpec _parseFormatSpecGeneral(
       );
     }
     precision = _readDecimal(units, index, () => index++, context);
+    if (precision > _maximumSafeFormatOption) {
+      throw _invalidSpecifier(
+        context,
+        'The precision is too large to format safely.',
+      );
+    }
     if (index < units.length && _isGrouping(units[index])) {
       fractionalGrouping = take();
     }
@@ -399,8 +405,16 @@ int _readDecimal(
     advance();
     index++;
   }
-  return int.tryParse(digits.toString()) ??
-      (throw _invalidSpecifier(context, 'Decimal value is out of range.'));
+  final value = int.tryParse(digits.toString());
+  // A run of digits too long to be an int is not a different failure from
+  // one merely past the safety ceiling, and on the web the two cannot even
+  // be told apart: an int is a double there, so `tryParse` rounds instead of
+  // returning null. Both come back as the same out-of-range marker, and the
+  // caller reports it against its own option, so a template rejected on the
+  // server is rejected in the browser too.
+  return value == null || value > _maximumSafeFormatOption
+      ? _maximumSafeFormatOption + 1
+      : value;
 }
 
 InvalidSpecifierException _invalidSpecifier(

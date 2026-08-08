@@ -110,22 +110,17 @@ final class _PrintfParser {
     if (start == _index) {
       return allowEmpty ? const _LiteralPrintfOption(0) : null;
     }
-    final digits = template.substring(start, _index);
-    final value = int.tryParse(digits);
-    if (value == null) {
-      final conversion =
-          _index < template.length && _isConversionCandidate(template[_index])
-              ? template[_index]
-              : null;
-      throw _invalid(
-        conversionOffset,
-        conversion == null ? _index : _index + 1,
-        'A numeric printf option is out of range.',
-        specifier: conversion,
-        conversion: conversion,
-      );
+    final value = int.tryParse(template.substring(start, _index));
+    if (value != null && value <= _maximumSafeFormatOption) {
+      return _LiteralPrintfOption(value);
     }
-    return _LiteralPrintfOption(value);
+    // Past the safety ceiling — and on the web `tryParse` cannot even tell
+    // "past it" from "too long to be an int", since an int is a double
+    // there and the parse rounds rather than failing. The exact value
+    // cannot matter to a formatter that refuses the option either way, so
+    // both platforms carry the same marker and both report the refusal in
+    // the same place, with the same type, naming the option that caused it.
+    return const _LiteralPrintfOption(_maximumSafeFormatOption + 1);
   }
 
   void _validate(_PrintfConversionNode node) {
