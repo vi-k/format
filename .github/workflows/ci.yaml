@@ -71,6 +71,33 @@ jobs:
         if: matrix.sdk == 'stable'
         run: dart pub publish --dry-run
 
+  generated-artifacts:
+    # Three committed files are produced by tools rather than written, and
+    # nothing about them announces that they are stale. This job regenerates
+    # each one and compares; it needs an interpreter and a compiler the other
+    # jobs do not, which is why it is separate rather than a step in `checks`.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+      - uses: actions/setup-python@v5
+        with:
+          # The generators require CPython 3.14: the fixtures record what that
+          # version does, and the identifier tables come from the Unicode
+          # database it ships. A patch release is tolerated, a minor one is not.
+          python-version: '3.14'
+      - name: Resolve dependencies
+        run: dart pub get
+      - name: Comparison self-test
+        # A checker that reports success because it compared a file with
+        # itself would look exactly like a clean repository.
+        run: dart run tool/verify_generated_artifacts.dart --self-test
+      - name: Generated artifacts match their generators
+        run: dart run tool/verify_generated_artifacts.dart --python=python
+
   benchmark-suite:
     runs-on: ubuntu-latest
     timeout-minutes: 30

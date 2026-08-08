@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import locale
 import math
@@ -13,7 +14,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "test" / "fixtures" / "python_format.json"
+DEFAULT_OUTPUT = ROOT / "test" / "fixtures" / "python_format.json"
 
 
 def value(type_: str, value: Any) -> dict[str, Any]:
@@ -213,7 +214,13 @@ def expected_for(fixture: dict[str, Any]) -> dict[str, str]:
         return {"error": type(error).__name__}
 
 
-def main() -> None:
+def main(argv: list[str]) -> None:
+    # An explicit output path lets a checker regenerate into a scratch
+    # directory and compare, instead of writing over the committed artifact
+    # and reading it back out of the working tree.
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    options = parser.parse_args(argv)
     if platform.python_implementation() != "CPython" or sys.version_info[:2] != (3, 14):
         raise SystemExit("This generator requires CPython 3.14 exactly.")
     locale.setlocale(locale.LC_ALL, "C")
@@ -226,11 +233,11 @@ def main() -> None:
         "generator": {"implementation": "CPython", "version": "3.14"},
         "cases": cases,
     }
-    with OUTPUT.open("w", encoding="utf-8", newline="\n") as output:
+    with options.output.open("w", encoding="utf-8", newline="\n") as output:
         output.write(
             json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
         )
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

@@ -3,12 +3,15 @@
 
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 import sys
 import unicodedata
 
 
-OUTPUT = Path(__file__).resolve().parents[1] / "lib" / "src" / "python_identifier.dart"
+DEFAULT_OUTPUT = (
+    Path(__file__).resolve().parents[1] / "lib" / "src" / "python_identifier.dart"
+)
 MAX_SCALAR = 0x10FFFF
 
 
@@ -63,7 +66,13 @@ def render_decimal_ranges(ranges: list[tuple[int, int, int]]) -> str:
     return "const List<int> _pythonDecimalRanges = <int>[\n" + "\n".join(rows) + "\n];"
 
 
-def main() -> None:
+def main(argv: list[str]) -> None:
+    # An explicit output path lets a checker regenerate into a scratch
+    # directory and compare, instead of writing over the committed artifact
+    # and reading it back out of the working tree.
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    options = parser.parse_args(argv)
     start = []
     continue_ = []
     decimals = []
@@ -147,8 +156,8 @@ bool _containsPythonRange(List<int> ranges, int scalar) {
             helpers.rstrip(),
         ]
     ) + "\n"
-    OUTPUT.write_text(content, encoding="utf-8")
+    options.output.write_text(content, encoding="utf-8")
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
