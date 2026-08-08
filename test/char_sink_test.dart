@@ -1,7 +1,30 @@
+// `CharSink` — the buffer every formatted string is built in — tested directly
+// rather than through the engine.
+//
+// Most of what is pinned here is one invariant: the sink starts in
+// single-string mode, holding a reference to the one string written so far and
+// nothing else, and any second write has to materialize that string into the
+// buffer first. The mode is what makes `format('{}', s)` return `s` itself
+// instead of a copy, and it is also the sink's sharpest edge — a new write
+// method that forgets to materialize loses the pending string silently, and
+// the engine above it would just produce a slightly wrong result somewhere.
+//
+// Reached through the engine these paths are hard to aim at: the sink decides
+// its own mode from the write sequence, and only a few templates produce each
+// sequence. Here the sequences are written out directly, including the
+// degenerate ones (empty string first, zero and negative fills).
+//
+// The grouped writes (`writeGroupedMagnitude`, `writeGroupedBody`) are not
+// here — they are covered against the legacy path in `template_ir_diff_test`,
+// where the expected grouping comes from an oracle rather than from a literal.
+
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
 void main() {
+  // The same string written twice: the second write has to leave
+  // single-string mode and produce a concatenation, not silently keep holding
+  // one reference and report it once.
   test('a repeated literal accumulates past single-string mode', () {
     final sink =
         CharSink(1)
@@ -11,6 +34,9 @@ void main() {
     expect(sink.length, 6);
   });
 
+  // All four write kinds in one sequence, starting from a capacity of 1 so
+  // that the buffer has to grow underneath them. The trailing empty string is
+  // there on purpose: it must change neither the length nor the contents.
   test('writes strings, chars and fill with growth', () {
     final sink =
         CharSink(1)
@@ -22,6 +48,10 @@ void main() {
     expect(sink.toString(), 'ab-000');
   });
 
+  // Callers compute padding as `width - content`, which goes zero or negative
+  // whenever the content already fills the field. `fill` absorbs that instead
+  // of making every call site guard, so a negative count must write nothing
+  // rather than loop, throw or corrupt the length.
   test('fill ignores non-positive counts', () {
     final sink =
         CharSink(4)
@@ -30,6 +60,12 @@ void main() {
     expect(sink.toString(), isEmpty);
   });
 
+  // `digitCount` is how the integer paths size a field before writing a single
+  // digit, so it has to agree exactly with what `writeMagnitude` will produce —
+  // one too few and the padding is wrong, one too many and it is off by a
+  // space. `toRadixString` of the absolute value is the reference; the cases
+  // walk the radix boundaries (9/10, 99) and both signs, since the count is of
+  // the magnitude and must ignore the minus.
   test('digitCount matches toString length across radixes', () {
     for (final value in [0, 1, 7, 9, 10, 99, 12345, -1, -12345]) {
       for (final radix in [2, 8, 10, 16]) {
@@ -42,6 +78,12 @@ void main() {
     }
   });
 
+  // `writeMagnitude` writes digits backwards into space it reserved, so the
+  // three things that can go wrong are all pinned at once: the sign must be
+  // dropped (`-48879` prints as `BEEF`), case must apply only to the letters
+  // of the requested write, and zero must still produce one digit rather than
+  // none. The separator between the two hex writes is what would expose digits
+  // landing at the wrong offset.
   test('writeMagnitude writes |value| digits in place', () {
     final sink =
         CharSink(4)
@@ -52,11 +94,20 @@ void main() {
     expect(sink.toString(), 'BEEF|ff0');
   });
 
+  // The sink works in UTF-16 code units and knows nothing about characters.
+  // That is fine as long as it never splits a pair: a capacity of 2 forces the
+  // emoji's two units across a growth boundary, and they must come back out
+  // adjacent and in order.
   test('surrogate pairs survive as code units', () {
     final sink = CharSink(2)..writeString('a\u{1F600}b');
     expect(sink.toString(), 'a\u{1F600}b');
   });
 
+  // Growth is where a copy can go wrong, and the sink has a minimum capacity
+  // that hides small mistakes. This sequence crosses it several times and mixes
+  // the write kinds across the boundaries, so a reallocation that copied too
+  // little or wrote at the pre-growth offset shows up in the contents rather
+  // than only in the length.
   test('buffer reallocation handles growth past 16-unit minimum', () {
     final sink =
         CharSink(1)
@@ -68,6 +119,10 @@ void main() {
     expect(sink.toString(), 'start${'0' * 20}-${'1' * 15}');
   });
 
+  // The payoff of single-string mode, and the only test that states it as an
+  // identity rather than an equality: one write in, the same object out, no
+  // buffer allocated and no copy made. This is what makes `format('{}', s)`
+  // and `'{:s}'` on an already-fitting string cost nothing.
   test('a single writeString is returned by reference', () {
     const text = 'hello world';
     final sink = CharSink(1)..writeString(text);
@@ -89,6 +144,9 @@ void main() {
     expect(identical(sink.toString(), text), isTrue);
   });
 
+  // Leaving single-string mode through each of the other write kinds in turn,
+  // interleaved: the pending string is materialized once, at the right moment,
+  // and every later write lands after it.
   test('writeString followed by other writes materializes correctly', () {
     final sink =
         CharSink(1)
@@ -100,6 +158,11 @@ void main() {
     expect(sink.toString(), 'hello-world!!');
   });
 
+  // An empty first write leaves the sink in a state that is ambiguous by
+  // length alone — nothing written, but a pending string is held. The next
+  // write must not treat the empty pending string as absent and must not
+  // concatenate it as content; either way the result is just `'x'`, and it must
+  // still be reachable by reference rather than through a materialized buffer.
   test('empty first string then another string keeps single-string mode '
       'consistent', () {
     final sink =

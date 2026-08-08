@@ -1,3 +1,13 @@
+// Contracts that belong to no single stage of the brace pipeline, and so would
+// belong to no single one of the other test files: the order the stages run in,
+// how automatic numbering counts across nesting, the width ceiling, and what a
+// caller gets when formatting fails halfway.
+//
+// The per-stage files each pin their own stage in isolation and would all stay
+// green if the stages were wired together in the wrong order. That is the gap
+// this file covers, so it is deliberately small: a handful of cases, each one a
+// property of the pipeline as a whole.
+
 import 'package:format/format.dart';
 import 'package:test/test.dart';
 
@@ -24,6 +34,11 @@ final class _TracingRepresentation extends Representation<_TraceValue> {
 }
 
 void main() {
+  // One template that needs every stage at once: literal braces to unescape, a
+  // named field, an attribute lookup into a map, two nested fields resolved
+  // into the specification, and a float laid out to that width and precision.
+  // Any stage that silently drops out of the chain shows up here as a wrong
+  // string, where a stage-local test would still pass.
   test('public engine completes the full brace formatting pipeline', () {
     expect(
       formatWith(
@@ -38,6 +53,11 @@ void main() {
     );
   });
 
+  // Two stages that both touch the same field, in an order that is only
+  // observable through side effects: the conversion (`!r`) runs first, and the
+  // nested specification is resolved after. The tracing representation records
+  // that it ran even though the resolution then failed — swap the order and the
+  // recorded events are empty, while the thrown exception stays the same.
   test('conversion runs before resolving a nested specification', () {
     final events = <String>[];
     final configured = Format(
@@ -54,6 +74,10 @@ void main() {
     expect(events, ['canRepresent', 'represent']);
   });
 
+  // Automatic numbering is a single counter over the whole template, and a
+  // nested `{}` inside a specification draws from it like any other field. So
+  // `'{:{}} {}'` consumes three values in written order — value, width, tail —
+  // and not two with the width coming from somewhere else.
   test('nested fields share automatic positional numbering', () {
     expect(format('{:{}} {}', 'value', 8, 'tail'), 'value    tail');
   });
@@ -81,6 +105,10 @@ void main() {
     );
   });
 
+  // Formatting is all or nothing. The engine writes into a sink as it goes, so
+  // by the time the missing field is reached the prefix is already written —
+  // and it must still be thrown away rather than returned as a half-formatted
+  // string. A caller catching the exception gets no output at all.
   test('a formatting failure never returns partial output', () {
     expect(
       () => formatWith(
