@@ -564,6 +564,110 @@ void main() {
     expectPrintfParity('%0*d/%.*s/%%', [6, 42, 2, 'abcdef']);
   });
 
+  test('grouped integer layouts match the legacy path', () {
+    // Grouping and zero padding interact: under '=' with a '0' fill the
+    // zeros are grouped with the digits, so the result can end up wider
+    // than the width asked for. The legacy path finds that count by
+    // bisection and the op computes it; this matrix is where the two are
+    // held to the same answer.
+    const values = <Object?>[
+      0,
+      1,
+      999,
+      1000,
+      1234567,
+      -1234567,
+      9007199254740991,
+      -9007199254740991,
+    ];
+    final wide = BigInt.parse('123456789012345678901234567890');
+    for (final separator in [',', '_']) {
+      for (final type in separator == ',' ? ['d'] : ['d', 'x', 'X', 'b', 'o']) {
+        for (final layout in ['', '0', '=', '0=', '0>', '*^', '+0', ' ']) {
+          for (final width in ['', '1', '8', '10', '13']) {
+            final template = '{:$layout$width$separator$type}';
+            for (final value in values) {
+              expectBraceParity(template, positional: [value]);
+            }
+            expectBraceParity(template, positional: [wide]);
+            expectBraceParity(template, positional: [-wide]);
+          }
+        }
+      }
+    }
+  });
+
+  test('grouped double layouts match the legacy path', () {
+    const values = <Object?>[
+      0.0,
+      -0.0,
+      1234.5,
+      -1234567.891,
+      0.0001,
+      1e21,
+      double.nan,
+      double.infinity,
+      42,
+    ];
+    for (final type in ['', 'f', 'e', 'G', '%']) {
+      for (final layout in ['', '0', '=', '0=', '0>', '*^', '+0']) {
+        for (final width in ['', '1', '8', '12', '16']) {
+          for (final precision in ['', '.0', '.2']) {
+            final template = '{:$layout$width,$precision$type}';
+            for (final value in values) {
+              expectBraceParity(template, positional: [value]);
+              expectBraceParity(
+                template,
+                positional: [value],
+                engine: compatibleFormat,
+              );
+            }
+          }
+        }
+      }
+    }
+  });
+
+  test('locale-aware n matches the legacy path per engine', () {
+    // A compiled program is shared by every engine, so the n op decides per
+    // call: the C locale writes digits directly, anything else — and any
+    // value the op does not write — goes to the legacy path.
+    const values = <Object?>[
+      0,
+      1234567,
+      -1234567,
+      9007199254740991,
+      0.0,
+      1234.5,
+      -0.0,
+      double.nan,
+      'text',
+      true,
+      null,
+    ];
+    final engines = [
+      defaultFormat,
+      // ignore: prefer_const_constructors
+      Format(numberLocale: CNumberLocale()),
+      localeFormat,
+      compatibleFormat,
+    ];
+    final wide = BigInt.parse('123456789012345678901234567890');
+    for (final engine in engines) {
+      for (final layout in ['', '0', '=', '0=', '*^', '+', '0>']) {
+        for (final width in ['', '1', '12']) {
+          for (final precision in ['', '.3']) {
+            final template = '{:$layout$width$precision n}'.replaceAll(' ', '');
+            for (final value in values) {
+              expectBraceParity(template, positional: [value], engine: engine);
+            }
+            expectBraceParity(template, positional: [wide], engine: engine);
+          }
+        }
+      }
+    }
+  });
+
   test('cache clearing does not change IR results', () {
     final before = format('{:10d}|{:<6s}', 42, 'ab');
     debugClearTemplateCaches();

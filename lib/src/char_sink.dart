@@ -163,6 +163,135 @@ final class CharSink {
     }
   }
 
+  /// The length [writeGroupedMagnitude] writes for [digits] digits: one
+  /// separator before every group after the first.
+  static int groupedLength(int digits, int groupSize) =>
+      digits + (digits - 1) ~/ groupSize;
+
+  /// Writes the digits of |value| in [radix] behind [leadingZeros] zeros,
+  /// with [separator] between groups of [groupSize] digits from the right.
+  ///
+  /// The zeros are grouped along with the digits rather than padded around
+  /// them, which is what `{:010,d}` asks for: the separators fall where they
+  /// would if the number really had that many digits.
+  void writeGroupedMagnitude(
+    int value,
+    int radix,
+    int separator,
+    int groupSize, {
+    int leadingZeros = 0,
+    bool uppercase = false,
+  }) {
+    _materialize();
+    final significant = digitCount(value, radix);
+    final count = significant + leadingZeros;
+    final total = groupedLength(count, groupSize);
+    if (_isWeb) {
+      // Above the web-safe range callers take the BigInt branch, so negating
+      // and converting stay exact here.
+      final magnitude = (value < 0 ? -value : value).toRadixString(radix);
+      _text!.write(
+        _groupAscii(
+          (uppercase ? magnitude.toUpperCase() : magnitude).padLeft(count, '0'),
+          separator,
+          groupSize,
+        ),
+      );
+      _length += total;
+      return;
+    }
+    _ensure(total);
+    final digits = uppercase ? _upperDigits : _lowerDigits;
+    var negative = value <= 0 ? value : -value;
+    var index = _length + total;
+    _length = index;
+    for (var written = 0; written < count; written++) {
+      if (written > 0 && written % groupSize == 0) {
+        _buffer[--index] = separator;
+      }
+      if (written < significant) {
+        _buffer[--index] = digits.codeUnitAt(-negative.remainder(radix));
+        negative = negative ~/ radix;
+      } else {
+        _buffer[--index] = 0x30;
+      }
+    }
+  }
+
+  /// Writes [leadingZeros] zeros, then `text`, with [separator] between
+  /// groups of [groupSize] characters counted back from [digitEnd].
+  ///
+  /// Only the digits before [digitEnd] are grouped; the rest of [text] — a
+  /// fraction, an exponent — is copied through.
+  void writeGroupedBody(
+    String text,
+    int digitEnd,
+    int separator,
+    int groupSize, {
+    int leadingZeros = 0,
+  }) {
+    _materialize();
+    final count = digitEnd + leadingZeros;
+    final total = groupedLength(count, groupSize) + (text.length - digitEnd);
+    if (_isWeb) {
+      final buffer = StringBuffer();
+      _writeGroupedBodyUnits(
+        text,
+        digitEnd,
+        separator,
+        groupSize,
+        leadingZeros,
+        buffer.writeCharCode,
+      );
+      _text!.write(buffer);
+      _length += total;
+      return;
+    }
+    _ensure(total);
+    var index = _length;
+    _writeGroupedBodyUnits(text, digitEnd, separator, groupSize, leadingZeros, (
+      unit,
+    ) {
+      _buffer[index++] = unit;
+    });
+    _length = index;
+  }
+
+  static void _writeGroupedBodyUnits(
+    String text,
+    int digitEnd,
+    int separator,
+    int groupSize,
+    int leadingZeros,
+    void Function(int unit) write,
+  ) {
+    final count = digitEnd + leadingZeros;
+    for (var written = 0; written < count; written++) {
+      write(
+        written < leadingZeros ? 0x30 : text.codeUnitAt(written - leadingZeros),
+      );
+      final remaining = count - 1 - written;
+      if (remaining > 0 && remaining % groupSize == 0) write(separator);
+    }
+    for (var index = digitEnd; index < text.length; index++) {
+      write(text.codeUnitAt(index));
+    }
+  }
+
+  static String _groupAscii(String digits, int separator, int groupSize) {
+    final remainder = digits.length % groupSize;
+    final first = remainder == 0 ? groupSize : remainder;
+    final buffer = StringBuffer(digits.substring(0, first));
+    final separatorText = String.fromCharCode(separator);
+    for (var start = first; start < digits.length; start += groupSize) {
+      buffer
+        ..write(separatorText)
+        ..write(digits.substring(start, start + groupSize));
+    }
+
+    return buffer.toString();
+  }
+
   @override
   String toString() =>
       _single ??
