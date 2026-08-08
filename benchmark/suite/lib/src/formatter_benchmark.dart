@@ -37,6 +37,12 @@ final class BenchmarkEngine {
 
 final benchmarkEngines = <BenchmarkEngine>[
   BenchmarkEngine(
+    name: 'sprintf 7.0 → sprintf',
+    isSprintf: true,
+    isSprintf70: true,
+    format: sprintf70.sprintf.call,
+  ),
+  BenchmarkEngine(
     name: 'format 1.6 → format',
     isSprintf: false,
     isFormat16: true,
@@ -54,12 +60,6 @@ final benchmarkEngines = <BenchmarkEngine>[
     isSprintf: true,
     hasTemplateCache: true,
     format: _format3.vsprintf,
-  ),
-  BenchmarkEngine(
-    name: 'sprintf 7.0 → sprintf',
-    isSprintf: true,
-    isSprintf70: true,
-    format: sprintf70.sprintf.call,
   ),
 ];
 
