@@ -170,12 +170,20 @@ void main() {
     );
 
     final output = lines.join('\n');
+    final plainOutput = output.replaceAll(RegExp('\x1B\\[[0-9;]*m'), '');
     expect(output, contains('{:b}'));
     expect(output, contains(List.filled(50, '{}').join('|')));
     expect(output, contains(': —'));
-    expect(output, contains('OK'));
     expect(output, contains('Mode: quick'));
     expect(output, contains('Total:'));
+
+    // Every row is scaled against format 1.6, which names itself instead of
+    // scaling against its own time.
+    expect(plainOutput, contains('<- reference'));
+    expect(plainOutput, matches(RegExp(r'<- x\d+\.\d\d')));
+    // A scenario format 1.6 does not run leaves nothing to scale against,
+    // so those rows still say what they know.
+    expect(plainOutput, contains('<- OK'));
 
     final errors = lines.where((line) => line.contains('ERROR')).toList();
     expect(errors, hasLength(1));
