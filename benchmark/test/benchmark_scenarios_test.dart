@@ -1,3 +1,30 @@
+// The benchmark matrix and the runner that measures it.
+//
+// The matrix is a list of scenarios, and its completeness is a claim: that the
+// gate watches the paths worth watching. Nothing enforces that claim at
+// runtime — a scenario deleted in a refactor leaves a gate that still passes,
+// on a smaller set of measurements, and says nothing about what it stopped
+// looking at. So the required dimensions are listed here by id, and the
+// scenarios that carry extra weight (the key comparisons, the two double
+// profiles, cold versus hot inputs) are pinned individually.
+//
+// The runner is the other half, and its failure modes are worse than the
+// matrix's, because they produce numbers rather than nothing. A measurement
+// taken over too few rounds, or on an input that was already warm when it
+// claimed to be cold, or under a runtime it labels wrongly, is not a smaller
+// measurement — it is a different one, indistinguishable from the real thing in
+// the report. Every one of those is refused explicitly here.
+//
+// A measurement is also only meaningful if the engines being compared produced
+// the same string, so the runner checks the output before it records a timing,
+// and comparisons that cannot be made at all (a locale reference, a conversion
+// one comparator lacks) are marked as informational rather than turned into a
+// ratio.
+//
+// The last two tests compile and run the harness under dart2js and AOT in
+// temporary directories: the provenance the reports carry has to be detected,
+// not declared, and a JIT run mislabelled as AOT would poison the baseline.
+
 import 'dart:convert';
 import 'dart:io';
 
@@ -10,6 +37,8 @@ import '../scenarios.dart';
 const _testSourceRevision = '0123456789abcdef0123456789abcdef01234567';
 
 void main() {
+  // The coverage claim as a list of ids. A scenario removed silently narrows
+  // the gate without failing it, so removal has to be an explicit edit here.
   test('benchmark matrix covers every required dimension', () {
     final ids = benchmarkScenarios.map((scenario) => scenario.id).toSet();
     for (final required in [
@@ -31,6 +60,9 @@ void main() {
     }
   });
 
+  // Key scenarios are held to a tighter tolerance and compared against the
+  // frozen 2.0 baseline. Which ones carry that weight is a decision, not an
+  // attribute, so it is pinned rather than inferred.
   test('large decimal integer is a key Format 2 comparison', () {
     final scenario = benchmarkScenarios.singleWhere(
       (value) => value.id == 'brace.int.large_decimal.hot',
@@ -51,6 +83,9 @@ void main() {
     expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
   });
 
+  // The double-side key comparison, on the profile whose digits the package
+  // produces itself — the most expensive path in the package and the one worth
+  // the tighter tolerance.
   test('large compatible fixed double is a key Format 2 comparison', () {
     final scenario = benchmarkScenarios.singleWhere(
       (value) => value.id == 'brace.double.fixed_large.compatible.hot',
@@ -71,6 +106,9 @@ void main() {
     expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
   });
 
+  // The two double profiles are separate measurements even for the same value,
+  // because they run different code: merging them would average a delegation to
+  // the SDK with the package's own conversion and hide a regression in either.
   test('Dart and compatible half ties remain separate scenarios', () {
     final dart = benchmarkScenarios.singleWhere(
       (value) => value.id == 'brace.double.half_tie.dart.hot',
@@ -91,6 +129,10 @@ void main() {
     expect(outcomesEqual(compatible.candidate(0), compatible.expected), isTrue);
   });
 
+  // A cold scenario measures parsing, which only happens once per template —
+  // so its inputs must still be unparsed when measurement begins, and a hot
+  // scenario's must be stable across rounds. Get this wrong and a cold
+  // measurement quietly becomes a warm one, several times faster and meaningless.
   test(
     'scenarios retain cold inputs before measurement and hot inputs stable',
     () {
@@ -125,6 +167,9 @@ void main() {
     },
   );
 
+  // Too few rounds does not produce a rougher number, it produces a different
+  // one — dominated by warm-up. A shortened run is refused rather than recorded
+  // with a caveat nobody reads.
   test('runner rejects a shortened non-smoke measurement', () {
     expect(
       () => parseRunnerOptions(const [
@@ -147,6 +192,10 @@ void main() {
     expect(smoke.samples, 1);
   });
 
+  // Smoke runs exist to check the harness works, not to measure. They are
+  // marked non-gateable at the source, so the gate refuses them by construction
+  // rather than by convention — and the raw samples are kept, since a rejected
+  // report is still worth reading.
   test('runner marks smoke reports non-gateable and preserves raw samples', () {
     final report = runBenchmark(
       const BenchmarkRunOptions(
@@ -166,6 +215,9 @@ void main() {
     expect(BenchmarkReport.fromJson(report.toJson()).toJson(), report.toJson());
   });
 
+  // A batch too small measures the clock and the loop rather than the work. The
+  // minimum is a property of a gateable scenario, checked here so that adding a
+  // fast scenario cannot quietly introduce a noisy one.
   test(
     'gateable JIT measurements use batches large enough to suppress noise',
     () {
@@ -197,6 +249,9 @@ void main() {
     },
   );
 
+  // Provenance is detected, never taken on the caller's word: a report claiming
+  // a runtime it is not running on would be compared against the wrong
+  // baseline, which is the failure that looks most like a real regression.
   test('runner records detected JIT provenance and rejects a false label', () {
     const options = BenchmarkRunOptions(
       dialect: BenchmarkDialect.braces,
@@ -226,6 +281,9 @@ void main() {
     );
   });
 
+  // Some scenarios exist to show a number, not to compare one — there is no
+  // comparable implementation on the other side. They are marked so no ratio is
+  // computed, because a ratio against nothing is still a ratio in a report.
   test('reference-only locale comparisons never produce a ratio', () {
     final references = benchmarkScenarios.where(
       (scenario) =>
@@ -259,6 +317,9 @@ void main() {
     );
   });
 
+  // The reference output for the locale scenario is a committed constant rather
+  // than something this package produces, so the comparison cannot silently
+  // become the package agreeing with itself.
   test('format_intl uses a pinned golden reference rather than Format', () {
     final scenario = benchmarkScenarios.singleWhere(
       (scenario) => scenario.id == 'brace.format_intl.hot',
@@ -269,6 +330,10 @@ void main() {
     expect((outcome as TextOutcome).value, '1\u00a0234');
   });
 
+  // Where the comparator has no equivalent conversion there is nothing to
+  // compare, and the scenario stays informational — measuring it against
+  // something it does not implement would produce a flattering number that
+  // means nothing.
   test('non-overlapping sprintf7 conversions stay informational', () {
     final byId = {
       for (final scenario in benchmarkScenarios) scenario.id: scenario,
@@ -286,6 +351,9 @@ void main() {
     }
   });
 
+  // Some scenarios measure a calling convention rather than a template, so the
+  // shape of the call is part of the scenario's definition and has to be
+  // recorded with it.
   test('matrix records the API call shape behind API-path scenarios', () {
     final byId = {
       for (final scenario in benchmarkScenarios) scenario.id: scenario,
@@ -298,6 +366,10 @@ void main() {
     expect(byId['printf.tear_off.hot']!.apiPath, BenchmarkApiPath.tearOff);
   });
 
+  // Coverage stated structurally rather than by id: whatever the matrix is
+  // called, it must contain scenarios with several fields, with non-ASCII text,
+  // and with cold inputs. This survives a renaming that the id list above would
+  // not.
   test(
     'matrix structurally covers multi-field, Unicode, and cold dimensions',
     () {
@@ -335,6 +407,9 @@ void main() {
     },
   );
 
+  // The report refuses to describe itself inconsistently: gateable and smoke at
+  // once, gateable with too few rounds. The invariants live in the type rather
+  // than in the code that fills it, so no producer can bypass them.
   test('report rejects gateable smoke, short gateable rounds, and '
       'forbidden ratios', () {
     final valid =
@@ -365,6 +440,9 @@ void main() {
     expect(() => BenchmarkReport.fromJson(forbiddenRatio), throwsArgumentError);
   });
 
+  // A timing is only meaningful if the two sides produced the same string.
+  // Checking that first turns "one engine is much faster" into "one engine is
+  // wrong", which is the more useful failure.
   test('runner checks a comparable output before recording timing', () {
     final scenario = BenchmarkScenario(
       id: 'test.mismatch.hot',
@@ -392,6 +470,10 @@ void main() {
     );
   });
 
+  // The harness compiled under dart2js and run for real: a scenario that fails
+  // must arrive as the same typed outcome it has on the VM, or the web reports
+  // would differ from the VM ones for reasons that have nothing to do with
+  // speed.
   test(
     'compiled JavaScript runner preserves typed error outcomes',
     () async {
@@ -463,6 +545,10 @@ void main() {
     timeout: const Timeout.factor(4),
   );
 
+  // The same for AOT, plus the refusal that matters most: an AOT run must not
+  // be able to present itself as a JIT one. The two have different baselines,
+  // and a mislabelled report is compared against numbers from another
+  // compiler.
   test(
     'compiled AOT runner rejects JIT label and records AOT provenance',
     () async {

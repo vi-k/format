@@ -1,3 +1,17 @@
+// The exception hierarchy as data: what each failure carries, and what it says.
+//
+// These exceptions are a public API. A caller that catches
+// `FormattingException` and reports the offset, or switches on the subtype to
+// decide whether the template or the value was at fault, depends on the payload
+// fields being there and being populated — none of which the engine's own tests
+// check, since they only assert that the right *type* was thrown.
+//
+// The exceptions are constructed directly here rather than provoked through the
+// engine. That is deliberate: it separates "the engine throws the right thing"
+// (asserted everywhere else) from "the thing carries the right payload"
+// (asserted here), and it reaches types the engine only produces in rare
+// configurations.
+
 import 'package:format/format.dart';
 import 'package:test/test.dart';
 
@@ -11,6 +25,10 @@ void main() {
     argumentIndex: 2,
   );
 
+  // The context survives construction as fields, not as text baked into a
+  // message: a tool that wants to underline the offending fragment in an editor
+  // reads `offset` and `specifier`, and would have to parse `toString` if these
+  // were only rendered.
   test('formatting errors retain machine-readable context', () {
     const error = InvalidSpecifierException(context, 'unknown specifier');
 
@@ -19,6 +37,14 @@ void main() {
     expect(error.reason, 'unknown specifier');
   });
 
+  // The roll call: every exception type the package can throw, in one list, so
+  // that a new one added without a payload accessor — or dropped from the
+  // common supertype — fails here. `everyElement` pins the supertype, which is
+  // what makes a single `on FormattingException` catch complete for a caller.
+  //
+  // `FormatConfigurationException` is the odd one out and is checked as such:
+  // it comes from constructing a misconfigured `Format`, before any template
+  // exists, so its context has no template to point at.
   test('formatting errors retain their domain-specific values', () {
     final stackTrace = StackTrace.current;
     final errors = <FormattingException>[
@@ -59,12 +85,18 @@ void main() {
     expect((errors[8] as FormatExtensionException).stackTrace, stackTrace);
   });
 
+  // The one payload that is a collection has to be handed out unmodifiable:
+  // it is built from the registry's own state, and a caller that appended to
+  // the list it received would be editing the registry through the exception.
   test('ambiguous formatter matches cannot be mutated', () {
     final error = AmbiguousFormatterException(context, 42, ['first']);
 
     expect(() => error.matches.add('second'), throwsUnsupportedError);
   });
 
+  // What lands in a log when nobody catches it. Four things have to be in the
+  // one line: which failure it is, what it means in prose, the specific reason,
+  // and where in the template — enough to fix the template without a debugger.
   test('toString reports the type, message, payload, and context', () {
     const error = InvalidSpecifierException(context, 'unknown specifier');
     final text = error.toString();
@@ -76,6 +108,10 @@ void main() {
     expect(text, contains('offset: 0'));
   });
 
+  // The same roll call again, from the other side: it is not enough for a
+  // payload to be stored, it also has to be printed. A field that a subtype
+  // holds but leaves out of its message is invisible in production — the type
+  // says a lookup failed, but not which segment or on what value.
   test('toString carries each domain-specific payload', () {
     final stackTrace = StackTrace.current;
 
@@ -121,6 +157,11 @@ void main() {
     );
   });
 
+  // The payload is the caller's value, and rendering it means calling its
+  // `toString` — which can itself throw. If that escaped, the failure a user
+  // sees would be the reporting of the error rather than the error, with the
+  // original cause lost. Instead the type name is printed and the exception
+  // still describes what went wrong.
   test('toString survives payload values whose own toString throws', () {
     final error = UnsupportedConversionException(context, _ThrowingToString());
 

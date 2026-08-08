@@ -1,3 +1,19 @@
+// Constructing a `Format` with extensions: what the constructor accepts, what
+// it copies, and how it fails.
+//
+// Configuration is the one place the package runs the caller's code *before*
+// any formatting happens, and the ordinary contracts still apply there. A
+// `Formatter`'s `specifier` is a getter, so reading it can throw; the list of
+// formatters is the caller's collection, so it can be mutated afterwards or be
+// an `Iterable` that only iterates once; and two formatters can claim the same
+// name. All of that has to be resolved at construction, into an immutable index
+// — because a `Format` is meant to be built once and shared, and an instance
+// that could change its behaviour later is not shareable at all.
+//
+// The naming rules are checked here rather than at format time for the same
+// reason: a formatter named `s` or `дата` would be unreachable or would shadow
+// a built-in, and the useful moment to say so is where the mistake was made.
+
 import 'dart:collection';
 
 import 'package:format/format.dart';
@@ -78,6 +94,12 @@ final class SingleUseFormatters extends IterableBase<Formatter<dynamic>> {
 }
 
 void main() {
+  // Both directions of the copy, for all three extension lists. The caller's
+  // lists are emptied right after construction and the instance keeps its
+  // entries — so a `Format` built inside a function that then reuses its
+  // scratch list is still valid. And the lists it exposes are unmodifiable, so
+  // the reverse cannot happen either: nobody reconfigures a shared engine by
+  // appending to `configured.formatters`.
   test('Format defensively copies immutable extension configuration', () {
     final formatter = NamedFormatter('json');
     final formatters = [formatter];
@@ -104,6 +126,11 @@ void main() {
     expect(configured.representations.clear, throwsUnsupportedError);
   });
 
+  // A specifier has to be spellable in a template, which the specification
+  // grammar defines narrowly: ASCII letters only. The four rejected names are
+  // the four ways to miss that — non-ASCII, a leading underscore, an
+  // interior dash, and empty — and each would otherwise produce a formatter
+  // that can be registered but never named.
   test('Format rejects invalid formatter names', () {
     for (final name in ['дата', '_name', 'has-dash', '']) {
       expect(
@@ -113,6 +140,10 @@ void main() {
     }
   });
 
+  // Two collisions. A built-in conversion letter cannot be taken over — `{:s}`
+  // has a meaning the engine owes every caller — and two formatters cannot
+  // share a name, since the template would then have no way to say which one
+  // it meant.
   test('Format rejects reserved and duplicate formatter specifiers', () {
     expect(
       () => Format(formatters: [NamedFormatter('s')]),
@@ -125,6 +156,10 @@ void main() {
     );
   });
 
+  // The same instance listed twice trips the duplicate check as well. It is
+  // harmless in effect — one entry would simply win — but it is always a
+  // mistake in the caller's code, and reporting it is cheaper than letting them
+  // wonder why their second registration had no effect.
   test('Format rejects repeated formatter instances by identity', () {
     final formatter = NamedFormatter('once');
 
@@ -134,6 +169,11 @@ void main() {
     );
   });
 
+  // The parameter is an `Iterable`, and an `Iterable` is allowed to be
+  // single-use. `SingleUseFormatters` yields its formatter once and nothing
+  // afterwards, so an implementation that walked the argument a second time —
+  // to validate, then to index — would build an empty registry and the template
+  // below would fail. The copy is made first, and everything else reads it.
   test('Format derives its immutable formatter index from its copied list', () {
     final formatter = NamedFormatter('singleUse');
     final configured = Format(formatters: SingleUseFormatters(formatter));
@@ -141,6 +181,11 @@ void main() {
     expect(configured.format('{:singleUse}', 42), 'singleUse:42');
   });
 
+  // The specifier is a getter on the caller's class — an uninitialized `late
+  // final` behind it throws on the first read, during construction. That has to
+  // arrive as the package's own extension failure, naming the class, rather
+  // than as a raw `StateError` from somewhere inside a constructor the caller
+  // never sees.
   test('Format reports a throwing specifier as a formatting failure', () {
     // Configuration reads user code, so it owes the same typed-failure
     // contract as formatting itself.
@@ -157,6 +202,12 @@ void main() {
     expect(failure.extension, contains('ThrowingSpecifierFormatter'));
   });
 
+  // Error reporting must not itself depend on the caller's code behaving. This
+  // formatter's specifier works once — long enough to be registered — and
+  // throws afterwards, so a failure report that read it again to build its
+  // message would replace the real cause (`canFormat boom`) with a second,
+  // unrelated error raised while reporting the first. The name is captured at
+  // configuration time and reused.
   test('A decaying specifier does not mask the original extension failure', () {
     final configured = Format(formatters: [DecayingSpecifierFormatter()]);
 

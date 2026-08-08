@@ -1,3 +1,16 @@
+// Deriving the anchors a Markdown document's headings resolve to.
+//
+// The divergence registries tell a user "we differ from Python (or C) here,
+// read the README", and each entry carries the anchor to read. An anchor that
+// resolves to nothing breaks that promise silently — the registry still looks
+// complete and the link still looks like a link. This helper is what lets the
+// compatibility tests check every one of them against the document's actual
+// headings.
+//
+// Its own tests are in `markdown_anchors_test.dart`, and they matter: a helper
+// that derived anchors GitHub would not would either pass broken links or fail
+// on working ones, and either way the blame would land on the documentation.
+
 import 'dart:convert';
 
 /// The anchors a Markdown document's headings resolve to.
