@@ -5,6 +5,7 @@ import 'package:format/format.dart';
 import 'package:test/test.dart';
 
 import 'support/fixture_value.dart';
+import 'support/markdown_anchors.dart';
 
 void main() {
   final compatibleFormat = Format(
@@ -147,6 +148,16 @@ void main() {
   final divergences = PythonDivergenceSuite.load(
     'test/fixtures/python_divergences.json',
   );
+
+  test('points every divergence at a README section that exists', () async {
+    // The registry tells a user "we differ from Python here, read the
+    // README". An anchor that resolves to nothing breaks that promise
+    // silently, so resolve each one against the headings themselves.
+    final anchors = markdownAnchors(await File('README.md').readAsString());
+    for (final entry in divergences.anchors.entries) {
+      expect(anchors, contains(entry.value), reason: entry.key);
+    }
+  });
 
   test('keeps intentional divergences sorted and executable', () {
     // Every registry entry must ship an executable exemplar below (or a

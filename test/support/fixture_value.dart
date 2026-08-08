@@ -102,7 +102,12 @@ final class PythonFixture {
 final class PythonDivergenceSuite {
   final List<String> ids;
 
-  const PythonDivergenceSuite._(this.ids);
+  /// The README anchor each entry points at, by entry ID. Whether an anchor
+  /// resolves is the caller's test: the loader only reads the file it was
+  /// given.
+  final Map<String, String> anchors;
+
+  const PythonDivergenceSuite._(this.ids, this.anchors);
 
   /// Synchronous so callers can register one `test()` per entry.
   factory PythonDivergenceSuite.load(String path) {
@@ -112,6 +117,7 @@ final class PythonDivergenceSuite {
     }
     final divergences = _list(document['divergences'], r'$.divergences');
     final ids = <String>[];
+    final anchors = <String, String>{};
     for (var index = 0; index < divergences.length; index++) {
       final path = '\$.divergences[$index]';
       final divergence = _object(divergences[index], path);
@@ -122,12 +128,14 @@ final class PythonDivergenceSuite {
       if (_string(divergence['reason'], '$path.reason').trim().isEmpty) {
         throw FormatException('$path.reason cannot be empty.');
       }
-      if (!_string(
+      final anchor = _string(
         divergence['readme_anchor'],
         '$path.readme_anchor',
-      ).startsWith('#')) {
+      );
+      if (!anchor.startsWith('#')) {
         throw FormatException('$path.readme_anchor must be an anchor.');
       }
+      anchors[ids.last] = anchor;
     }
     final sortedIds = [...ids]..sort();
     if (!_sameValues(ids, sortedIds)) {
@@ -136,7 +144,10 @@ final class PythonDivergenceSuite {
     if (ids.toSet().length != ids.length) {
       throw const FormatException('Divergence IDs must be unique.');
     }
-    return PythonDivergenceSuite._(List.unmodifiable(ids));
+    return PythonDivergenceSuite._(
+      List.unmodifiable(ids),
+      Map.unmodifiable(anchors),
+    );
   }
 }
 

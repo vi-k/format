@@ -43,7 +43,11 @@ unpublished 2.0.0 below.
 * Formatting exceptions render their type, payload, and full template context
   in `toString()`, and a value whose own `toString()` throws is reported
   safely.
-* Documented the whole public API surface with dartdoc.
+* Documented the whole public API surface with dartdoc, including the
+  extension contracts an implementer otherwise had to read the engine for:
+  what a throwing `canFormat`, `format`, `lookup`, or `represent` turns into,
+  that built-in types take priority over an extension, and that a `Map` uses
+  the string-key shortcut instead of a registered `AttributeLookup`.
 
 ## 2.0.0 (unpublished)
 
