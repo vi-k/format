@@ -24,6 +24,25 @@ final class _BraceParser {
 
   _BraceTemplate parse() => _BraceTemplate(_parseNodes(depth: 0));
 
+  /// How far the web branch walks before handing the rest of a literal to
+  /// the native search.
+  ///
+  /// A search costs about as much as walking ten characters under dart2js,
+  /// so a window a little past that keeps a brace-dense template on the walk
+  /// while a long literal still reaches the search after a fixed toll.
+  static const _webWalkWindow = 12;
+
+  /// The next `{` or `}` at or after [from], or -1 when the rest of the
+  /// template is ordinary text. Web only; see [_parseNodes].
+  int _nextBraceIndex(int from) {
+    final open = template.indexOf('{', from);
+    if (open < 0) return template.indexOf('}', from);
+    final close = template.indexOf('}', from);
+    if (close < 0) return open;
+
+    return open < close ? open : close;
+  }
+
   List<_BraceNode> _parseNodes({required int depth}) {
     final nodes = <_BraceNode>[];
 
@@ -63,8 +82,34 @@ final class _BraceParser {
       plainStart = _index;
     }
 
+    // Characters walked since the last brace; web only, see the loop below.
+    var walked = 0;
+
     while (_index < template.length) {
       final codeUnit = template.codeUnitAt(_index);
+      if (codeUnit != 0x7b && codeUnit != 0x7d) {
+        // Ordinary text: nothing to copy, the slice is taken on flush.
+        _index++;
+        // Under dart2js every step of this walk is a bounds-checked call
+        // into the string, and a long literal pays for all of them: forty
+        // characters cost 129 ns to walk against 36 ns to find, four hundred
+        // 1042 ns against 84. A native search is worth about ten walked
+        // characters there, so the walk keeps short runs — where a search
+        // would be pure overhead — and hands anything longer over once. On
+        // the VM the walk beats the search on every shape tried, and
+        // `_isWeb` being a const drops this branch there entirely.
+        if (_isWeb && ++walked == _webWalkWindow) {
+          final brace = _nextBraceIndex(_index);
+          if (brace < 0) {
+            _index = template.length;
+            break;
+          }
+          _index = brace;
+          walked = 0;
+        }
+        continue;
+      }
+      walked = 0;
       if (codeUnit == 0x7b) {
         if (_hasNextCodeUnit(0x7b)) {
           if (depth > 0) (escapedOpeningOffsets ??= <int>[]).add(_index);
@@ -108,9 +153,6 @@ final class _BraceParser {
           _index + 1,
           'Single closing brace is not allowed.',
         );
-      } else {
-        // Ordinary text: nothing to copy, the slice is taken on flush.
-        _index++;
       }
     }
 
