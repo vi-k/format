@@ -84,6 +84,22 @@ void main() {
     ]);
   });
 
+  test('canonicalizes a C locale argument', () {
+    // The compiled printf path recognizes the default locale by identity, so
+    // `CNumberLocale()` written without `const` would silently take the
+    // uncompiled path — same output, several times the cost, nothing to see.
+    expect(
+      // ignore: prefer_const_constructors
+      Format(numberLocale: CNumberLocale()).numberLocale,
+      same(const CNumberLocale()),
+      reason: 'a non-const C locale must not be a distinct instance',
+    );
+    expect(Format().numberLocale, same(const CNumberLocale()));
+
+    const other = _PassThroughLocale();
+    expect(Format(numberLocale: other).numberLocale, same(other));
+  });
+
   test('public import permits extension contracts', () {
     final lookup = MapAttributeLookup();
     final representation = MapRepresentation();
@@ -107,4 +123,34 @@ void main() {
     expect(TextUnit.graphemeClusters.take(value, 2), value);
     expect(TextUnit.graphemeClusters.split(value), ['a', '👩‍🔬']);
   });
+}
+
+/// A locale that is not [CNumberLocale], to pin that only that class is
+/// canonicalized.
+final class _PassThroughLocale implements NumberLocale {
+  const _PassThroughLocale();
+
+  @override
+  String get decimalSeparator => '.';
+
+  @override
+  String get groupSeparator => ',';
+
+  @override
+  String get plusSign => '+';
+
+  @override
+  String get minusSign => '-';
+
+  @override
+  String get exponentSeparator => 'e';
+
+  @override
+  bool get groupingEnabled => false;
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  String localizeDigits(String asciiDigits) => asciiDigits;
 }
