@@ -61,10 +61,46 @@ void main() {
     );
   });
 
+  test('grouped integer specs compile to int ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:,d}|{:_x}|{:010,d}|{:0>10,d}|{:=12,d}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'int:d:g,3',
+        'literal',
+        'int:x:g_4',
+        'literal',
+        // Zero padding is regrouped with the digits only under '=' with a
+        // '0' fill: '0>' fills around them, '=' with the default fill pads
+        // between the sign and them.
+        'int:d:w10:g,3z',
+        'literal',
+        'int:d:w10:g,3',
+        'literal',
+        'int:d:w12:g,3',
+      ],
+    );
+  });
+
+  test('n compiles to the int op, which checks the locale per call', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:n}|{:12n}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['int:n', 'literal', 'int:n:w12'],
+    );
+  });
+
   test('non-hot integer specs stay on fallback', () {
     // NB: single-code-unit fills (including precomposed 'é') compile hot;
     // only multi-unit fills fall back — that case is covered in Task 6.
-    for (final spec in ['{:,d}', '{:n}', '{:.2d}', '{:{}d}']) {
+    // ',' is rejected outside 'd', so it keeps its per-call error.
+    for (final spec in ['{:,x}', '{:.2d}', '{:{}d}']) {
       expect(
         debugCompiledProgramDescription(
           spec,
@@ -134,13 +170,32 @@ void main() {
     );
   });
 
+  test('grouped double specs compile to double ops', () {
+    expect(
+      debugCompiledProgramDescription(
+        '{:,.2f}|{:012,.2f}|{:0>12,.2f}|{:,e}',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      [
+        'double:f:p2:g,',
+        'literal',
+        'double:f:w12:p2:g,z',
+        'literal',
+        'double:f:w12:p2:g,',
+        'literal',
+        'double:e:g,',
+      ],
+    );
+  });
+
   test('non-hot double specs stay on fallback', () {
     // The combining fill (e + U+0301) is written as an explicit escape so
     // it stays two code units regardless of editor/source normalization:
     // the parser rejects it under unicodeScalars and it is a multi-unit
     // fill under graphemeClusters, so it never compiles hot. A precomposed
     // single-code-unit fill would compile hot instead.
-    for (final spec in ['{:,.2f}', '{:.2n}', '{:e\u0301^10.2f}']) {
+    for (final spec in ['{:.2_f}', '{:.2n}', '{:e\u0301^10.2f}']) {
       expect(
         debugCompiledProgramDescription(
           spec,

@@ -160,6 +160,22 @@ final class _BraceIntOp extends _BraceOp {
   final int fillChar;
   final int align; // code unit of '<' '>' '^' '='
   final String type;
+  final int groupSeparator; // 0 none, else ',' or '_'
+  final int groupSize; // 3 for decimal, 4 for the power-of-two radixes
+
+  /// Whether zero padding is grouped with the digits instead of filled
+  /// around them — `{:010,d}`, where the separators land as if the number
+  /// had that many digits.
+  final bool zeroPaddingGrouped;
+
+  /// Non-null for `n` only, whose result depends on the engine's locale.
+  ///
+  /// A compiled program is shared by every engine that formats the template,
+  /// so the locale cannot be decided at compile time. Under the C locale `n`
+  /// is `d` — grouping off, ASCII symbols, digits unchanged — and anything
+  /// else, including a value this op does not write, goes to the legacy path
+  /// with this specification.
+  final _FormatSpec? localeSpec;
 
   const _BraceIntOp({
     required this.field,
@@ -174,11 +190,26 @@ final class _BraceIntOp extends _BraceOp {
     required this.fillChar,
     required this.align,
     required this.type,
+    this.groupSeparator = 0,
+    this.groupSize = 3,
+    this.zeroPaddingGrouped = false,
+    this.localeSpec,
   });
 
   @override
   void write(CharSink sink, _BraceProcessor frame) {
     final value = frame._argument(argumentIndex, argumentName, field);
+    final spec = localeSpec;
+    if (spec != null &&
+        (!identical(frame.engine.numberLocale, const CNumberLocale()) ||
+            !((value is int && _isIntegerValue(value)) || value is BigInt))) {
+      // `n` under any other locale localizes symbols and may group, and `n`
+      // is a floating presentation too: both belong to the legacy path.
+      sink.writeString(
+        formatParsedValue(value, spec, frame.engine, _context(frame)),
+      );
+      return;
+    }
     if (value is int && _isIntegerValue(value)) {
       final signChar = value.isNegative ? 0x2d : requestedSign;
       if (_isWebInt && _exceedsWebSafeInt(value)) {
@@ -190,45 +221,54 @@ final class _BraceIntOp extends _BraceOp {
           radix,
           uppercase: uppercase,
         );
-        final padding =
-            width < 0
-                ? 0
-                : width -
-                    digitsText.length -
-                    prefix.length -
-                    (signChar == 0 ? 0 : 1);
-        _writeLeading(sink, padding, signChar);
-        sink.writeString(digitsText);
-        _writeTrailing(sink, padding);
+        _writeDigitsText(sink, digitsText, signChar);
         return;
       }
       final digits = CharSink.digitCount(value, radix);
-      final padding =
-          width < 0
-              ? 0
-              : width - digits - prefix.length - (signChar == 0 ? 0 : 1);
+      if (groupSeparator != 0) {
+        if (zeroPaddingGrouped) {
+          _writeLeading(sink, 0, signChar);
+          sink.writeGroupedMagnitude(
+            value,
+            radix,
+            groupSeparator,
+            groupSize,
+            leadingZeros: _groupedDigitCount(digits, signChar) - digits,
+            uppercase: uppercase,
+          );
+          return;
+        }
+        final padding = _padding(
+          CharSink.groupedLength(digits, groupSize),
+          signChar,
+        );
+        _writeLeading(sink, padding, signChar);
+        sink.writeGroupedMagnitude(
+          value,
+          radix,
+          groupSeparator,
+          groupSize,
+          uppercase: uppercase,
+        );
+        _writeTrailing(sink, padding);
+        return;
+      }
+      final padding = _padding(digits, signChar);
       _writeLeading(sink, padding, signChar);
       sink.writeMagnitude(value, radix, uppercase: uppercase);
       _writeTrailing(sink, padding);
       return;
     }
     if (value is BigInt) {
-      final magnitude = formatMagnitude(
-        value.isNegative ? -value : value,
-        radix,
-        uppercase: uppercase,
+      _writeDigitsText(
+        sink,
+        formatMagnitude(
+          value.isNegative ? -value : value,
+          radix,
+          uppercase: uppercase,
+        ),
+        value.isNegative ? 0x2d : requestedSign,
       );
-      final signChar = value.isNegative ? 0x2d : requestedSign;
-      final padding =
-          width < 0
-              ? 0
-              : width -
-                  magnitude.length -
-                  prefix.length -
-                  (signChar == 0 ? 0 : 1);
-      _writeLeading(sink, padding, signChar);
-      sink.writeString(magnitude);
-      _writeTrailing(sink, padding);
       return;
     }
     // Mirrors formatParsedValue's dispatch order for the value types it
@@ -252,6 +292,53 @@ final class _BraceIntOp extends _BraceOp {
     }
     throw UnsupportedFormatValueException(_context(frame), value);
   }
+
+  int _padding(int visibleDigits, int signChar) =>
+      width < 0
+          ? 0
+          : width - visibleDigits - prefix.length - (signChar == 0 ? 0 : 1);
+
+  int _groupedDigitCount(int digits, int signChar) =>
+      width < 0
+          ? digits
+          : _fittedGroupedDigitCount(
+            digits,
+            groupSize,
+            width - prefix.length - (signChar == 0 ? 0 : 1),
+          );
+
+  /// The layout for digits that arrived as a string: the magnitude of a
+  /// `BigInt`, or of an int too large for exact digit extraction on the web.
+  void _writeDigitsText(CharSink sink, String digitsText, int signChar) {
+    if (groupSeparator == 0) {
+      final padding = _padding(digitsText.length, signChar);
+      _writeLeading(sink, padding, signChar);
+      sink.writeString(digitsText);
+      _writeTrailing(sink, padding);
+      return;
+    }
+    if (zeroPaddingGrouped) {
+      _writeLeading(sink, 0, signChar);
+      sink.writeString(
+        _groupDigitsText(
+          digitsText,
+          _groupedDigitCount(digitsText.length, signChar) - digitsText.length,
+        ),
+      );
+      return;
+    }
+    final grouped = _groupDigitsText(digitsText, 0);
+    final padding = _padding(grouped.length, signChar);
+    _writeLeading(sink, padding, signChar);
+    sink.writeString(grouped);
+    _writeTrailing(sink, padding);
+  }
+
+  String _groupDigitsText(String digitsText, int leadingZeros) => groupDigits(
+    leadingZeros == 0 ? digitsText : '${'0' * leadingZeros}$digitsText',
+    separator: String.fromCharCode(groupSeparator),
+    grouping: groupSize == 3 ? const [3] : const [4],
+  );
 
   void _writeLeading(CharSink sink, int padding, int signChar) {
     if (align == 0x3e) {
@@ -281,7 +368,16 @@ final class _BraceIntOp extends _BraceOp {
       );
 
   @override
-  String describe() => width < 0 ? 'int:$type' : 'int:$type:w$width';
+  String describe() {
+    final buffer = StringBuffer('int:$type');
+    if (width >= 0) buffer.write(':w$width');
+    if (groupSeparator != 0) {
+      buffer.write(':g${String.fromCharCode(groupSeparator)}$groupSize');
+      if (zeroPaddingGrouped) buffer.write('z');
+    }
+
+    return buffer.toString();
+  }
 }
 
 final class _BraceTextOp extends _BraceOp {
@@ -355,6 +451,40 @@ final class _BraceTextOp extends _BraceOp {
   }
 }
 
+/// How many digits grouped zero padding ends up with: the smallest count
+/// whose grouped length still reaches [target].
+///
+/// Grouping makes that length jump by a separator at a time, so subtracting
+/// one width from the other overshoots — `{:08,d}` of 12 is `0,000,012`,
+/// nine characters wide, not ten. The legacy path finds the count by
+/// bisection; the same count follows from the group size directly, since
+/// grouped length grows by `groupSize + 1` per whole group.
+int _fittedGroupedDigitCount(int digits, int groupSize, int target) {
+  if (target <= 0) return digits;
+  var count = (target * groupSize) ~/ (groupSize + 1);
+  if (count < digits) count = digits;
+  while (CharSink.groupedLength(count, groupSize) < target) {
+    count++;
+  }
+  while (count > digits &&
+      CharSink.groupedLength(count - 1, groupSize) >= target) {
+    count--;
+  }
+
+  return count;
+}
+
+/// Where the integer digits of an ASCII float body end: at the point, at the
+/// exponent, or at the end of the body.
+int _asciiIntegerEnd(String body) {
+  for (var index = 0; index < body.length; index++) {
+    final unit = body.codeUnitAt(index);
+    if (unit == 0x2e || unit == 0x65 || unit == 0x45) return index;
+  }
+
+  return body.length;
+}
+
 /// Writes a formatted ASCII float — optional sign, [body], optional `%` —
 /// into [sink] with the padding described by [width] (-1 for none),
 /// [fillChar] and [align].
@@ -372,10 +502,38 @@ void _writeAsciiFloatDirect(
   bool percentSuffix,
   int width,
   int fillChar,
-  int align,
-) {
-  final content =
-      body.length + (signChar == 0 ? 0 : 1) + (percentSuffix ? 1 : 0);
+  int align, {
+  int groupSeparator = 0,
+  bool zeroPaddingGrouped = false,
+}) {
+  final signWidth = signChar == 0 ? 0 : 1;
+  final suffixWidth = percentSuffix ? 1 : 0;
+  final integerEnd = groupSeparator == 0 ? 0 : _asciiIntegerEnd(body);
+  // Zero padding is grouped along with the digits, so it is not padding at
+  // all here: the digit count grows until the grouped body reaches the
+  // width, and nothing is filled around it.
+  if (groupSeparator != 0 && zeroPaddingGrouped) {
+    final target =
+        (width < 0 ? 0 : width) -
+        signWidth -
+        suffixWidth -
+        (body.length - integerEnd);
+    final digits = _fittedGroupedDigitCount(integerEnd, 3, target);
+    if (signChar != 0) sink.writeCharCode(signChar);
+    sink.writeGroupedBody(
+      body,
+      integerEnd,
+      groupSeparator,
+      3,
+      leadingZeros: digits - integerEnd,
+    );
+    if (percentSuffix) sink.writeCharCode(0x25);
+    return;
+  }
+
+  final grouped =
+      groupSeparator == 0 ? body.length : body.length + (integerEnd - 1) ~/ 3;
+  final content = grouped + signWidth + suffixWidth;
   final padding = width < 0 ? 0 : width - content;
   if (align == 0x3e) {
     sink.fill(fillChar, padding);
@@ -384,7 +542,11 @@ void _writeAsciiFloatDirect(
   }
   if (signChar != 0) sink.writeCharCode(signChar);
   if (align == 0x3d) sink.fill(fillChar, padding);
-  sink.writeString(body);
+  if (groupSeparator == 0) {
+    sink.writeString(body);
+  } else {
+    sink.writeGroupedBody(body, integerEnd, groupSeparator, 3);
+  }
   if (percentSuffix) sink.writeCharCode(0x25);
   if (align == 0x3c) {
     sink.fill(fillChar, padding);
@@ -413,6 +575,11 @@ final class _BraceDoubleOp extends _BraceOp {
   final int align;
   final bool uppercase; // 'E' 'F' 'G' spell their bodies in upper case
   final bool dartPrecisionRejected; // see _rejectsDartDoublePrecision
+  final int groupSeparator; // 0 none, else ',' or '_'
+
+  /// Whether zero padding is grouped with the integer digits rather than
+  /// filled between the sign and them — `{:012,.2f}`.
+  final bool zeroPaddingGrouped;
 
   const _BraceDoubleOp({
     required this.field,
@@ -431,6 +598,8 @@ final class _BraceDoubleOp extends _BraceOp {
     required this.align,
     required this.uppercase,
     required this.dartPrecisionRejected,
+    this.groupSeparator = 0,
+    this.zeroPaddingGrouped = false,
   });
 
   @override
@@ -527,6 +696,10 @@ final class _BraceDoubleOp extends _BraceOp {
       width,
       fillChar,
       align,
+      // `nan` and `inf` have no digits to group, and the legacy display
+      // returns such a body untouched.
+      groupSeparator: formatted.special ? 0 : groupSeparator,
+      zeroPaddingGrouped: zeroPaddingGrouped,
     );
   }
 
@@ -543,6 +716,11 @@ final class _BraceDoubleOp extends _BraceOp {
     final buffer = StringBuffer('double:${type ?? '-'}');
     if (width >= 0) buffer.write(':w$width');
     if (precision != null) buffer.write(':p$precision');
+    if (groupSeparator != 0) {
+      buffer.write(':g${String.fromCharCode(groupSeparator)}');
+      if (zeroPaddingGrouped) buffer.write('z');
+    }
+
     return buffer.toString();
   }
 }
@@ -589,6 +767,11 @@ _BraceDoubleOp _buildBraceDoubleOp(
   align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
   uppercase: spec.type == 'E' || spec.type == 'F' || spec.type == 'G',
   dartPrecisionRejected: _rejectsDartDoublePrecision(spec.type, spec.precision),
+  groupSeparator: spec.grouping == null ? 0 : spec.grouping!.codeUnitAt(0),
+  zeroPaddingGrouped:
+      spec.grouping != null &&
+      (spec.align ?? (spec.zero ? '=' : '>')) == '=' &&
+      (spec.fill ?? (spec.zero ? '0' : ' ')) == '0',
 );
 
 /// Probes `_validateDartDoublePrecision` once, at compile time: its verdict
@@ -614,10 +797,21 @@ bool _rejectsDartDoublePrecision(String? type, int? precision) {
 /// must keep its legacy per-call error, which the op never raises. The
 /// validator is probed instead of copied so its rules cannot drift away
 /// from the classifier (same pattern as _rejectsDartDoublePrecision).
-bool _rejectsHotDouble(_FormatSpec spec) {
-  if (spec.grouping != null || spec.fractionalGrouping != null) {
+/// True for integer specifications the int op cannot write directly. Only
+/// the validator's own verdict, probed once at compile time: every rejection
+/// it raises is a per-call error the op does not reproduce.
+bool _rejectsHotInteger(_FormatSpec spec, String type) {
+  try {
+    _validateIntegerSpec(spec, type, const FormatExceptionContext());
+    return false;
+  } on FormattingException {
     return true;
   }
+}
+
+bool _rejectsHotDouble(_FormatSpec spec) {
+  // Grouping inside the fraction regroups a part the op writes through.
+  if (spec.fractionalGrouping != null) return true;
   try {
     _validateDoubleSpec(spec, spec.type, const FormatExceptionContext());
     return false;
@@ -667,14 +861,13 @@ _BraceOp? _classifyBraceField(
     );
   }
   switch (spec.type) {
-    case 'd' || 'b' || 'o' || 'x' || 'X':
-      if (spec.grouping != null ||
-          spec.precision != null ||
-          spec.fractionalGrouping != null ||
-          spec.normalizeNegativeZero) {
-        return null;
-      }
+    case 'd' || 'b' || 'o' || 'x' || 'X' || 'n':
       final type = spec.type!;
+      // Anything the validator rejects keeps its legacy per-call error,
+      // which the op never raises. Probed rather than copied, so the rules
+      // stay in one place (same pattern as _rejectsHotDouble).
+      if (_rejectsHotInteger(spec, type)) return null;
+      final grouping = spec.grouping;
       return _BraceIntOp(
         field: field,
         argumentIndex: argumentIndex,
@@ -683,7 +876,7 @@ _BraceOp? _classifyBraceField(
         radix: switch (type) {
           'b' => 2,
           'o' => 8,
-          'd' => 10,
+          'd' || 'n' => 10,
           _ => 16,
         },
         uppercase: type == 'X',
@@ -697,6 +890,13 @@ _BraceOp? _classifyBraceField(
         fillChar: (spec.fill ?? (spec.zero ? '0' : ' ')).codeUnitAt(0),
         align: (spec.align ?? (spec.zero ? '=' : '>')).codeUnitAt(0),
         type: type,
+        groupSeparator: grouping == null ? 0 : grouping.codeUnitAt(0),
+        groupSize: type == 'd' ? 3 : 4,
+        localeSpec: type == 'n' ? spec : null,
+        zeroPaddingGrouped:
+            grouping != null &&
+            (spec.align ?? (spec.zero ? '=' : '>')) == '=' &&
+            (spec.fill ?? (spec.zero ? '0' : ' ')) == '0',
       );
     // 'n' is deliberately absent: locale-aware doubles stay on fallback.
     case 'f' || 'F' || 'e' || 'E' || 'g' || 'G' || '%':

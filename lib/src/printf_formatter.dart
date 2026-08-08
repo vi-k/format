@@ -305,30 +305,80 @@ String _displayPrintfHexBody(
   NumberLocale locale,
   FormatExceptionContext context,
 ) {
-  final match = RegExp(
-    r'^([0-9a-fA-F]+)(?:\.([0-9a-fA-F]*))?([pP])([+-])(\d+)$',
-  ).firstMatch(body);
-  if (match == null) {
+  final exponentStart = _hexadecimalExponentStart(body);
+  if (exponentStart < 0) {
     throw StateError('Invalid internal hexadecimal float: $body');
   }
-  final integer = _localizeAsciiRuns(match.group(1)!, locale, context);
-  final fraction = match.group(2);
-  final point =
-      fraction == null
-          ? ''
-          : _readLocale(context, () => locale.decimalSeparator);
-  final displayedFraction =
-      fraction == null ? '' : _localizeAsciiRuns(fraction, locale, context);
-  final exponentNegative = match.group(4) == '-';
-  final exponentSign = _localizedSign(exponentNegative, '+', locale, context);
-  final exponentDigits = _readLocale(
+  // Under the C locale every part below maps to itself, and the body is this
+  // package's own output: taking it apart and putting it back returns the
+  // same string. The shape check above still runs, so a body that is not
+  // what this package writes still fails the same way.
+  if (identical(locale, const CNumberLocale())) return body;
+
+  final mantissa = body.substring(0, exponentStart);
+  final point = mantissa.indexOf('.');
+  final integer = _localizeAsciiRuns(
+    point < 0 ? mantissa : mantissa.substring(0, point),
+    locale,
     context,
-    () => locale.localizeDigits(match.group(5)!),
   );
+  final displayedPoint =
+      point < 0 ? '' : _readLocale(context, () => locale.decimalSeparator);
+  final displayedFraction =
+      point < 0
+          ? ''
+          : _localizeAsciiRuns(mantissa.substring(point + 1), locale, context);
+  final exponentDigits = body.substring(exponentStart + 2);
+  final exponentSign = _localizedSign(
+    body.codeUnitAt(exponentStart + 1) == 0x2d,
+    '+',
+    locale,
+    context,
+  );
+
   return integer +
-      point +
+      displayedPoint +
       displayedFraction +
-      match.group(3)! +
+      body[exponentStart] +
       exponentSign +
-      exponentDigits;
+      _readLocale(context, () => locale.localizeDigits(exponentDigits));
 }
+
+/// The index of the `p` or `P` in [_formatHexadecimal] output, or -1 when
+/// [body] is not that shape: hexadecimal digits, an optional `.` with more
+/// of them, then the marker, a sign, and decimal digits.
+int _hexadecimalExponentStart(String body) {
+  var index = body.length;
+  while (index > 0 && _isAsciiDigitUnit(body.codeUnitAt(index - 1))) {
+    index--;
+  }
+  // A marker, a sign, and at least one digit each side of them.
+  if (index == body.length || index < 3) return -1;
+  final sign = body.codeUnitAt(index - 1);
+  if (sign != 0x2b && sign != 0x2d) return -1;
+  final marker = body.codeUnitAt(index - 2);
+  if (marker != 0x70 && marker != 0x50) return -1;
+
+  final mantissaEnd = index - 2;
+  var digits = 0;
+  var points = 0;
+  for (var scan = 0; scan < mantissaEnd; scan++) {
+    final unit = body.codeUnitAt(scan);
+    if (unit == 0x2e) {
+      // At most one point, and never before the first digit.
+      if (points > 0 || digits == 0) return -1;
+      points++;
+    } else if (_isHexadecimalDigitUnit(unit)) {
+      digits++;
+    } else {
+      return -1;
+    }
+  }
+
+  return digits == 0 ? -1 : mantissaEnd;
+}
+
+bool _isHexadecimalDigitUnit(int codeUnit) =>
+    _isAsciiDigitUnit(codeUnit) ||
+    (codeUnit >= 0x61 && codeUnit <= 0x66) ||
+    (codeUnit >= 0x41 && codeUnit <= 0x46);

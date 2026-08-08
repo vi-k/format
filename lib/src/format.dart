@@ -25,6 +25,13 @@ final class Format {
   final List<Representation<dynamic>> representations;
 
   /// Number symbols and grouping rules; the C locale by default.
+  ///
+  /// A [CNumberLocale] argument is stored as the canonical constant. The
+  /// class is stateless and `final`, so every instance of it means the same
+  /// thing, while the compiled printf path recognizes the default locale by
+  /// identity — writing `CNumberLocale()` without `const` would otherwise
+  /// cost every `%f`, `%e`, and `%g` a fallback to the uncompiled path, with
+  /// no visible difference in output to explain it.
   final NumberLocale numberLocale;
 
   /// The unit in which widths and precisions measure text.
@@ -44,11 +51,13 @@ final class Format {
     Iterable<Formatter<dynamic>> formatters = const [],
     Iterable<AttributeLookup<dynamic>> lookups = const [],
     Iterable<Representation<dynamic>> representations = const [],
-    this.numberLocale = const CNumberLocale(),
+    NumberLocale numberLocale = const CNumberLocale(),
     this.textUnit = TextUnit.unicodeScalars,
     this.doubleFormatMode = DoubleFormatMode.dartSdk,
     this.doubleSpecialValueSpelling = DoubleSpecialValueSpelling.dartSdk,
-  }) : formatters = List.unmodifiable(formatters),
+  }) : numberLocale =
+           numberLocale is CNumberLocale ? const CNumberLocale() : numberLocale,
+       formatters = List.unmodifiable(formatters),
        lookups = List.unmodifiable(lookups),
        representations = List.unmodifiable(representations) {
     // Every specifier is read exactly once, here: the getter is user code,

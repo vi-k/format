@@ -39,9 +39,12 @@ export 'errors.dart'
 
 // NumberLocale is part of the same seam surface: the template-IR
 // differential tests build an engine on a deliberately non-default locale to
-// prove the hot double ops hand such engines back to the legacy tail (it is
-// also separately exported by the public `format.dart` library).
-export 'number_locale.dart' show NumberLocale;
+// prove the hot double ops hand such engines back to the legacy tail. The
+// C locale comes with it, because those tests also build an engine on a
+// non-const instance of it, which the constructor canonicalizes — the case
+// that decides whether `n` and the printf doubles take their hot path (both
+// are also separately exported by the public `format.dart` library).
+export 'number_locale.dart' show CNumberLocale, NumberLocale;
 
 // TextUnit is part of the internal template-IR test seam surface: seam
 // tests reach it via `package:format/src/engine.dart` alone, so it must be

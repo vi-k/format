@@ -61,7 +61,7 @@ void _validateDartDoublePrecision(
 
 String _ensureDartDecimalPoint(String body) {
   if (body.contains('.')) return body;
-  final exponent = body.indexOf(RegExp('[eE]'));
+  final exponent = _exponentMarkerIndex(body);
   if (exponent < 0) return '$body.';
   return '${body.substring(0, exponent)}.${body.substring(exponent)}';
 }
