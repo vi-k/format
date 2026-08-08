@@ -177,19 +177,41 @@ void main() {
     }
   });
 
-  test('rejects overflowing numeric options as typed invalid formats', () {
+  test('defers overflowing numeric options to the same refusal', () {
+    // An option too long to be an int is not a different failure from one
+    // merely past the safety ceiling, and on the web it cannot be told
+    // apart: an int is a double there, so the parse rounds instead of
+    // failing. The parser therefore accepts the grammar and the formatter
+    // refuses the option — which is what `%100001d` already did on both
+    // platforms, and what a `%*d` resolved to the same size does.
     final enormous = '9' * 2000;
-    for (final template in ['%${enormous}d', '%.${enormous}d']) {
-      try {
-        debugParsePrintfTemplate(template);
-        fail('Expected InvalidFormatException.');
-      } on InvalidFormatException catch (error) {
-        expect(error.context.template, template);
-        expect(error.context.offset, 0);
-        expect(error.context.fragment, template);
-        expect(error.context.specifier, 'd');
-        expect(error.context.conversion, 'd');
-      }
+    for (final entry in [
+      (template: '%${enormous}d', role: 'width'),
+      (template: '%.${enormous}d', role: 'precision'),
+    ]) {
+      expect(
+        () => debugParsePrintfTemplate(entry.template),
+        returnsNormally,
+        reason: entry.template,
+      );
+      expect(
+        () => sprintf(entry.template, 1),
+        throwsA(
+          isA<InvalidSpecifierException>()
+              .having(
+                (error) => error.context.specifier,
+                'specifier',
+                entry.role,
+              )
+              .having((error) => error.context.conversion, 'conversion', 'd')
+              .having(
+                (error) => error.context.template,
+                'template',
+                entry.template,
+              ),
+        ),
+        reason: entry.template,
+      );
     }
   });
 
