@@ -44,23 +44,80 @@ Use doubled braces to emit literal braces:
 format('{{value}} = {0}', 42); // {value} = 42
 ```
 
-Formatting width uses Unicode scalar values by default. Configure grapheme
-clusters when emoji and combined characters should align as one visible
-character:
+## Text formatting
+
+Fill, alignment, and width apply to whatever the placeholder produced, and
+precision truncates text rather than rounding it:
+
+```dart
+format('{:>8s}', 'hi');     //       hi
+format('{:.3s}', 'abcdef'); // abc
+```
+
+Zero padding is a numeric option, so a text specification rejects it instead
+of quietly padding with zeros:
+
+```dart
+format('{:05s}', 'abc');  // throws InvalidSpecifierException
+```
+
+Width and precision are read as ASCII digits. Other Unicode digits are a
+specification error, though they remain usable in a field index or key, where
+they name an argument rather than a count:
+
+```dart
+format('{:٥d}', 1);                        // throws InvalidSpecifierException
+formatWith('{٠}', positional: ['first']);  // first
+```
+
+## Character values
+
+The `c` conversion turns a number into the character it encodes, in both
+mini-languages:
+
+```dart
+format('{:c}', 0x41);  // A
+sprintf('%c', 0x41);   // A
+```
+
+The value must be a Unicode scalar. A lone surrogate or a value above
+`0x10FFFF` is rejected rather than producing a broken string, and zero padding
+is a numeric option here too:
+
+```dart
+format('{:c}', 0xD800);    // throws UnsupportedFormatValueException
+format('{:c}', 0x110000);  // throws UnsupportedFormatValueException
+format('{:05c}', 0x41);    // throws InvalidSpecifierException
+```
+
+## Unicode text units
+
+Width and precision count Unicode scalar values by default. Configure grapheme
+clusters when emoji and combined characters should count as one visible
+character each:
 
 ```dart
 final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
-graphemeFormat.format('{:🇰🇿^13s}', 'Қазақстан');
+
+format('{:.3s}', '👩‍👩‍👧‍👦ab');              // 👩‍👩  — three scalars
+graphemeFormat.format('{:.3s}', '👩‍👩‍👧‍👦ab');  // 👩‍👩‍👧‍👦ab — three clusters
+graphemeFormat.format('{:*<5s}', '👩‍👩‍👧‍👦');   // 👩‍👩‍👧‍👦****
 ```
 
-The optional [`format_intl`](https://pub.dev/packages/format_intl) package
-adapts `intl` locale data without adding `intl` to this package's dependencies:
+The unit also decides what counts as a single fill character, so a multi-scalar
+fill needs the grapheme mode:
 
 ```dart
-import 'package:format_intl/format_intl.dart';
+graphemeFormat.format('{:🇰🇿^13s}', 'Қазақстан');  // 🇰🇿🇰🇿Қазақстан🇰🇿🇰🇿
+format('{:🇰🇿^13s}', 'Қазақстан');                // throws InvalidSpecifierException
+```
 
-final kazakh = Format(numberLocale: IntlNumberLocale('kk_KZ'));
-kazakh.format('{:.8n}', 123456.789);
+`TextUnitOperations` exposes the same measurement the engine uses, for code
+that needs to lay out text alongside it:
+
+```dart
+TextUnit.graphemeClusters.length('👩‍👩‍👧‍👦ab');  // 3
+TextUnit.unicodeScalars.length('👩‍👩‍👧‍👦ab');    // 9
 ```
 
 ## Double formatting profiles
@@ -148,6 +205,31 @@ to a C machine width. A configured `NumberLocale`, including one supplied by
 `format_intl`, may localize signs, separators, and digits beyond the normative
 `LC_ALL=C` compatibility profile.
 
+## Number locales
+
+The `n` presentation type and the `,`/`_` grouping flags read a `NumberLocale`.
+The default is the C locale, which groups with `,`, separates decimals with
+`.`, and leaves `n` ungrouped:
+
+```dart
+format('{:,.2f}', 1234567.5);  // 1,234,567.50
+format('{:n}', 1234567);       // 1234567
+```
+
+Implement `NumberLocale` for a locale of your own, or use the optional
+[`format_intl`](https://pub.dev/packages/format_intl) package, which adapts
+`intl` locale data without adding `intl` to this package's dependencies:
+
+```dart
+import 'package:format_intl/format_intl.dart';
+
+final kazakh = Format(numberLocale: IntlNumberLocale('kk_KZ'));
+kazakh.format('{:.8n}', 123456.789);
+```
+
+A locale may localize signs, separators, and digits beyond what the C locale
+core specifies; the compatibility fixtures pin only the C locale behavior.
+
 ## Custom formatters
 
 Implement `Formatter<T>`, then provide it to an immutable `Format` instance:
@@ -172,11 +254,89 @@ jsonFormat.format('{:json}', <String, Object?>{'answer': 42});
 Custom specifiers must match `[A-Za-z][A-Za-z0-9_]*`. Built-in names are
 reserved. For a placeholder without an explicit specifier, built-in types take
 priority, followed by a unique matching custom formatter, then `toString()`.
-Multiple custom matches throw `AmbiguousFormatterException`.
+A formatter is therefore never consulted for a value the engine already
+renders: one that accepts everything still leaves `{}` on a `String` or an
+`int` to the built-in path, and only an explicit `{:name}` reaches such a
+value. When two formatters accept the same value and the placeholder names
+neither, the engine throws `AmbiguousFormatterException` rather than picking
+one.
 
 Width, fill, and alignment are applied by the engine after a custom formatter
 returns, while `FormatOptions` provides sign, alternate form, zero, grouping,
-precision, and the optional additional template.
+precision, and the optional additional template. That template is the text
+after a second `:`; the formatter reads it from `FormatOptions.payload` and
+interprets it however it likes:
+
+```dart
+jsonFormat.format('{:json:pretty}', <String, Object?>{'answer': 42});
+// JsonFormatter.format receives options.payload == 'pretty'
+```
+
+### Attribute lookup
+
+Dart has no reflection, so `{value.attribute}` resolves only through a
+registered `AttributeLookup`. Without one, the engine throws
+`FormatLookupException`:
+
+```dart
+final class PointLookup extends AttributeLookup<Point> {
+  @override
+  bool canLookup(Object? value) => value is Point;
+
+  @override
+  Object? lookup(Point value, String attribute) => switch (attribute) {
+    'x' => value.x,
+    _ => throw ArgumentError.value(attribute, 'attribute'),
+  };
+}
+
+final pointFormat = Format(lookups: [PointLookup()]);
+pointFormat.formatWith('{p.x}', named: {'p': const Point(7)});  // 7
+```
+
+A `Map` is the exception: `{value.name}` on a map is a shorthand for the
+string key `'name'`, resolved before any lookup is consulted, so a lookup that
+accepts maps is never called for one.
+
+```dart
+formatWith('{value.name}', named: {
+  'value': {'name': 'Ada'},
+});  // Ada
+```
+
+### Custom representations
+
+Implement `Representation<T>` to give a type its own `!r` and `!a` form.
+Built-in representations take priority the same way built-in formatters do,
+and `!a` escapes non-ASCII characters in whatever the representation returned:
+
+```dart
+final class MoneyRepresentation extends Representation<Money> {
+  @override
+  bool canRepresent(Object? value) => value is Money;
+
+  @override
+  String represent(Money value) => '${value.cents}¢';
+}
+
+final moneyRepr = Format(representations: [MoneyRepresentation()]);
+moneyRepr.format('{!r}', const Money(250));  // 250¢
+moneyRepr.format('{!a}', const Money(250));  // 250\xa2
+```
+
+### Failures inside an extension
+
+Anything an extension throws is caught and rethrown as
+`FormatExtensionException`, which carries the original `error` and
+`stackTrace` along with the template location. The exception to that is a
+`FormattingException`: an extension reporting a failure in the engine's own
+vocabulary has it passed through unchanged.
+
+Errors Dart raises on the extension's behalf are wrapped the same way. A
+`canFormat` that accepts a value of the wrong type produces a `TypeError` when
+the engine calls `format`, and an extension that formats by calling the engine
+again on the same value produces a `StackOverflowError` — both arrive as
+`FormatExtensionException` rather than escaping the engine raw.
 
 ## JavaScript number semantics
 
@@ -191,10 +351,65 @@ remains a separate value kind on every platform.
 ## Representations
 
 The `!r` conversion produces a Dart-oriented representation, while `!a` also
-escapes non-ASCII characters. Nested `double` values follow the selected double
-profile and special-value spelling. Empty `Map` and `Set` values are both
-represented as `{}`. This ambiguity is intentional: non-empty values remain
-distinguishable by their entries.
+escapes non-ASCII characters. Both are implemented by this package rather than
+delegated to the value: there is no Dart equivalent of the Python object
+protocol to call.
+
+```dart
+format('{0!r} {0!a}', 'строка');
+// 'строка' '\u0441\u0442\u0440\u043e\u043a\u0430'
+```
+
+Values are spelled with their Dart tokens, and a container keeps the iteration
+order of the collection it came from rather than being reordered:
+
+```dart
+format('{} {} {}', true, false, null);  // true false null
+format('{!r}', {'b': 1, 'a': 2});       // {'b': 1, 'a': 2}
+format('{!r}', {'b', 'a'});             // {'b', 'a'}
+```
+
+Nested `double` values follow the selected double profile and special-value
+spelling. Empty `Map` and `Set` values are both represented as `{}`. This
+ambiguity is intentional: non-empty values remain distinguishable by their
+entries.
+
+## Template cache
+
+Parsed templates are cached, which is what makes repeated formatting cheap:
+in the package's own benchmark a first call costs roughly two to three times a
+cached one, depending on the mini-language. The cache is bounded, because
+templates can come from data and an unbounded cache would be an unbounded
+leak.
+
+```dart
+templateCacheCapacity;    // 512 by default, per mini-language
+templateCacheSize;        // how many parsed templates are resident
+clearTemplateCache();     // discard them all
+```
+
+The capacity is per isolate and shared by every `Format` instance — a parsed
+template does not depend on the engine that parsed it. Raise it when the
+working set is larger than the default and templates repeat; a set that cycles
+past the capacity keeps roughly `capacity / size` of itself resident, because
+a full cache evicts at random rather than in order.
+
+Set it to zero when templates are generated and never repeat, so that caching
+would only pay to evict:
+
+```dart
+templateCacheCapacity = 0;  // discards what is cached, and keeps nothing
+```
+
+`templateCacheSize` tells "the cache is too small for this workload" apart
+from "this workload never repeats a template", which otherwise look alike from
+the outside. To see the difference the cache makes on the current machine, the
+benchmark measures every case with it on and off:
+
+```console
+cd benchmark/suite
+dart run bin/benchmark.dart
+```
 
 ## Format 3.0 migration
 
