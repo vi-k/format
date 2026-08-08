@@ -18,6 +18,12 @@ unpublished 2.0.0 below.
 * Represent empty Dart `Map` and `Set` values as `{}`.
 * Added immutable `Format` instances with configurable custom formatters,
   lookups, representations, number locales, and Unicode text units.
+* Bounded the template cache by template text as well as by entry count:
+  `templateCacheCharacterLimit` (about a million characters by default, roughly
+  5.7 MiB of retained memory) and `templateCacheCharacters` join
+  `templateCacheCapacity` and `templateCacheSize`. Whichever bound binds first
+  evicts, a template larger than the whole budget is formatted but not cached,
+  and lowering either bound discards entries immediately.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Cache parsed templates, and expose `templateCacheCapacity`,
