@@ -466,24 +466,55 @@ String _pythonShortestDouble(double value) {
   return sign + _formatShortest(value, false).body;
 }
 
+/// Splits the Dart `toString()` of a non-negative double into significant
+/// digits and a decimal exponent.
+///
+/// The scan reads code units rather than matching patterns. `indexOf` with a
+/// `RegExp` runs the matcher at every position of the string, and this input
+/// needs no matcher: it is `double.toString()`, so digits, at most one `.`,
+/// and an optional `e`/`E` with a signed exponent, all ASCII.
 _ShortestDecimal _parseShortest(String source) {
-  final exponentIndex = source.indexOf(RegExp('[eE]'));
-  final mantissa =
-      exponentIndex < 0 ? source : source.substring(0, exponentIndex);
+  var exponentIndex = -1;
+  var point = -1;
+  var first = -1;
+  for (var index = 0; index < source.length; index++) {
+    final unit = source.codeUnitAt(index);
+    if (unit == 0x65 || unit == 0x45) {
+      exponentIndex = index;
+      break;
+    }
+    if (unit == 0x2e) {
+      point = index;
+    } else if (first < 0 && unit > 0x30 && unit <= 0x39) {
+      first = index;
+    }
+  }
+  if (first < 0) return const _ShortestDecimal('0', 0);
+
+  final mantissaEnd = exponentIndex < 0 ? source.length : exponentIndex;
+  // Trailing zeros carry nothing, and once they reach back past the point
+  // the point goes with them: `100.0` is one digit with an exponent of two.
+  var end = mantissaEnd;
+  while (end > first + 1) {
+    final unit = source.codeUnitAt(end - 1);
+    if (unit != 0x30 && unit != 0x2e) break;
+    end--;
+  }
+
+  // The point only has to be cut out when significant digits straddle it.
+  final digits =
+      point < first || point >= end
+          ? source.substring(first, end)
+          : source.substring(first, point) + source.substring(point + 1, end);
+  // Counted without the point, which is what the exponent is relative to.
+  final firstDigit = point >= 0 && point < first ? first - 1 : first;
+  final decimalPosition = point < 0 ? mantissaEnd : point;
   final externalExponent =
       exponentIndex < 0 ? 0 : int.parse(source.substring(exponentIndex + 1));
-  final point = mantissa.indexOf('.');
-  final decimalPosition = point < 0 ? mantissa.length : point;
-  final rawDigits = mantissa.replaceAll('.', '');
-  final first = rawDigits.indexOf(RegExp('[1-9]'));
-  if (first < 0) return const _ShortestDecimal('0', 0);
-  var digits = rawDigits.substring(first);
-  while (digits.length > 1 && digits.endsWith('0')) {
-    digits = digits.substring(0, digits.length - 1);
-  }
+
   return _ShortestDecimal(
     digits,
-    decimalPosition - first - 1 + externalExponent,
+    decimalPosition - firstDigit - 1 + externalExponent,
   );
 }
 
@@ -516,6 +547,40 @@ String _asciiExponent(String character, int exponent) {
   return '$character$sign$digits';
 }
 
+bool _isAsciiDigitUnit(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x39;
+
+/// The index of the `e` or `E` in an ASCII float body, or -1.
+///
+/// Only ever asked about text the engine or the Dart SDK produced, where a
+/// scan is the whole job; `indexOf` with a `RegExp` would start a matcher at
+/// every position instead.
+int _exponentMarkerIndex(String body) {
+  for (var index = 0; index < body.length; index++) {
+    final unit = body.codeUnitAt(index);
+    if (unit == 0x65 || unit == 0x45) return index;
+  }
+
+  return -1;
+}
+
+/// Where the trailing `e+12`-shaped exponent of [body] starts, or -1.
+///
+/// [_asciiExponent] writes the marker, a sign, and digits, in that order, at
+/// the end of the body, so reading it back is a scan from the end.
+int _trailingExponentStart(String body) {
+  var index = body.length;
+  while (index > 0 && _isAsciiDigitUnit(body.codeUnitAt(index - 1))) {
+    index--;
+  }
+  if (index == body.length || index < 2) return -1;
+  final sign = body.codeUnitAt(index - 1);
+  if (sign != 0x2b && sign != 0x2d) return -1;
+  final marker = body.codeUnitAt(index - 2);
+  if (marker != 0x65 && marker != 0x45) return -1;
+
+  return index - 2;
+}
+
 String _displayFloatBody(
   String body,
   // ignore: library_private_types_in_public_api
@@ -535,9 +600,8 @@ String _displayFloatBody(
         suffix;
   }
 
-  final exponentMatch = RegExp(r'([eE])([+-])(\d+)$').firstMatch(body);
-  final mantissa =
-      exponentMatch == null ? body : body.substring(0, exponentMatch.start);
+  final exponentStart = _trailingExponentStart(body);
+  final mantissa = exponentStart < 0 ? body : body.substring(0, exponentStart);
   final point = mantissa.indexOf('.');
   var integer = point < 0 ? mantissa : mantissa.substring(0, point);
   var fraction = point < 0 ? '' : mantissa.substring(point + 1);
@@ -587,26 +651,23 @@ String _displayFloatBody(
     }
   }
   var displayed = integer + decimalSeparator + fraction;
-  if (exponentMatch != null) {
+  if (exponentStart >= 0) {
+    final marker = body[exponentStart];
+    final signCharacter = body[exponentStart + 1];
+    final digits = body.substring(exponentStart + 2);
     var exponentSeparator =
         locale == null
-            ? exponentMatch.group(1)!
+            ? marker
             : _readLocale(context, () => locale.exponentSeparator);
-    if (exponentMatch.group(1) == 'E') {
-      exponentSeparator = exponentSeparator.toUpperCase();
-    }
-    final exponentNegative = exponentMatch.group(2) == '-';
+    if (marker == 'E') exponentSeparator = exponentSeparator.toUpperCase();
     final exponentSign =
         locale == null
-            ? exponentMatch.group(2)!
-            : _localizedSign(exponentNegative, '+', locale, context);
+            ? signCharacter
+            : _localizedSign(signCharacter == '-', '+', locale, context);
     final exponentDigits =
         locale == null
-            ? exponentMatch.group(3)!
-            : _readLocale(
-              context,
-              () => locale.localizeDigits(exponentMatch.group(3)!),
-            );
+            ? digits
+            : _readLocale(context, () => locale.localizeDigits(digits));
     displayed += exponentSeparator + exponentSign + exponentDigits;
   }
   return displayed + suffix;
@@ -627,13 +688,21 @@ String _localizeAsciiRuns(
 ) {
   final output = StringBuffer();
   var start = 0;
-  for (final match in RegExp(r'\d+').allMatches(value)) {
+  var index = 0;
+  while (index < value.length) {
+    if (!_isAsciiDigitUnit(value.codeUnitAt(index))) {
+      index++;
+      continue;
+    }
+    final run = index;
+    while (index < value.length && _isAsciiDigitUnit(value.codeUnitAt(index))) {
+      index++;
+    }
+    final digits = value.substring(run, index);
     output
-      ..write(value.substring(start, match.start))
-      ..write(
-        _readLocale(context, () => locale.localizeDigits(match.group(0)!)),
-      );
-    start = match.end;
+      ..write(value.substring(start, run))
+      ..write(_readLocale(context, () => locale.localizeDigits(digits)));
+    start = index;
   }
   return (output..write(value.substring(start))).toString();
 }
