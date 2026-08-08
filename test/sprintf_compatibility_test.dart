@@ -5,6 +5,7 @@ import 'package:format/format.dart';
 import 'package:test/test.dart';
 
 import 'support/fixture_value.dart';
+import 'support/markdown_anchors.dart';
 
 void main() {
   final compatibleFormat = Format(
@@ -70,7 +71,10 @@ void main() {
     expect(ids.toSet(), hasLength(ids.length));
     expect(ids, containsAll(_requiredDivergenceIds));
     expect(anchors, {'#sprintf'});
-    expect(await File('README.md').readAsString(), contains('\n## sprintf\n'));
+    expect(
+      markdownAnchors(await File('README.md').readAsString()),
+      containsAll(anchors),
+    );
 
     expect(documentedDartErrors.keys, unorderedEquals(_executableErrors.keys));
     for (final entry in _executableErrors.entries) {
