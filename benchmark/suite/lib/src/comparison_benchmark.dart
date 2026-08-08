@@ -47,9 +47,10 @@ void runComparisonBenchmark({
   emit('template cache switched off, so it parses every time — which is what');
   emit('a comparator does anyway, having no cache of its own.');
   emit('');
-  emit('Each row is scaled against format 1.6 on the same values: x2.00');
-  emit('means twice as fast as it, x0.50 half as fast. A row says OK instead');
-  emit('when format 1.6 has no figure to scale against.');
+  emit('Each row is scaled against format 1.6 on the same values, which');
+  emit('shows as itself: ×2.00 / 50% is twice as fast as it, ×0.50 / 200%');
+  emit('half as fast. A row says OK instead when format 1.6 has no figure');
+  emit('to scale against.');
 
   final stopwatch = Stopwatch()..start();
   for (final scenario in benchmarkScenarios) {
@@ -148,25 +149,31 @@ final class _Row {
   });
 
   String render(double? reference) {
+    final label = isReference ? h1(name) : accent(name);
     final time = score;
     if (time == null) {
-      return failure == null
-          ? '${accent(name)}: —'
-          : '${accent(name)}: <- $failure';
+      return failure == null ? '$label: —' : '$label: <- $failure';
     }
 
-    return '${accent(name)}:'
+    return '$label:'
         ' ${format('{:.3f}', time)} µs'
         ' <- ${failure ?? _scale(time, reference)}';
   }
 
   String _scale(double time, double? reference) {
-    if (isReference) return faintAccent('reference');
     // Nothing to scale against, so the row falls back to saying what it
     // still knows: the output was the expected one.
     if (reference == null || time <= 0) return ok('OK');
     final factor = reference / time;
-    final text = 'x${format('{:.2f}', factor)}';
+    final percent = time / reference * 100;
+    final text =
+        '×${format('{:.2f}', factor)}'
+        // A tenth of a percent matters where the row is a fraction of the
+        // reference and says nothing where it is a multiple of it.
+        ' / ${format(percent < 10 ? '{:.1f}' : '{:.0f}', percent)}%';
+    // The reference is neither fast nor slow, and it reads as itself: the
+    // trivial row, in the colour that marks it everywhere else.
+    if (isReference) return h1(text);
 
     return factor >= 1 ? ok(text) : warning(text);
   }
