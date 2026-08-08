@@ -2,12 +2,8 @@ import 'dart:math';
 
 import 'package:format/format.dart';
 
-import 'benchmark_cold.dart';
-import 'benchmark_format16_format.dart';
-import 'benchmark_format30_format.dart';
-import 'benchmark_format30_sprintf.dart';
-import 'benchmark_sprintf70.dart';
 import 'double_modes_benchmark.dart' show BenchmarkLineWriter;
+import 'formatter_benchmark.dart';
 import 'my_benchmark_base.dart';
 import 'tests/tests.dart';
 import 'utils/output.dart';
@@ -31,25 +27,18 @@ void runComparisonBenchmark({
 }) {
   final resolved = durations ?? parseBenchmarkArgs(args);
   final emit = writeLine ?? print;
+  // One list, warm and no-cache together: each measurement sets the cache
+  // mode it needs, so the order here is presentation, not a dependency.
+  // Only format 3.0 keeps parsed templates, so only format 3.0 has a second
+  // number — a comparator parses on every call anyway, and printing its
+  // figure twice would say the same thing under two headings.
   final benchmarks = [
-    BenchmarkFormat16Format(),
-    BenchmarkFormat30Format(),
-    BenchmarkFormat30Sprintf(),
-    BenchmarkSprintf70(),
+    for (final engine in benchmarkEngines) ...[
+      FormatterBenchmark(engine),
+      if (engine.hasTemplateCache) FormatterBenchmark(engine, cached: false),
+    ],
   ];
   for (final benchmark in benchmarks) {
-    benchmark.durations = resolved;
-  }
-
-  // Only format 3.0 caches parsed templates, so only format 3.0 has two
-  // numbers to report. A comparator parses on every call by construction, and
-  // its single figure already is a first parse — measuring it twice would
-  // print the same number under two headings.
-  final coldBenchmarks = [
-    BenchmarkFormat30ColdFormat(),
-    BenchmarkFormat30ColdSprintf(),
-  ];
-  for (final benchmark in coldBenchmarks) {
     benchmark.durations = resolved;
   }
 
@@ -93,28 +82,6 @@ void runComparisonBenchmark({
                 '\n  expected: ${difference.$1}'
                 '\n  actual:   ${difference.$2}';
           }
-          emit(
-            '${accent(benchmark.name)}:'
-            ' ${format('{:.3f}', score)} µs'
-            ' <- $message',
-          );
-        } on Object catch (errorValue) {
-          emit(
-            '${accent(benchmark.name)}:'
-            ' <- ${accentError('ERROR')}'
-            '\n${error(errorValue.toString())}',
-          );
-        }
-      }
-
-      for (final benchmark in coldBenchmarks) {
-        final template =
-            benchmark.isSprintf ? scenario.sprintf : scenario.brace;
-        if (template == null) continue;
-        try {
-          final score = benchmark.go(template, values);
-          final message =
-              benchmark.output == expected ? ok('OK') : accentError('ERROR');
           emit(
             '${accent(benchmark.name)}:'
             ' ${format('{:.3f}', score)} µs'

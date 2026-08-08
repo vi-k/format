@@ -1,10 +1,6 @@
-export 'src/benchmark_cold.dart';
-export 'src/benchmark_format16_format.dart';
-export 'src/benchmark_format30_format.dart';
-export 'src/benchmark_format30_sprintf.dart';
-export 'src/benchmark_sprintf70.dart';
 export 'src/comparison_benchmark.dart';
 export 'src/double_modes_benchmark.dart';
+export 'src/formatter_benchmark.dart';
 export 'src/my_benchmark_base.dart';
 export 'src/template_ir_benchmark.dart';
 export 'src/tests/tests.dart';
