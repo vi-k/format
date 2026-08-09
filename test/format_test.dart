@@ -1,12 +1,13 @@
-// Contracts that belong to no single stage of the brace pipeline, and so would
-// belong to no single one of the other test files: the order the stages run in,
-// how automatic numbering counts across nesting, the width ceiling, and what a
-// caller gets when formatting fails halfway.
-//
-// The per-stage files each pin their own stage in isolation and would all stay
-// green if the stages were wired together in the wrong order. That is the gap
-// this file covers, so it is deliberately small: a handful of cases, each one a
-// property of the pipeline as a whole.
+/// Contracts that belong to no single stage of the brace pipeline, and so would
+/// belong to no single one of the other test files: the order the stages run
+/// in, how automatic numbering counts across nesting, the width ceiling, and
+/// what a caller gets when formatting fails halfway.
+///
+/// The per-stage files each pin their own stage in isolation and would all stay
+/// green if the stages were wired together in the wrong order. That is the gap
+/// this file covers, so it is deliberately small: a handful of cases, each one
+/// a property of the pipeline as a whole.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

@@ -1,18 +1,17 @@
-// The one IR-versus-legacy case that cannot be written anywhere else: the
-// minimum 64-bit integer.
-//
-// `-9223372036854775808` is the value with no positive counterpart, so every
-// piece of integer layout that works by taking a magnitude and prefixing a sign
-// has to special-case it — and each path (the compiled int op, the legacy one,
-// the printf conversions) special-cases it separately. Comparing them against
-// each other, rather than against a literal, is what makes a divergence
-// visible.
-//
-// It lives apart from the rest of the parity suite because the literal does not
-// compile under dart2js, where integers are doubles; on that platform the value
-// simply does not exist. Same reason as `integer_format_test.dart` and
-// `sprintf_integer_test.dart` — see the VM-only note in HANDOFF.
-
+/// The one IR-versus-legacy case that cannot be written anywhere else: the
+/// minimum 64-bit integer.
+///
+/// `-9223372036854775808` is the value with no positive counterpart, so every
+/// piece of integer layout that works by taking a magnitude and prefixing a
+/// sign has to special-case it — and each path (the compiled int op, the legacy
+/// one, the printf conversions) special-cases it separately. Comparing them
+/// against each other, rather than against a literal, is what makes a
+/// divergence visible.
+///
+/// It lives apart from the rest of the parity suite because the literal does
+/// not compile under dart2js, where integers are doubles; on that platform the
+/// value simply does not exist. Same reason as `integer_format_test.dart` and
+/// `sprintf_integer_test.dart` — see the VM-only note in HANDOFF.
 @TestOn('vm')
 library;
 

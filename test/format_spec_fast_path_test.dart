@@ -1,19 +1,20 @@
-// The specification fast path: a hand-rolled scanner that handles the common
-// ASCII specifications without the general, Unicode-aware parser.
-//
-// It is an optimization, which makes it dangerous in a specific way — it can
-// only be wrong by disagreeing with the parser it stands in for, and that
-// disagreement is invisible from the outside until some template renders
-// differently than it used to. So the tests come in pairs: what the fast path
-// claims it can handle, and — through
-// `debugSimpleBuiltinFormatSpecMatchesGeneralParser` — that the two agree on
-// every specification it claims.
-//
-// The other direction matters just as much. A specification the fast path
-// *declines* costs a little time and nothing else; one it accepts wrongly is a
-// bug. Hence the list of things it must leave alone: anything Unicode, anything
-// with grouping or a precision beside a width, a width too long to scan, and
-// any custom format name.
+/// The specification fast path: a hand-rolled scanner that handles the common
+/// ASCII specifications without the general, Unicode-aware parser.
+///
+/// It is an optimization, which makes it dangerous in a specific way — it can
+/// only be wrong by disagreeing with the parser it stands in for, and that
+/// disagreement is invisible from the outside until some template renders
+/// differently than it used to. So the tests come in pairs: what the fast path
+/// claims it can handle, and — through
+/// `debugSimpleBuiltinFormatSpecMatchesGeneralParser` — that the two agree on
+/// every specification it claims.
+///
+/// The other direction matters just as much. A specification the fast path
+/// *declines* costs a little time and nothing else; one it accepts wrongly is a
+/// bug. Hence the list of things it must leave alone: anything Unicode,
+/// anything with grouping or a precision beside a width, a width too long to
+/// scan, and any custom format name.
+library;
 
 import 'package:format/format.dart';
 // The package URI resolves to the same library instance as the public

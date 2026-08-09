@@ -1,14 +1,15 @@
-// The public surface of `package:format/format.dart`, used the way a consumer
-// uses it: the entry points, the configured `Format` object, and the contracts
-// an extension implements.
-//
-// Nothing here reaches into `src/`, and that is the point. These tests fail
-// when a symbol stops being exported, when a documented default changes, or
-// when an extension contract stops being implementable from outside the
-// package — none of which the engine's own tests would notice, since they
-// import the engine directly. What the engine *produces* is pinned elsewhere;
-// this file pins that the door is open and the handles are where the README
-// says they are.
+/// The public surface of `package:format/format.dart`, used the way a consumer
+/// uses it: the entry points, the configured `Format` object, and the contracts
+/// an extension implements.
+///
+/// Nothing here reaches into `src/`, and that is the point. These tests fail
+/// when a symbol stops being exported, when a documented default changes, or
+/// when an extension contract stops being implementable from outside the
+/// package — none of which the engine's own tests would notice, since they
+/// import the engine directly. What the engine *produces* is pinned elsewhere;
+/// this file pins that the door is open and the handles are where the README
+/// says they are.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

@@ -1,14 +1,15 @@
-// Two properties of the frozen baselines that nothing else would catch.
-//
-// `benchmark/baselines/format20` is a copy of version 2.0 kept for the release
-// gate to measure against. Being a copy, it has two ways to cause damage: it
-// could leak into the published API — the package would then export two
-// formatters, one of them years old — or it could be edited, at which point
-// every threshold calibrated against it silently means something else.
-//
-// The first is checked by reading the export file; the second by pinning five
-// outputs that differ from the current version's, so any edit to the baseline
-// shows up as a failure rather than as a shifted benchmark.
+/// Two properties of the frozen baselines that nothing else would catch.
+///
+/// `benchmark/baselines/format20` is a copy of version 2.0 kept for the release
+/// gate to measure against. Being a copy, it has two ways to cause damage: it
+/// could leak into the published API — the package would then export two
+/// formatters, one of them years old — or it could be edited, at which point
+/// every threshold calibrated against it silently means something else.
+///
+/// The first is checked by reading the export file; the second by pinning five
+/// outputs that differ from the current version's, so any edit to the baseline
+/// shows up as a failure rather than as a shifted benchmark.
+library;
 
 import 'dart:io';
 

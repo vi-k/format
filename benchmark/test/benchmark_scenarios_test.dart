@@ -1,29 +1,30 @@
-// The benchmark matrix and the runner that measures it.
-//
-// The matrix is a list of scenarios, and its completeness is a claim: that the
-// gate watches the paths worth watching. Nothing enforces that claim at
-// runtime — a scenario deleted in a refactor leaves a gate that still passes,
-// on a smaller set of measurements, and says nothing about what it stopped
-// looking at. So the required dimensions are listed here by id, and the
-// scenarios that carry extra weight (the key comparisons, the two double
-// profiles, cold versus hot inputs) are pinned individually.
-//
-// The runner is the other half, and its failure modes are worse than the
-// matrix's, because they produce numbers rather than nothing. A measurement
-// taken over too few rounds, or on an input that was already warm when it
-// claimed to be cold, or under a runtime it labels wrongly, is not a smaller
-// measurement — it is a different one, indistinguishable from the real thing in
-// the report. Every one of those is refused explicitly here.
-//
-// A measurement is also only meaningful if the engines being compared produced
-// the same string, so the runner checks the output before it records a timing,
-// and comparisons that cannot be made at all (a locale reference, a conversion
-// one comparator lacks) are marked as informational rather than turned into a
-// ratio.
-//
-// The last two tests compile and run the harness under dart2js and AOT in
-// temporary directories: the provenance the reports carry has to be detected,
-// not declared, and a JIT run mislabelled as AOT would poison the baseline.
+/// The benchmark matrix and the runner that measures it.
+///
+/// The matrix is a list of scenarios, and its completeness is a claim: that the
+/// gate watches the paths worth watching. Nothing enforces that claim at
+/// runtime — a scenario deleted in a refactor leaves a gate that still passes,
+/// on a smaller set of measurements, and says nothing about what it stopped
+/// looking at. So the required dimensions are listed here by id, and the
+/// scenarios that carry extra weight (the key comparisons, the two double
+/// profiles, cold versus hot inputs) are pinned individually.
+///
+/// The runner is the other half, and its failure modes are worse than the
+/// matrix's, because they produce numbers rather than nothing. A measurement
+/// taken over too few rounds, or on an input that was already warm when it
+/// claimed to be cold, or under a runtime it labels wrongly, is not a smaller
+/// measurement — it is a different one, indistinguishable from the real thing
+/// in the report. Every one of those is refused explicitly here.
+///
+/// A measurement is also only meaningful if the engines being compared produced
+/// the same string, so the runner checks the output before it records a timing,
+/// and comparisons that cannot be made at all (a locale reference, a conversion
+/// one comparator lacks) are marked as informational rather than turned into a
+/// ratio.
+///
+/// The last two tests compile and run the harness under dart2js and AOT in
+/// temporary directories: the provenance the reports carry has to be detected,
+/// not declared, and a JIT run mislabelled as AOT would poison the baseline.
+library;
 
 import 'dart:convert';
 import 'dart:io';

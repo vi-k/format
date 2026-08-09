@@ -1,29 +1,30 @@
-// What each template compiles to — the classifier, not the output.
-//
-// A parsed template is compiled into a program of ops, and each field ends up
-// either on a specialized op (`int`, `double`, `text`, `str`, `dynamic`) or on
-// `fallback`, which runs the general path. Both outcomes are correct; the
-// difference is speed, and it is invisible from the outside. That is exactly
-// why it needs its own tests: a specification that silently stops compiling hot
-// keeps producing the right string while the optimization it was written for
-// quietly stops applying, and only a benchmark would ever notice.
-//
-// So `debugCompiledProgramDescription` renders the program as a list of
-// op descriptions, and the tests assert those lists exactly. The descriptions
-// carry the compiled details too (`int:d:w10:g,3z` — decimal, width 10, comma
-// grouping by three, zero padding regrouped with the digits), which means a
-// field that compiles hot with the *wrong* parameters is caught here rather
-// than as a wrong string somewhere downstream.
-//
-// The fallback lists matter as much as the hot ones. Each entry is a shape the
-// compiler must decline — a dynamic nested specification it cannot see at
-// compile time, a multi-code-unit fill, an option combination the hot op does
-// not implement, a precision past the safety ceiling — and accepting one of
-// them wrongly is a correctness bug, not a performance one.
-//
-// Two tests here compare the IR against the legacy path directly. They are a
-// smoke check; the real comparison happens at scale in `template_ir_diff_test`
-// and `template_ir_fuzz_test`.
+/// What each template compiles to — the classifier, not the output.
+///
+/// A parsed template is compiled into a program of ops, and each field ends up
+/// either on a specialized op (`int`, `double`, `text`, `str`, `dynamic`) or on
+/// `fallback`, which runs the general path. Both outcomes are correct; the
+/// difference is speed, and it is invisible from the outside. That is exactly
+/// why it needs its own tests: a specification that silently stops compiling
+/// hot keeps producing the right string while the optimization it was written
+/// for quietly stops applying, and only a benchmark would ever notice.
+///
+/// So `debugCompiledProgramDescription` renders the program as a list of op
+/// descriptions, and the tests assert those lists exactly. The descriptions
+/// carry the compiled details too (`int:d:w10:g,3z` — decimal, width 10, comma
+/// grouping by three, zero padding regrouped with the digits), which means a
+/// field that compiles hot with the *wrong* parameters is caught here rather
+/// than as a wrong string somewhere downstream.
+///
+/// The fallback lists matter as much as the hot ones. Each entry is a shape the
+/// compiler must decline — a dynamic nested specification it cannot see at
+/// compile time, a multi-code-unit fill, an option combination the hot op does
+/// not implement, a precision past the safety ceiling — and accepting one of
+/// them wrongly is a correctness bug, not a performance one.
+///
+/// Two tests here compare the IR against the legacy path directly. They are a
+/// smoke check; the real comparison happens at scale in `template_ir_diff_test`
+/// and `template_ir_fuzz_test`.
+library;
 
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';

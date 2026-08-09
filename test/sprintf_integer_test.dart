@@ -1,21 +1,20 @@
-// Integer conversions in the printf dialect, where C's rules differ from
-// Python's — this is not the brace behaviour with another syntax.
-//
-// Three differences carry the file. Integers have a *precision* here, meaning a
-// minimum number of digits, and a precision of zero prints an empty string for
-// the value zero. The alternate prefix follows C: `%#o` is `052`, not `0o52`.
-// And the unsigned conversions are genuinely unsigned — a negative value is
-// rejected rather than reinterpreted, because printing `-1` as
-// `18446744073709551615` is exactly the C behaviour that hides bugs, and this
-// dialect has no fixed width to wrap to in the first place.
-//
-// The int/`BigInt` boundary and the minimum int are walked again here, since
-// printf reaches the digits through its own conversions rather than the brace
-// path's.
-//
-// VM-only, and annotated as such: the 64-bit literals below do not survive
-// dart2js. The web side of these paths is covered in `template_ir_diff_test`.
-
+/// Integer conversions in the printf dialect, where C's rules differ from
+/// Python's — this is not the brace behaviour with another syntax.
+///
+/// Three differences carry the file. Integers have a *precision* here, meaning
+/// a minimum number of digits, and a precision of zero prints an empty string
+/// for the value zero. The alternate prefix follows C: `%#o` is `052`, not
+/// `0o52`. And the unsigned conversions are genuinely unsigned — a negative
+/// value is rejected rather than reinterpreted, because printing `-1` as
+/// `18446744073709551615` is exactly the C behaviour that hides bugs, and this
+/// dialect has no fixed width to wrap to in the first place.
+///
+/// The int/`BigInt` boundary and the minimum int are walked again here, since
+/// printf reaches the digits through its own conversions rather than the brace
+/// path's.
+///
+/// VM-only, and annotated as such: the 64-bit literals below do not survive
+/// dart2js. The web side of these paths is covered in `template_ir_diff_test`.
 @TestOn('vm')
 library;
 

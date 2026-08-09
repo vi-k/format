@@ -1,26 +1,28 @@
-// The `Formatter` extension point: the third-party conversion, reached either
-// by name (`{:json}`) or automatically by an empty specification (`{}`).
-//
-// A custom formatter has to be given enough to do its job and no more, and the
-// split is the subject of most of this file. The engine keeps width, alignment
-// and fill for itself — a formatter should not have to implement padding — and
-// hands over everything that describes the *number* rather than the field:
-// sign, alternate form, grouping, precision, and the free-form payload after
-// the name. Where a single option means different things to the two sides (`0`
-// is zero padding for the engine, an option for the formatter), the split is
-// pinned explicitly.
-//
-// Automatic selection is the riskier half. An empty `{}` consults every
-// registered formatter, so built-in types must be answered by the engine before
-// the extensions are asked (otherwise one registration changes how every `int`
-// in every template prints), an unclaimed value falls back to `toString`, and
-// two formatters claiming the same value is an error rather than list order.
-//
-// The rest is the failure contract shared with the other extension points:
-// both halves of the callback pair are wrapped and attributed by specifier, a
-// `FormattingException` from inside passes through unwrapped, and a
-// specification the engine can reject on its own is rejected before any of the
-// caller's code runs.
+/// The `Formatter` extension point: the third-party conversion, reached either
+/// by name (`{:json}`) or automatically by an empty specification (`{}`).
+///
+/// A custom formatter has to be given enough to do its job and no more, and the
+/// split is the subject of most of this file. The engine keeps width, alignment
+/// and fill for itself — a formatter should not have to implement padding — and
+/// hands over everything that describes the *number* rather than the field:
+/// sign, alternate form, grouping, precision, and the free-form payload after
+/// the name. Where a single option means different things to the two sides (`0`
+/// is zero padding for the engine, an option for the formatter), the split is
+/// pinned explicitly.
+///
+/// Automatic selection is the riskier half. An empty `{}` consults every
+/// registered formatter, so built-in types must be answered by the engine
+/// before the extensions are asked (otherwise one registration changes how
+/// every `int` in every template prints), an unclaimed value falls back to
+/// `toString`, and two formatters claiming the same value is an error rather
+/// than list order.
+///
+/// The rest is the failure contract shared with the other extension points:
+/// both halves of the callback pair are wrapped and attributed by specifier, a
+/// `FormattingException` from inside passes through unwrapped, and a
+/// specification the engine can reject on its own is rejected before any of the
+/// caller's code runs.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

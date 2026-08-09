@@ -1,22 +1,23 @@
-// `CharSink` — the buffer every formatted string is built in — tested directly
-// rather than through the engine.
-//
-// Most of what is pinned here is one invariant: the sink starts in
-// single-string mode, holding a reference to the one string written so far and
-// nothing else, and any second write has to materialize that string into the
-// buffer first. The mode is what makes `format('{}', s)` return `s` itself
-// instead of a copy, and it is also the sink's sharpest edge — a new write
-// method that forgets to materialize loses the pending string silently, and
-// the engine above it would just produce a slightly wrong result somewhere.
-//
-// Reached through the engine these paths are hard to aim at: the sink decides
-// its own mode from the write sequence, and only a few templates produce each
-// sequence. Here the sequences are written out directly, including the
-// degenerate ones (empty string first, zero and negative fills).
-//
-// The grouped writes (`writeGroupedMagnitude`, `writeGroupedBody`) are not
-// here — they are covered against the legacy path in `template_ir_diff_test`,
-// where the expected grouping comes from an oracle rather than from a literal.
+/// `CharSink` — the buffer every formatted string is built in — tested directly
+/// rather than through the engine.
+///
+/// Most of what is pinned here is one invariant: the sink starts in
+/// single-string mode, holding a reference to the one string written so far and
+/// nothing else, and any second write has to materialize that string into the
+/// buffer first. The mode is what makes `format('{}', s)` return `s` itself
+/// instead of a copy, and it is also the sink's sharpest edge — a new write
+/// method that forgets to materialize loses the pending string silently, and
+/// the engine above it would just produce a slightly wrong result somewhere.
+///
+/// Reached through the engine these paths are hard to aim at: the sink decides
+/// its own mode from the write sequence, and only a few templates produce each
+/// sequence. Here the sequences are written out directly, including the
+/// degenerate ones (empty string first, zero and negative fills).
+///
+/// The grouped writes (`writeGroupedMagnitude`, `writeGroupedBody`) are not
+/// here — they are covered against the legacy path in `template_ir_diff_test`,
+/// where the expected grouping comes from an oracle rather than from a literal.
+library;
 
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';

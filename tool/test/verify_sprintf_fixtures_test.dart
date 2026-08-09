@@ -1,15 +1,16 @@
-// Tests the fixture verifier itself: a gate is only worth having if it is
-// known to go red.
-//
-// The verifier compares regenerated C++ fixtures against the committed ones and
-// is supposed to fail when they disagree. Nothing about a passing verifier
-// distinguishes "the fixtures match" from "the comparison does nothing", so the
-// red path is the only one worth testing — a case present on one side and
-// absent on the other, without a documented explanation, must be reported.
-//
-// It lives beside the tool rather than in `test/`, because `tool/` is excluded
-// from the published archive and a shipped test may not depend on anything the
-// archive drops.
+/// Tests the fixture verifier itself: a gate is only worth having if it is
+/// known to go red.
+///
+/// The verifier compares regenerated C++ fixtures against the committed ones
+/// and is supposed to fail when they disagree. Nothing about a passing verifier
+/// distinguishes "the fixtures match" from "the comparison does nothing", so
+/// the red path is the only one worth testing — a case present on one side and
+/// absent on the other, without a documented explanation, must be reported.
+///
+/// It lives beside the tool rather than in `test/`, because `tool/` is excluded
+/// from the published archive and a shipped test may not depend on anything the
+/// archive drops.
+library;
 
 import 'dart:convert';
 import 'dart:io';

@@ -1,17 +1,18 @@
-// The IR-versus-legacy A/B benchmark, tested as a program rather than as a
-// measurement.
-//
-// This benchmark is the project's sharpest instrument for detecting a
-// performance regression in the IR: it runs both paths on the same scenarios
-// and reports which won. Its own failure mode is that it stops covering
-// something and keeps reporting confidently — a scenario dropped from the
-// matrix, or a comparison that silently disagreed on output.
-//
-// So the test runs it with tiny sample counts and reads its output: every
-// scenario label is present, including the fallback controls, no comparison
-// reported differing results, and the verdict count matches the scenario count.
-// Timings are deliberately not asserted — they are what the tool measures, not
-// what it promises.
+/// The IR-versus-legacy A/B benchmark, tested as a program rather than as a
+/// measurement.
+///
+/// This benchmark is the project's sharpest instrument for detecting a
+/// performance regression in the IR: it runs both paths on the same scenarios
+/// and reports which won. Its own failure mode is that it stops covering
+/// something and keeps reporting confidently — a scenario dropped from the
+/// matrix, or a comparison that silently disagreed on output.
+///
+/// So the test runs it with tiny sample counts and reads its output: every
+/// scenario label is present, including the fallback controls, no comparison
+/// reported differing results, and the verdict count matches the scenario
+/// count. Timings are deliberately not asserted — they are what the tool
+/// measures, not what it promises.
+library;
 
 import 'package:format_benchmarks/benchmark.dart';
 import 'package:test/test.dart';

@@ -1,29 +1,31 @@
-// Double layout under the `compatible` profile — the package's own digits,
-// matching C and Python rather than the Dart SDK.
-//
-// The whole file shadows `format` with a `compatible` instance (below the
-// locale classes), because that is the profile whose digits the package
-// produces itself and therefore the only one whose correctness is ours to
-// prove. The `dartSdk` profile delegates to the SDK and is covered in
-// `dart_double_format_test.dart`.
-//
-// What is being pinned is a decimal conversion of a binary value, so the
-// expectations are long and exact on purpose. A double is a rational with a
-// power-of-two denominator, and printing it at high precision must show that
-// exact value — `{:.50f}` of 1.23456789 is not the digits anyone typed, and
-// `{:.0f}` of the largest finite double is 309 digits, all of them determined.
-// Anything shorter would let a `toStringAsFixed` shortcut pass while quietly
-// rounding.
-//
-// Rounding is ties-to-even, on the binary value and not on its decimal
-// spelling: 2.675 is really 2.67499…, so `{:.2f}` is `2.67`. Cases that look
-// like off-by-one errors are the point of the test rather than a mistake in it.
-//
-// The rest is layout over those digits — exponent thresholds and carry, the
-// alternate form, grouping on both sides of the point, sign and zero padding,
-// negative zero (normalized after rounding, never before), the special values,
-// and `n`, which hands the separators, the digits and the exponent marker to a
-// caller-supplied locale.
+/// Double layout under the `compatible` profile — the package's own digits,
+/// matching C and Python rather than the Dart SDK.
+///
+/// The whole file shadows `format` with a `compatible` instance (below the
+/// locale classes), because that is the profile whose digits the package
+/// produces itself and therefore the only one whose correctness is ours to
+/// prove. The `dartSdk` profile delegates to the SDK and is covered in
+/// `dart_double_format_test.dart`.
+///
+/// What is being pinned is a decimal conversion of a binary value, so the
+/// expectations are long and exact on purpose. A double is a rational with a
+/// power-of-two denominator, and printing it at high precision must show that
+/// exact value — `{:.50f}` of 1.23456789 is not the digits anyone typed, and
+/// `{:.0f}` of the largest finite double is 309 digits, all of them determined.
+/// Anything shorter would let a `toStringAsFixed` shortcut pass while quietly
+/// rounding.
+///
+/// Rounding is ties-to-even, on the binary value and not on its decimal
+/// spelling: 2.675 is really 2.67499…, so `{:.2f}` is `2.67`. Cases that look
+/// like off-by-one errors are the point of the test rather than a mistake in
+/// it.
+///
+/// The rest is layout over those digits — exponent thresholds and carry, the
+/// alternate form, grouping on both sides of the point, sign and zero padding,
+/// negative zero (normalized after rounding, never before), the special values,
+/// and `n`, which hands the separators, the digits and the exponent marker to a
+/// caller-supplied locale.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

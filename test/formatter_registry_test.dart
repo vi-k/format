@@ -1,18 +1,19 @@
-// Constructing a `Format` with extensions: what the constructor accepts, what
-// it copies, and how it fails.
-//
-// Configuration is the one place the package runs the caller's code *before*
-// any formatting happens, and the ordinary contracts still apply there. A
-// `Formatter`'s `specifier` is a getter, so reading it can throw; the list of
-// formatters is the caller's collection, so it can be mutated afterwards or be
-// an `Iterable` that only iterates once; and two formatters can claim the same
-// name. All of that has to be resolved at construction, into an immutable index
-// — because a `Format` is meant to be built once and shared, and an instance
-// that could change its behaviour later is not shareable at all.
-//
-// The naming rules are checked here rather than at format time for the same
-// reason: a formatter named `s` or `дата` would be unreachable or would shadow
-// a built-in, and the useful moment to say so is where the mistake was made.
+/// Constructing a `Format` with extensions: what the constructor accepts, what
+/// it copies, and how it fails.
+///
+/// Configuration is the one place the package runs the caller's code *before*
+/// any formatting happens, and the ordinary contracts still apply there. A
+/// `Formatter`'s `specifier` is a getter, so reading it can throw; the list of
+/// formatters is the caller's collection, so it can be mutated afterwards or be
+/// an `Iterable` that only iterates once; and two formatters can claim the same
+/// name. All of that has to be resolved at construction, into an immutable
+/// index — because a `Format` is meant to be built once and shared, and an
+/// instance that could change its behaviour later is not shareable at all.
+///
+/// The naming rules are checked here rather than at format time for the same
+/// reason: a formatter named `s` or `дата` would be unreachable or would shadow
+/// a built-in, and the useful moment to say so is where the mistake was made.
+library;
 
 import 'dart:collection';
 

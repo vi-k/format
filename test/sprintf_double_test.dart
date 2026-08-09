@@ -1,29 +1,31 @@
-// Floating conversions in the printf dialect, under the `compatible` profile —
-// including `%a`, which exists nowhere else in the package.
-//
-// As in `double_format_test.dart`, `sprintf` is shadowed below with a
-// `compatible` instance: these are the digits the package produces itself, and
-// the reference is C rather than Dart.
-//
-// Most of the decimal rules are shared with the brace path and are checked here
-// only where printf differs — repeated and conflicting flags, which the brace
-// grammar cannot even express, and the special values under zero padding, where
-// C pads with spaces because zeros around `inf` would be nonsense.
-//
-// `%a` is the reason the file is long. Hexadecimal floating notation prints the
-// binary64 value exactly, so every case is decidable and none of it is a matter
-// of taste: the leading digit is 1 for normals and 0 for subnormals, the
-// exponent is a power of two written in decimal, rounding at a given precision
-// is ties-to-even on hex digits, and both `p-1022` boundaries have a canonical
-// spelling. The precision sweep from 0 to 13 walks 0.1 through every prefix of
-// its mantissa — 13 being the point at which the value is exact — so a rounding
-// error at any single length is caught rather than averaged away.
-//
-// The locale tests are here rather than with the brace ones because printf
-// reaches the localization through its own path: the same expanding-digit trap
-// (a locale whose digits are wider than ASCII, so padding has to be fitted
-// after localization) applies, and nothing else in the suite exercises it on
-// this side.
+/// Floating conversions in the printf dialect, under the `compatible` profile —
+/// including `%a`, which exists nowhere else in the package.
+///
+/// As in `double_format_test.dart`, `sprintf` is shadowed below with a
+/// `compatible` instance: these are the digits the package produces itself, and
+/// the reference is C rather than Dart.
+///
+/// Most of the decimal rules are shared with the brace path and are checked
+/// here only where printf differs — repeated and conflicting flags, which the
+/// brace grammar cannot even express, and the special values under zero
+/// padding, where C pads with spaces because zeros around `inf` would be
+/// nonsense.
+///
+/// `%a` is the reason the file is long. Hexadecimal floating notation prints
+/// the binary64 value exactly, so every case is decidable and none of it is a
+/// matter of taste: the leading digit is 1 for normals and 0 for subnormals,
+/// the exponent is a power of two written in decimal, rounding at a given
+/// precision is ties-to-even on hex digits, and both `p-1022` boundaries have a
+/// canonical spelling. The precision sweep from 0 to 13 walks 0.1 through every
+/// prefix of its mantissa — 13 being the point at which the value is exact — so
+/// a rounding error at any single length is caught rather than averaged away.
+///
+/// The locale tests are here rather than with the brace ones because printf
+/// reaches the localization through its own path: the same expanding-digit trap
+/// (a locale whose digits are wider than ASCII, so padding has to be fitted
+/// after localization) applies, and nothing else in the suite exercises it on
+/// this side.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

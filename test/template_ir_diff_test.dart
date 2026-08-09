@@ -1,33 +1,34 @@
-// The hand-written half of the IR parity suite: every specification the
-// compiler specializes, run through both paths and compared.
-//
-// `template_ir_compile_test.dart` checks that a specification compiles to the
-// op it should. This file checks that the op then *behaves* like the path it
-// replaced — output, exception type, payload and offset alike (see
-// `parity_harness.dart` for what parity means here). Between them, a hot op
-// cannot go wrong silently: either it stops being selected, or it stops
-// agreeing.
-//
-// The tests are matrices rather than cases, because the interesting failures
-// live in combinations. A hot op is written once and then has to hold for every
-// value that can reach it — both integer types, both signs, zero, the special
-// doubles, values of the wrong type entirely — under every layout the option
-// grammar allows, and under every engine configuration the op is meant to
-// respect. Multiplying those axes is affordable precisely because the
-// expectations come from the oracle rather than from an author.
-//
-// A few matrices are large on purpose: grouped integer layouts, grouped double
-// layouts and locale-aware `n` each run into the hundreds of thousands of
-// comparisons. Those are the three areas where the hot ops reimplement
-// arithmetic the legacy path derives some other way — fitted padding by
-// formula instead of bisection, localization inline instead of as a tail — and
-// so the three where a hand-written matrix would be least likely to find the
-// disagreement.
-//
-// The values of the wrong type in each matrix are not padding. A hot op must
-// reject what it cannot format with the same complaint the general path makes,
-// and that is the easiest part of the contract to forget when writing a
-// specialization.
+/// The hand-written half of the IR parity suite: every specification the
+/// compiler specializes, run through both paths and compared.
+///
+/// `template_ir_compile_test.dart` checks that a specification compiles to the
+/// op it should. This file checks that the op then *behaves* like the path it
+/// replaced — output, exception type, payload and offset alike (see
+/// `parity_harness.dart` for what parity means here). Between them, a hot op
+/// cannot go wrong silently: either it stops being selected, or it stops
+/// agreeing.
+///
+/// The tests are matrices rather than cases, because the interesting failures
+/// live in combinations. A hot op is written once and then has to hold for
+/// every value that can reach it — both integer types, both signs, zero, the
+/// special doubles, values of the wrong type entirely — under every layout the
+/// option grammar allows, and under every engine configuration the op is meant
+/// to respect. Multiplying those axes is affordable precisely because the
+/// expectations come from the oracle rather than from an author.
+///
+/// A few matrices are large on purpose: grouped integer layouts, grouped double
+/// layouts and locale-aware `n` each run into the hundreds of thousands of
+/// comparisons. Those are the three areas where the hot ops reimplement
+/// arithmetic the legacy path derives some other way — fitted padding by
+/// formula instead of bisection, localization inline instead of as a tail — and
+/// so the three where a hand-written matrix would be least likely to find the
+/// disagreement.
+///
+/// The values of the wrong type in each matrix are not padding. A hot op must
+/// reject what it cannot format with the same complaint the general path makes,
+/// and that is the easiest part of the contract to forget when writing a
+/// specialization.
+library;
 
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
