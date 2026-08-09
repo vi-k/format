@@ -87,9 +87,9 @@ final class Format {
     Object? value8 = _MissingValue.value,
     Object? value9 = _MissingValue.value,
     Object? value10 = _MissingValue.value,
-  ]) => formatWith(
+  ]) => _formatWith(
     template,
-    positional: _collectOptionalValues(
+    _collectOptionalValues(
       value1,
       value2,
       value3,
@@ -101,6 +101,7 @@ final class Format {
       value9,
       value10,
     ),
+    const {},
   );
 
   /// Formats a printf [template] with up to ten positional values; the
@@ -117,7 +118,7 @@ final class Format {
     Object? value8 = _MissingValue.value,
     Object? value9 = _MissingValue.value,
     Object? value10 = _MissingValue.value,
-  ]) => vsprintf(
+  ]) => _vsprintf(
     template,
     _collectOptionalValues(
       value1,
@@ -135,26 +136,49 @@ final class Format {
 
   /// Formats a printf [template] with a list of [values]; the instance
   /// counterpart of the top-level [vsprintf].
+  ///
+  /// [values] is snapshotted first: formatting calls `toString` on its
+  /// contents, and one of those can reach back and mutate the very list being
+  /// formatted. Mutating it during a call therefore has no effect on that
+  /// call, and the list itself is never modified.
   String vsprintf(String template, List<Object?> values) =>
-      _PrintfProcessor(
-        template,
-        List<Object?>.unmodifiable(values),
-        this,
-      ).format();
+      _vsprintf(template, _snapshot(values));
 
   /// Formats a brace [template] with [positional] and [named] value
   /// collections; the instance counterpart of the top-level [formatWith].
+  ///
+  /// Both collections are snapshotted first, for the reason given on
+  /// [vsprintf]: a `toString` reached during formatting can mutate them.
   String formatWith(
     String template, {
     List<Object?> positional = const [],
     Map<String, Object?> named = const {},
-  }) =>
+  }) => _formatWith(
+    template,
+    _snapshot(positional),
+    named.isEmpty ? named : Map<String, Object?>.unmodifiable(named),
+  );
+
+  // The two entry points below take collections this class built itself, from
+  // values handed to a variadic call. Nothing outside can reach them, so they
+  // skip the snapshot the public entry points owe their callers.
+  String _vsprintf(String template, List<Object?> values) =>
+      _PrintfProcessor(template, values, this).format();
+
+  String _formatWith(
+    String template,
+    List<Object?> positional,
+    Map<String, Object?> named,
+  ) =>
       _BraceProcessor(
         template,
         positional: positional,
         named: named,
         engine: this,
       ).format();
+
+  static List<Object?> _snapshot(List<Object?> values) =>
+      values.isEmpty ? values : List<Object?>.of(values, growable: false);
 
   List<String> _validateConfiguration() {
     final names = <String>{};

@@ -57,6 +57,28 @@ void main() {
     expect(format('{}', const ['value']), '[value]');
   });
 
+  // The mirror of `vsprintf snapshots its input` in `sprintf_api_test.dart`.
+  // Formatting calls `toString` on the caller's objects, and one of those can
+  // reach back and mutate the very collection being formatted: here the first
+  // value's `toString` clears the list, and without a snapshot the second
+  // value would be gone before it is read. The printf dialect has always
+  // taken the snapshot; the brace dialect did not, and the same call failed
+  // with a missing argument for a value that was there when it started.
+  test('formatWith snapshots its collections before formatting values', () {
+    final positional = <Object?>[];
+    positional.addAll([_ClearsSourceValues(positional), 'second']);
+    expect(formatWith('{0} {1}', positional: positional), 'first second');
+
+    final named = <String, Object?>{};
+    named['a'] = _ClearsSourceEntries(named);
+    named['b'] = 'second';
+    expect(
+      formatWith('{a} {b}', named: named),
+      'first second',
+      reason: 'карта обязана сниматься так же, как список',
+    );
+  });
+
   // The pattern the README recommends for an app-wide configuration is to tear
   // the methods off a configured instance once and call them like the
   // top-level ones. That only works while they stay instance methods with the
@@ -192,4 +214,32 @@ final class _PassThroughLocale implements NumberLocale {
 
   @override
   String localizeDigits(String asciiDigits) => asciiDigits;
+}
+
+/// Clears the list it was taken from when asked for its string, so that a
+/// formatter reading its arguments one by one loses the rest mid-call.
+final class _ClearsSourceValues {
+  final List<Object?> values;
+
+  _ClearsSourceValues(this.values);
+
+  @override
+  String toString() {
+    values.clear();
+    return 'first';
+  }
+}
+
+/// The map counterpart of [_ClearsSourceValues]: named arguments are just as
+/// reachable from a value's own `toString`.
+final class _ClearsSourceEntries {
+  final Map<String, Object?> entries;
+
+  _ClearsSourceEntries(this.entries);
+
+  @override
+  String toString() {
+    entries.clear();
+    return 'first';
+  }
 }
