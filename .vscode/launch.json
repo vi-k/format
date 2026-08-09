@@ -63,14 +63,6 @@
       "type": "dart",
       "program": "test/format_test.dart",
       "args": []
-    },
-    {
-      "name": "C/C++ Runner: Debug Session",
-      "type": "lldb",
-      "request": "launch",
-      "args": [],
-      "cwd": "/Users/user/development/my/format/tool",
-      "program": "/Users/user/development/my/format/tool/build/Debug/outDebug"
     }
-  ],
+  ]
 }

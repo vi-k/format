@@ -5,6 +5,10 @@
 
 # Conventional directory for build outputs
 build/
+# Where a C/C++ extension drops its objects when the sprintf fixture
+# generator is built from the editor. The generator that counts is built by
+# tool/verify_generated_artifacts.dart into a temporary directory instead.
+/tool/build/
 
 # The benchmark suite remains an independent package and keeps its
 # library lock local.
