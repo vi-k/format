@@ -1,25 +1,24 @@
-// Integer layout in the brace dialect: the four bases, the sign and alternate
-// forms, width and alignment, digit grouping, and the locale-aware `n`.
-//
-// Most of these rules are Python's, and Python's are not obvious, so the
-// expectations are literals taken from its behaviour rather than derived from
-// ours. Two areas carry nearly all the risk. Grouping interacts with zero
-// padding in a way that surprises everyone who meets it — `{:08,d}` of 1234 is
-// `0,001,234`, nine characters, because the padding is fitted to the *grouped*
-// length rather than added to the raw digits — and each combination of width,
-// group size, sign and alternate prefix reaches that arithmetic differently.
-// And `n` hands parts of the layout to a `NumberLocale`, which is caller code:
-// it can group irregularly, replace the digits themselves, and throw.
-//
-// The values are chosen at the edges: zero, the int boundaries in both
-// directions, `BigInt` values just past them, and the minimum int — the one
-// value with no positive counterpart, which every sign-then-magnitude
-// implementation has to special-case.
-//
-// VM-only, and annotated as such: the 64-bit literals below do not survive
-// dart2js, where an int is a double. The IR is exercised against these same
-// paths on the web in `template_ir_diff_test.dart`.
-
+/// Integer layout in the brace dialect: the four bases, the sign and alternate
+/// forms, width and alignment, digit grouping, and the locale-aware `n`.
+///
+/// Most of these rules are Python's, and Python's are not obvious, so the
+/// expectations are literals taken from its behaviour rather than derived from
+/// ours. Two areas carry nearly all the risk. Grouping interacts with zero
+/// padding in a way that surprises everyone who meets it — `{:08,d}` of 1234 is
+/// `0,001,234`, nine characters, because the padding is fitted to the *grouped*
+/// length rather than added to the raw digits — and each combination of width,
+/// group size, sign and alternate prefix reaches that arithmetic differently.
+/// And `n` hands parts of the layout to a `NumberLocale`, which is caller code:
+/// it can group irregularly, replace the digits themselves, and throw.
+///
+/// The values are chosen at the edges: zero, the int boundaries in both
+/// directions, `BigInt` values just past them, and the minimum int — the one
+/// value with no positive counterpart, which every sign-then-magnitude
+/// implementation has to special-case.
+///
+/// VM-only, and annotated as such: the 64-bit literals below do not survive
+/// dart2js, where an int is a double. The IR is exercised against these same
+/// paths on the web in `template_ir_diff_test.dart`.
 @TestOn('vm')
 library;
 

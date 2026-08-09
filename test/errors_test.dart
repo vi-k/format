@@ -1,16 +1,18 @@
-// The exception hierarchy as data: what each failure carries, and what it says.
-//
-// These exceptions are a public API. A caller that catches
-// `FormattingException` and reports the offset, or switches on the subtype to
-// decide whether the template or the value was at fault, depends on the payload
-// fields being there and being populated — none of which the engine's own tests
-// check, since they only assert that the right *type* was thrown.
-//
-// The exceptions are constructed directly here rather than provoked through the
-// engine. That is deliberate: it separates "the engine throws the right thing"
-// (asserted everywhere else) from "the thing carries the right payload"
-// (asserted here), and it reaches types the engine only produces in rare
-// configurations.
+/// The exception hierarchy as data: what each failure carries, and what it
+/// says.
+///
+/// These exceptions are a public API. A caller that catches
+/// `FormattingException` and reports the offset, or switches on the subtype to
+/// decide whether the template or the value was at fault, depends on the
+/// payload fields being there and being populated — none of which the engine's
+/// own tests check, since they only assert that the right *type* was thrown.
+///
+/// The exceptions are constructed directly here rather than provoked through
+/// the engine. That is deliberate: it separates "the engine throws the right
+/// thing" (asserted everywhere else) from "the thing carries the right payload"
+/// (asserted here), and it reaches types the engine only produces in rare
+/// configurations.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

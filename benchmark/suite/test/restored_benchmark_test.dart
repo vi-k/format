@@ -1,23 +1,24 @@
-// The comparison matrix — the tool that prints how this package measures up
-// against `format` 1.6 and `sprintf` — tested for the things a benchmark run
-// cannot tell you about itself.
-//
-// A benchmark is a program that always produces plausible output. If a
-// comparator silently stopped being measured, or a scenario disappeared, or the
-// engines were compared on values one of them formats differently, the table
-// would still print and still look authoritative. These tests read the output
-// and the matrix instead of trusting them: the engines are present and produce
-// the expected strings, the scenario count and the scaling case are pinned, and
-// a comparator that cannot run a scenario is shown as skipped rather than
-// omitted.
-//
-// The measurement machinery gets the same treatment. Cache mode is per
-// measurement and must be restored afterwards, so one row cannot change what
-// the next one measures. Durations default to quick and switch on request, and
-// an invalid threshold is refused rather than quietly accepted.
-//
-// Nothing here asserts a timing. The output format is asserted, because it is
-// what a reader interprets, and it has changed several times.
+/// The comparison matrix — the tool that prints how this package measures up
+/// against `format` 1.6 and `sprintf` — tested for the things a benchmark run
+/// cannot tell you about itself.
+///
+/// A benchmark is a program that always produces plausible output. If a
+/// comparator silently stopped being measured, or a scenario disappeared, or
+/// the engines were compared on values one of them formats differently, the
+/// table would still print and still look authoritative. These tests read the
+/// output and the matrix instead of trusting them: the engines are present and
+/// produce the expected strings, the scenario count and the scaling case are
+/// pinned, and a comparator that cannot run a scenario is shown as skipped
+/// rather than omitted.
+///
+/// The measurement machinery gets the same treatment. Cache mode is per
+/// measurement and must be restored afterwards, so one row cannot change what
+/// the next one measures. Durations default to quick and switch on request, and
+/// an invalid threshold is refused rather than quietly accepted.
+///
+/// Nothing here asserts a timing. The output format is asserted, because it is
+/// what a reader interprets, and it has changed several times.
+library;
 
 import 'package:format/format.dart';
 import 'package:format_benchmarks/benchmark.dart';

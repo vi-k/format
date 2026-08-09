@@ -1,28 +1,29 @@
-// What the two platforms disagree about, written down and checked on both.
-//
-// On the VM `int` and `double` are distinct types. Under dart2js they are the
-// same type: `42.0 is int` is true, `identical(1, 1.0)` is true, and there is
-// no way to ask which one the programmer meant. That difference reaches the
-// surface of this package — `format('{}', 42.0)` is `'42.0'` on the VM and
-// `'42'` on the web, and `%d` accepts an integral double on one and rejects it
-// on the other — so it cannot be hidden, only made explicit.
-//
-// This file is where it is made explicit. Every test asserts *both* answers,
-// keyed off `isJavaScript`, so neither platform's behaviour can drift
-// unnoticed and a reader can see the divergence rather than discover it. The
-// same cases are listed in the divergence registry the documentation is
-// generated from.
-//
-// The second theme is the web's number-to-string, which is not usable here.
-// JavaScript prints the shortest form that round-trips (`1152921504606847000`
-// for 2^60) and switches to exponential at 1e21 — neither of which is what an
-// integer conversion promises. The tests pin exact digits across the range
-// where the platform's own conversion would give something else.
-//
-// The third is the option-size ceiling, which used to be a divergence and no
-// longer is: a digit run too long to be an `int` rounds under dart2js instead
-// of failing to parse, so a template rejected on the VM was once accepted in a
-// browser. Both platforms now refuse at the same point, with the same type.
+/// What the two platforms disagree about, written down and checked on both.
+///
+/// On the VM `int` and `double` are distinct types. Under dart2js they are the
+/// same type: `42.0 is int` is true, `identical(1, 1.0)` is true, and there is
+/// no way to ask which one the programmer meant. That difference reaches the
+/// surface of this package — `format('{}', 42.0)` is `'42.0'` on the VM and
+/// `'42'` on the web, and `%d` accepts an integral double on one and rejects it
+/// on the other — so it cannot be hidden, only made explicit.
+///
+/// This file is where it is made explicit. Every test asserts *both* answers,
+/// keyed off `isJavaScript`, so neither platform's behaviour can drift
+/// unnoticed and a reader can see the divergence rather than discover it. The
+/// same cases are listed in the divergence registry the documentation is
+/// generated from.
+///
+/// The second theme is the web's number-to-string, which is not usable here.
+/// JavaScript prints the shortest form that round-trips (`1152921504606847000`
+/// for 2^60) and switches to exponential at 1e21 — neither of which is what an
+/// integer conversion promises. The tests pin exact digits across the range
+/// where the platform's own conversion would give something else.
+///
+/// The third is the option-size ceiling, which used to be a divergence and no
+/// longer is: a digit run too long to be an `int` rounds under dart2js instead
+/// of failing to parse, so a template rejected on the VM was once accepted in a
+/// browser. Both platforms now refuse at the same point, with the same type.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

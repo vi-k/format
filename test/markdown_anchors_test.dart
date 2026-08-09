@@ -1,16 +1,17 @@
-// The slug derivation used to check documentation links — a test of the test
-// support code, not of the package.
-//
-// `markdownAnchors` is what lets other tests assert that a link like
-// `[the cache](#template-cache)` actually lands somewhere. That check is only
-// as trustworthy as the slugging: if this helper derived anchors GitHub would
-// not, the link tests would either pass on broken links or fail on working
-// ones, and either way the failure would be blamed on the documentation.
-//
-// So the rules are pinned against GitHub's behaviour directly: punctuation is
-// dropped rather than replaced, spaces become hyphens, case folds, and a `#`
-// that is not a heading — no space after it, or not at the start of a line, or
-// inside a fenced code block — produces no anchor at all.
+/// The slug derivation used to check documentation links — a test of the test
+/// support code, not of the package.
+///
+/// `markdownAnchors` is what lets other tests assert that a link like
+/// `[the cache](#template-cache)` actually lands somewhere. That check is only
+/// as trustworthy as the slugging: if this helper derived anchors GitHub would
+/// not, the link tests would either pass on broken links or fail on working
+/// ones, and either way the failure would be blamed on the documentation.
+///
+/// So the rules are pinned against GitHub's behaviour directly: punctuation is
+/// dropped rather than replaced, spaces become hyphens, case folds, and a `#`
+/// that is not a heading — no space after it, or not at the start of a line, or
+/// inside a fenced code block — produces no anchor at all.
+library;
 
 import 'package:test/test.dart';
 

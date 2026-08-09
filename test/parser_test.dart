@@ -1,17 +1,18 @@
-// The brace template grammar, checked at the parser rather than through the
-// formatted output.
-//
-// A template is untrusted input — it can come from a config file, a log format
-// string, a translation catalogue — so what the parser accepts and rejects is a
-// contract in itself, and the rejections matter as much as the acceptances.
-// Going through `format` would only show that a bad template failed somehow;
-// `debugParseBraceTemplate` shows the parse tree, which is how a template that
-// parses into the *wrong* structure gets caught rather than a template that
-// happens to render the same anyway.
-//
-// The interesting territory is where braces nest: a specification can contain
-// fields, and both escapes and nested fields are spelled with braces, so the
-// grammar has to stay decidable in cases like `'{0:{{{width}}}}'`.
+/// The brace template grammar, checked at the parser rather than through the
+/// formatted output.
+///
+/// A template is untrusted input — it can come from a config file, a log format
+/// string, a translation catalogue — so what the parser accepts and rejects is
+/// a contract in itself, and the rejections matter as much as the acceptances.
+/// Going through `format` would only show that a bad template failed somehow;
+/// `debugParseBraceTemplate` shows the parse tree, which is how a template that
+/// parses into the *wrong* structure gets caught rather than a template that
+/// happens to render the same anyway.
+///
+/// The interesting territory is where braces nest: a specification can contain
+/// fields, and both escapes and nested fields are spelled with braces, so the
+/// grammar has to stay decidable in cases like `'{0:{{{width}}}}'`.
+library;
 
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';

@@ -1,26 +1,27 @@
-// The performance gate's own logic, tested as ordinary code.
-//
-// The gate decides whether a change may land, from benchmark reports produced
-// on CI. That makes it a piece of software with two ways to fail, and both are
-// expensive: passing a real regression, or failing an innocent change often
-// enough that people learn to override it. Neither can be discovered by running
-// it — a green gate looks the same whether it is working or asleep.
-//
-// So none of these tests measure anything. They build reports in memory, feed
-// them to the same functions the gate uses, and assert the decision: the
-// tolerance arithmetic, the rule that a scenario must breach in *both* runs
-// before it counts, and the provenance checks that make a report admissible at
-// all — right runtime, right Node version, one source revision across every
-// report, no smoke runs, no shortened ones.
-//
-// The provenance half is the larger one, and deliberately so. A wrong number
-// compared correctly is worse than no gate: reports from two different builds,
-// or from a JIT run mislabelled as AOT, produce ratios that mean nothing while
-// looking exactly like ratios that mean something.
-//
-// The last two tests run the command end to end in a temporary directory, on a
-// build that did not change and one that regressed, so the wiring between the
-// pieces above is checked as well as the pieces.
+/// The performance gate's own logic, tested as ordinary code.
+///
+/// The gate decides whether a change may land, from benchmark reports produced
+/// on CI. That makes it a piece of software with two ways to fail, and both are
+/// expensive: passing a real regression, or failing an innocent change often
+/// enough that people learn to override it. Neither can be discovered by
+/// running it — a green gate looks the same whether it is working or asleep.
+///
+/// So none of these tests measure anything. They build reports in memory, feed
+/// them to the same functions the gate uses, and assert the decision: the
+/// tolerance arithmetic, the rule that a scenario must breach in *both* runs
+/// before it counts, and the provenance checks that make a report admissible at
+/// all — right runtime, right Node version, one source revision across every
+/// report, no smoke runs, no shortened ones.
+///
+/// The provenance half is the larger one, and deliberately so. A wrong number
+/// compared correctly is worse than no gate: reports from two different builds,
+/// or from a JIT run mislabelled as AOT, produce ratios that mean nothing while
+/// looking exactly like ratios that mean something.
+///
+/// The last two tests run the command end to end in a temporary directory, on a
+/// build that did not change and one that regressed, so the wiring between the
+/// pieces above is checked as well as the pieces.
+library;
 
 import 'dart:convert';
 import 'dart:io';

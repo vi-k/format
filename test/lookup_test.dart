@@ -1,20 +1,22 @@
-// Resolving a field to a value: the argument itself, then `.attribute` and
-// `[item]` steps on top of it, then the `AttributeLookup` extension point.
-//
-// Lookup is where the engine touches the caller's own objects, so most of what
-// is pinned here is about *failing well*. A lookup can fail for four different
-// reasons — the root was never passed, the step is out of range, the value has
-// no such attribute, or the caller's extension threw — and they must not
-// collapse into one another: a missing argument is a template bug, a failed
-// step is a data bug, and an extension that throws is the extension's bug and
-// has to arrive with its original error and stack trace intact. Each is
-// asserted as a type plus the field it happened in, because an exception that
-// cannot say which field it came from is nearly useless in a template with ten.
-//
-// The other theme is dispatch. Built-in types are resolved by the engine and
-// never offered to an extension — the `Map` case below is the one that catches
-// this — and two extensions claiming the same value is an error rather than a
-// race won by list order.
+/// Resolving a field to a value: the argument itself, then `.attribute` and
+/// `[item]` steps on top of it, then the `AttributeLookup` extension point.
+///
+/// Lookup is where the engine touches the caller's own objects, so most of what
+/// is pinned here is about *failing well*. A lookup can fail for four different
+/// reasons — the root was never passed, the step is out of range, the value has
+/// no such attribute, or the caller's extension threw — and they must not
+/// collapse into one another: a missing argument is a template bug, a failed
+/// step is a data bug, and an extension that throws is the extension's bug and
+/// has to arrive with its original error and stack trace intact. Each is
+/// asserted as a type plus the field it happened in, because an exception that
+/// cannot say which field it came from is nearly useless in a template with
+/// ten.
+///
+/// The other theme is dispatch. Built-in types are resolved by the engine and
+/// never offered to an extension — the `Map` case below is the one that catches
+/// this — and two extensions claiming the same value is an error rather than a
+/// race won by list order.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

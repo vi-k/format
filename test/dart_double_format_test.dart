@@ -1,24 +1,25 @@
-// The `dartSdk` double profile — the default one — against `compatible`.
-//
-// The package can spell doubles two ways, and the choice is not cosmetic. In
-// `dartSdk` mode the digits come from the SDK's own conversions, so a number
-// prints the way the rest of a Dart program prints it, and rounding follows the
-// SDK (`{:.0f}` of 2.5 is 3). In `compatible` mode the digits come from the
-// package's own layout, matching C and Python instead (the same 2.5 is 2, on
-// banker's rounding).
-//
-// Both are correct; what must not happen is drift between the documented
-// profile and the actual one, or one profile leaking into the other. So the two
-// are asserted side by side on the values where they disagree, over both
-// dialects — the profile is a property of the engine, not of the brace path,
-// and the printf path has to inherit it.
-//
-// The SDK conversions also carry a precision range the package does not choose,
-// and it has to surface as a specifier rejection rather than as an SDK error
-// escaping the package. That range is checked in both dialects and, separately,
-// on infinities and NaN — where the digits are never produced, so an
-// implementation that validated late would accept a specification it rejects
-// for every finite value.
+/// The `dartSdk` double profile — the default one — against `compatible`.
+///
+/// The package can spell doubles two ways, and the choice is not cosmetic. In
+/// `dartSdk` mode the digits come from the SDK's own conversions, so a number
+/// prints the way the rest of a Dart program prints it, and rounding follows
+/// the SDK (`{:.0f}` of 2.5 is 3). In `compatible` mode the digits come from
+/// the package's own layout, matching C and Python instead (the same 2.5 is 2,
+/// on banker's rounding).
+///
+/// Both are correct; what must not happen is drift between the documented
+/// profile and the actual one, or one profile leaking into the other. So the
+/// two are asserted side by side on the values where they disagree, over both
+/// dialects — the profile is a property of the engine, not of the brace path,
+/// and the printf path has to inherit it.
+///
+/// The SDK conversions also carry a precision range the package does not
+/// choose, and it has to surface as a specifier rejection rather than as an SDK
+/// error escaping the package. That range is checked in both dialects and,
+/// separately, on infinities and NaN — where the digits are never produced, so
+/// an implementation that validated late would accept a specification it
+/// rejects for every finite value.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

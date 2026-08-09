@@ -1,16 +1,17 @@
-// The two text conversions, `s` and `c`, and the option sets they accept.
-//
-// Text formatting is where the configured `TextUnit` becomes visible: width and
-// precision count units, not code units, so the same template gives different
-// answers under `unicodeScalars` and `graphemeClusters`. Both modes are
-// exercised on values where they genuinely disagree — a combining sequence, a
-// ZWJ emoji — because on ASCII they never differ and any mode confusion would
-// go unnoticed.
-//
-// The other half is rejection. `s` and `c` take a small subset of the numeric
-// option grammar, and the options they *don't* take are listed one per test:
-// silently ignoring `{:+s}` or `{:04c}` would let a template that means
-// nothing look like it worked.
+/// The two text conversions, `s` and `c`, and the option sets they accept.
+///
+/// Text formatting is where the configured `TextUnit` becomes visible: width
+/// and precision count units, not code units, so the same template gives
+/// different answers under `unicodeScalars` and `graphemeClusters`. Both modes
+/// are exercised on values where they genuinely disagree — a combining
+/// sequence, a ZWJ emoji — because on ASCII they never differ and any mode
+/// confusion would go unnoticed.
+///
+/// The other half is rejection. `s` and `c` take a small subset of the numeric
+/// option grammar, and the options they *don't* take are listed one per test:
+/// silently ignoring `{:+s}` or `{:04c}` would let a template that means
+/// nothing look like it worked.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

@@ -1,21 +1,22 @@
-// The printf dialect's public surface: `sprintf`, `vsprintf`, and how values
-// arrive.
-//
-// This is the counterpart of `api_test.dart` for the other mini-language, and
-// its subject is argument handling rather than layout. printf has no named
-// values and no automatic/manual distinction — arguments are consumed strictly
-// in order — so the questions are which values a call sees, when it reads them,
-// and what happens when there are too few. `sprintf` is variadic and `vsprintf`
-// takes a list, which are two genuinely different contracts: one has a fixed
-// maximum arity and needs a sentinel to tell "not passed" from an explicit
-// `null`, the other has to snapshot a caller's list that formatting itself
-// might mutate.
-//
-// The rest is the typed-failure contract, restated for this dialect because it
-// is a separate parser and a separate processor: an unknown conversion, a
-// dangling `%`, a missing argument, a value of the wrong type and a `toString`
-// that throws — each with the offset and the argument index filled in, since a
-// printf template gives a reader nothing else to locate the fault by.
+/// The printf dialect's public surface: `sprintf`, `vsprintf`, and how values
+/// arrive.
+///
+/// This is the counterpart of `api_test.dart` for the other mini-language, and
+/// its subject is argument handling rather than layout. printf has no named
+/// values and no automatic/manual distinction — arguments are consumed strictly
+/// in order — so the questions are which values a call sees, when it reads
+/// them, and what happens when there are too few. `sprintf` is variadic and
+/// `vsprintf` takes a list, which are two genuinely different contracts: one
+/// has a fixed maximum arity and needs a sentinel to tell "not passed" from an
+/// explicit `null`, the other has to snapshot a caller's list that formatting
+/// itself might mutate.
+///
+/// The rest is the typed-failure contract, restated for this dialect because it
+/// is a separate parser and a separate processor: an unknown conversion, a
+/// dangling `%`, a missing argument, a value of the wrong type and a `toString`
+/// that throws — each with the offset and the argument index filled in, since a
+/// printf template gives a reader nothing else to locate the fault by.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

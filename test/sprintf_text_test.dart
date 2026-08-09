@@ -1,23 +1,24 @@
-// The printf text conversions, `%s` and `%c`, and the dialect's own invention:
-// options taken from the argument list.
-//
-// `%*.*s` is where printf differs structurally from the brace dialect. A single
-// conversion can consume three values, in a fixed order — width, then
-// precision, then the value — and each of them can be missing, of the wrong
-// type, or absurdly large. So the interesting property is not the layout, which
-// mirrors `text_format_test.dart`, but the *consumption order* and how a
-// failure at each position is reported: by argument index, since a printf
-// template gives the reader no names to go by.
-//
-// A dynamic width also carries a meaning static syntax cannot: a negative width
-// means left alignment, and a negative precision means none at all. Those are
-// C's rules, and they make the sign of an argument change the layout rather
-// than being rejected.
-//
-// The size ceiling is here rather than with the layout tests because a template
-// is untrusted input: a single conversion must not be able to demand an
-// arbitrarily large allocation, whether the number came from the template or
-// from the arguments.
+/// The printf text conversions, `%s` and `%c`, and the dialect's own invention:
+/// options taken from the argument list.
+///
+/// `%*.*s` is where printf differs structurally from the brace dialect. A
+/// single conversion can consume three values, in a fixed order — width, then
+/// precision, then the value — and each of them can be missing, of the wrong
+/// type, or absurdly large. So the interesting property is not the layout,
+/// which mirrors `text_format_test.dart`, but the *consumption order* and how a
+/// failure at each position is reported: by argument index, since a printf
+/// template gives the reader no names to go by.
+///
+/// A dynamic width also carries a meaning static syntax cannot: a negative
+/// width means left alignment, and a negative precision means none at all.
+/// Those are C's rules, and they make the sign of an argument change the layout
+/// rather than being rejected.
+///
+/// The size ceiling is here rather than with the layout tests because a
+/// template is untrusted input: a single conversion must not be able to demand
+/// an arbitrarily large allocation, whether the number came from the template
+/// or from the arguments.
+library;
 
 import 'package:format/format.dart';
 import 'package:test/test.dart';

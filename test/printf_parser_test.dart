@@ -1,29 +1,30 @@
-// The printf grammar, checked at the parser rather than through output — the
-// counterpart of `parser_test.dart` for the other dialect.
-//
-// A printf conversion is a fixed sequence: flags, width, precision, type. What
-// makes it worth testing at this level is that the sequence is *almost*
-// unambiguous. Flags may repeat and collide, a width may be a literal or an
-// asterisk, and the type is a single letter — so a template that means nothing
-// still looks like a conversion, and the parser has to decide which of three
-// answers it gives: accept it, reject it as bad grammar
-// (`InvalidFormatException`), or reject it as an option that does not apply to
-// this conversion (`InvalidSpecifierException`). Those two rejections are
-// different complaints and are kept apart deliberately: `%q` is not a
-// conversion at all, while `%+u` is a real conversion with an option that
-// cannot mean anything for it.
-//
-// The three tables are the core of the file: every option each conversion
-// accepts, every combination that parses but is inapplicable, and every shape
-// that is not printf at all — length modifiers (`%llx`), positional arguments
-// (`%2$d`), conversions from other languages (`%b`, `%n`, `%p`), non-ASCII
-// digits.
-//
-// The rest is the location contract. printf templates are frequently built at
-// runtime, so an offset that is off by one — or a fragment that stops before
-// the conversion letter — makes a failure much harder to place. Several cases
-// put astral characters before and inside the fragment, since offsets are in
-// UTF-16 code units and a surrogate pair is where a naive count drifts.
+/// The printf grammar, checked at the parser rather than through output — the
+/// counterpart of `parser_test.dart` for the other dialect.
+///
+/// A printf conversion is a fixed sequence: flags, width, precision, type. What
+/// makes it worth testing at this level is that the sequence is *almost*
+/// unambiguous. Flags may repeat and collide, a width may be a literal or an
+/// asterisk, and the type is a single letter — so a template that means nothing
+/// still looks like a conversion, and the parser has to decide which of three
+/// answers it gives: accept it, reject it as bad grammar
+/// (`InvalidFormatException`), or reject it as an option that does not apply to
+/// this conversion (`InvalidSpecifierException`). Those two rejections are
+/// different complaints and are kept apart deliberately: `%q` is not a
+/// conversion at all, while `%+u` is a real conversion with an option that
+/// cannot mean anything for it.
+///
+/// The three tables are the core of the file: every option each conversion
+/// accepts, every combination that parses but is inapplicable, and every shape
+/// that is not printf at all — length modifiers (`%llx`), positional arguments
+/// (`%2$d`), conversions from other languages (`%b`, `%n`, `%p`), non-ASCII
+/// digits.
+///
+/// The rest is the location contract. printf templates are frequently built at
+/// runtime, so an offset that is off by one — or a fragment that stops before
+/// the conversion letter — makes a failure much harder to place. Several cases
+/// put astral characters before and inside the fragment, since offsets are in
+/// UTF-16 code units and a surrogate pair is where a naive count drifts.
+library;
 
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';

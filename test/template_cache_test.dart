@@ -1,29 +1,31 @@
-// The template cache: that it is transparent, and that its policy holds.
-//
-// Parsed templates are kept in a process-wide, bounded cache, which is the
-// single largest reason repeated formatting is fast. Being a cache, the one
-// thing it must never do is change an answer — so half of this file is the
-// boring half: the same call twice, a dynamic width twice with different
-// values, a failing template twice. Each of those is a way a cached node could
-// leak state from one call into the next, and each failure mode is silent and
-// data-dependent, which is exactly the kind that reaches production.
-//
-// The other half is the policy, tested through debug seams rather than through
-// timing. Two properties are pinned deliberately: overflow evicts one entry
-// rather than clearing the cache, and the replacement is random rather than
-// FIFO or LRU — with the cyclic-working-set test that explains why, since that
-// is the input on which the obvious policies degrade to a zero hit rate.
-//
-// The cache is global state, so every test starts from
-// `debugClearTemplateCaches` and some deliberately move
-// `templateCacheCapacity`. That also makes the import below load-bearing rather
-// than stylistic.
-//
-// The engine is imported via its package URI: this is the same canonical
-// library instance the public package:format export resolves to, so the
-// debug seams observe the same static template caches that format() and
-// sprintf() populate. A relative ../lib/src import would create a second
-// library instance with its own independent caches and types.
+/// The template cache: that it is transparent, and that its policy holds.
+///
+/// Parsed templates are kept in a process-wide, bounded cache, which is the
+/// single largest reason repeated formatting is fast. Being a cache, the one
+/// thing it must never do is change an answer — so half of this file is the
+/// boring half: the same call twice, a dynamic width twice with different
+/// values, a failing template twice. Each of those is a way a cached node could
+/// leak state from one call into the next, and each failure mode is silent and
+/// data-dependent, which is exactly the kind that reaches production.
+///
+/// The other half is the policy, tested through debug seams rather than through
+/// timing. Two properties are pinned deliberately: overflow evicts one entry
+/// rather than clearing the cache, and the replacement is random rather than
+/// FIFO or LRU — with the cyclic-working-set test that explains why, since that
+/// is the input on which the obvious policies degrade to a zero hit rate.
+///
+/// The cache is global state, so every test starts from
+/// `debugClearTemplateCaches` and some deliberately move
+/// `templateCacheCapacity`. That also makes the import below load-bearing
+/// rather than stylistic.
+///
+/// The engine is imported via its package URI: this is the same canonical
+/// library instance the public package:format export resolves to, so the debug
+/// seams observe the same static template caches that format() and sprintf()
+/// populate. A relative ../lib/src import would create a second library
+/// instance with its own independent caches and types.
+library;
+
 import 'package:format/format.dart' show FormattingException, TextUnit;
 import 'package:format/src/engine.dart' as engine;
 import 'package:test/test.dart';
