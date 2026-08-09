@@ -9,8 +9,7 @@ final class FormatExceptionContext {
   /// The UTF-16 offset of [fragment] within [template].
   final int? offset;
 
-  /// The placeholder or conversion text the failure belongs to.
-  final String? fragment;
+  final String? _fragment;
 
   /// The format specification (after `:`) or printf option role.
   final String? specifier;
@@ -24,11 +23,41 @@ final class FormatExceptionContext {
   const FormatExceptionContext({
     this.template,
     this.offset,
-    this.fragment,
+    String? fragment,
     this.specifier,
     this.conversion,
     this.argumentIndex,
-  });
+  }) : _fragment = fragment;
+
+  /// The placeholder or conversion text the failure belongs to, as an
+  /// excerpt rather than a copy.
+  ///
+  /// A fragment longer than 80 characters is cut and ends in `…`, and the cut
+  /// never lands inside a surrogate pair.
+  /// [template] is kept whole, and it is the reason for the cap: a generated
+  /// template can run to hundreds of kilobytes, and slicing an equally long
+  /// fragment out of one held all of it twice for text nobody could read.
+  /// Use [offset] with [template] when the exact span matters.
+  String? get fragment => _truncateFragment(_fragment);
+}
+
+/// The longest [FormatExceptionContext.fragment] reported, counting the `…`
+/// that marks a cut. Internal: the public documentation states the number, so
+/// that a reader of the generated docs is not sent to a symbol they cannot
+/// import.
+const int _fragmentLengthLimit = 80;
+
+String? _truncateFragment(String? fragment) {
+  if (fragment == null || fragment.length <= _fragmentLengthLimit) {
+    return fragment;
+  }
+  var end = _fragmentLengthLimit - 1;
+  // Never cut between a high surrogate and its low one: a fragment carrying
+  // half a character cannot be printed, which defeats the point of having it.
+  final last = fragment.codeUnitAt(end - 1);
+  if (last >= 0xd800 && last <= 0xdbff) end--;
+
+  return '${fragment.substring(0, end)}…';
 }
 
 /// Renders [value] for diagnostics without trusting its `toString()`:

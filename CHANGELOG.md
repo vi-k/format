@@ -48,7 +48,10 @@ unpublished 2.0.0 below.
   `formatWith` and `vsprintf`.
 * Formatting exceptions render their type, payload, and full template context
   in `toString()`, and a value whose own `toString()` throws is reported
-  safely.
+  safely. `FormatExceptionContext.fragment` is an excerpt rather than a copy:
+  it is capped at 80 characters, ending in `…` and never cut inside a
+  surrogate pair, while `template` is kept whole. Use `offset` with `template`
+  when the exact span matters.
 * Documented the whole public API surface with dartdoc, including the
   extension contracts an implementer otherwise had to read the engine for:
   what a throwing `canFormat`, `format`, `lookup`, or `represent` turns into,

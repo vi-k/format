@@ -39,6 +39,45 @@ void main() {
     expect(error.reason, 'unknown specifier');
   });
 
+  // A fragment is an excerpt, not a second copy of the template. A generated
+  // template can run to hundreds of kilobytes, and the context already holds
+  // all of it in `template`, so slicing an equally long fragment out of it
+  // doubled what an error retained for text nobody could read anyway.
+  test('caps the fragment while keeping the template whole', () {
+    final long = 'x' * 500;
+    final capped = FormatExceptionContext(template: long, fragment: long);
+
+    expect(capped.template, hasLength(500));
+    expect(capped.fragment, hasLength(80));
+    expect(capped.fragment, endsWith('…'));
+    expect(capped.fragment, startsWith('xxx'));
+  });
+
+  // Short fragments are the overwhelming majority and must stay verbatim:
+  // capping is a ceiling, not a transformation applied to every diagnostic.
+  test('leaves a fragment at the limit untouched', () {
+    final exact = 'y' * 80;
+
+    expect(FormatExceptionContext(fragment: exact).fragment, exact);
+  });
+
+  // The cut must not land between a high surrogate and its low one. This is
+  // the same class of defect as reading a conversion by code unit: a fragment
+  // carrying half a character cannot be printed or logged.
+  test('never cuts a fragment inside a surrogate pair', () {
+    final astral = '\u{1F600}' * 100;
+    final capped = FormatExceptionContext(fragment: astral).fragment!;
+    final body = capped.substring(0, capped.length - 1);
+
+    expect(capped.length, lessThanOrEqualTo(80));
+    expect(capped, endsWith('…'));
+    expect(
+      body.codeUnitAt(body.length - 1) & 0xfc00 == 0xd800,
+      isFalse,
+      reason: 'фрагмент не должен обрываться на старшем суррогате',
+    );
+  });
+
   // The roll call: every exception type the package can throw, in one list, so
   // that a new one added without a payload accessor — or dropped from the
   // common supertype — fails here. `everyElement` pins the supertype, which is
