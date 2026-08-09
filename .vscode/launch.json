@@ -25,6 +25,14 @@
       "args": []
     },
     {
+      "name": "Benchmark: list snapshot strategies",
+      "request": "launch",
+      "type": "dart",
+      "program": "bin/list_snapshot_benchmark.dart",
+      "cwd": "${workspaceFolder}/benchmark/suite",
+      "args": []
+    },
+    {
       "name": "Benchmark: template IR vs legacy",
       "request": "launch",
       "type": "dart",
