@@ -617,6 +617,58 @@ void main() {
     expectPrintfParity('%*.2f', [100001, 2.5], engine: localeFormat);
   });
 
+  // The same hand-over on the integer side, which the op gained when printf
+  // integers started reading the locale (L18). It is the riskier of the two:
+  // the int op writes digits straight into the sink as ASCII, so *everything*
+  // it produces — sign, digits, and the zero padding around them — has to come
+  // from the legacy tail instead, not just a decorated body. All six
+  // conversions are walked, since the alternate prefix differs between them
+  // and `#` on octal is a digit rather than a marker.
+  test('printf integer op falls back to slow path for custom locales', () {
+    for (final template in [
+      '%d',
+      '%i',
+      '%u',
+      '%o',
+      '%#o',
+      '%x',
+      '%#x',
+      '%X',
+      '%#X',
+      '%+d',
+      '% d',
+      '%08d',
+      '%-8d',
+      '%.5d',
+      '%.0d',
+      '%10.5d',
+    ]) {
+      for (final value in [0, 42, 7, BigInt.two]) {
+        expectPrintfParity(template, [value], engine: localeFormat);
+      }
+    }
+    // Negatives only where the conversion is signed: the unsigned ones reject
+    // them, and the rejection is compared separately below.
+    for (final template in ['%d', '%i', '%+d', '%08d', '%-8d', '%.5d']) {
+      for (final value in [-42, BigInt.from(-7)]) {
+        expectPrintfParity(template, [value], engine: localeFormat);
+      }
+    }
+    for (final template in ['%u', '%o', '%x']) {
+      expectPrintfParity(template, [-1], engine: localeFormat);
+    }
+    // Dynamic options, where the slow branch rebuilds the resolved conversion
+    // by hand — the same reconstruction the double op does, exercised through
+    // the other op.
+    for (final width in [12, -12]) {
+      expectPrintfParity('%*d', [width, -42], engine: localeFormat);
+      expectPrintfParity('%0*d', [width, 42], engine: localeFormat);
+      expectPrintfParity('%*.*d', [width, 5, 42], engine: localeFormat);
+    }
+    expectPrintfParity('%.*d', [-1, 42], engine: localeFormat);
+    expectPrintfParity('%*d', [100001, 42], engine: localeFormat);
+  });
+
   // Above the exact-double range in both dialects and every radix. `int.parse`
   // rather than literals so the file still compiles under dart2js, where these
   // values exist but cannot be written down.

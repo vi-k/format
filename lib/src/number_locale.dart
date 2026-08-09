@@ -1,8 +1,13 @@
 /// Symbols and grouping rules for locale-aware number formatting.
 ///
 /// The `n` presentation type applies the locale's grouping automatically;
-/// the printf dialect uses the locale's separators, signs, and digits. A
-/// locale supplies symbols only: precision, rounding, and notation remain
+/// the printf dialect, which has no `n`, uses the locale's separators, signs,
+/// and digits on every numeric conversion but never groups on its own — a
+/// template that did not ask for separators does not get them. Syntax markers
+/// stay ASCII: the `0x` of `%#x` and of `%a` is not a digit. The alternate
+/// zero of `%#o` is, and is localized with the rest.
+///
+/// A locale supplies symbols only: precision, rounding, and notation remain
 /// the responsibility of the engine. The companion `format_intl` package
 /// adapts `intl` locale data to this interface.
 abstract interface class NumberLocale {

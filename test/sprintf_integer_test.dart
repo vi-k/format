@@ -13,6 +13,12 @@
 /// printf reaches the digits through its own conversions rather than the brace
 /// path's.
 ///
+/// The locale tests at the end are the integer half of the ones in
+/// `sprintf_double_test.dart`. printf has no `n`, so a locale applies to the
+/// ordinary conversions, and the interesting cases are the ones where "digit"
+/// and "marker" have to be told apart: the `0x` of `%#x` is a marker, the zero
+/// of `%#o` is a digit, and the zeros that padding adds are digits too.
+///
 /// VM-only, and annotated as such: the 64-bit literals below do not survive
 /// dart2js. The web side of these paths is covered in `template_ir_diff_test`.
 @TestOn('vm')
@@ -150,4 +156,139 @@ void main() {
       ),
     );
   });
+
+  // printf has no `n`, so a locale reaches the ordinary integer conversions —
+  // the same rule the floating ones already followed, and the reason the
+  // `NumberLocale` doc comment was true of half the dialect (L18). Digits and
+  // both signs are localized; grouping is not, because a printf template that
+  // did not ask for separators must not get them, and this locale enables
+  // grouping to prove it.
+  test('localizes integer signs and digits without implicit grouping', () {
+    final localized = Format(numberLocale: _IntegerPrintfLocale());
+
+    expect(localized.sprintf('%d', 1234567), '١٢٣٤٥٦٧');
+    expect(localized.sprintf('%d', -1234567), '−١٢٣٤٥٦٧');
+    expect(localized.sprintf('%+d', 42), '＋٤٢');
+    expect(localized.sprintf('% d', 42), ' ٤٢');
+    expect(localized.sprintf('%i', -42), '−٤٢');
+  });
+
+  // The padding zeros are digits of the result, so they localize with it —
+  // both the ones precision asks for and the ones the `0` flag adds. Width is
+  // still counted in text units of the localized string, which is why the
+  // padded cases come out at their requested width and not one character
+  // longer.
+  test('localizes integer padding zeros', () {
+    final localized = Format(numberLocale: _IntegerPrintfLocale());
+
+    expect(localized.sprintf('%.5d', 42), '٠٠٠٤٢');
+    expect(localized.sprintf('%08d', -42), '−٠٠٠٠٠٤٢');
+    expect(localized.sprintf('%8d', -42).length, 8);
+    expect(localized.sprintf('%-8d|', -42), '−٤٢     |');
+  });
+
+  // A locale whose digits are *wider* than ASCII, the integer counterpart of
+  // the trap in `sprintf_double_test.dart`: padding counted before
+  // localization would overshoot, so the count is fitted after. `%x` is here
+  // because only its digit run expands — the hex letters are not digits and
+  // pass through, which is the same rule `%a` follows on the floating side.
+  test('fits integer zero padding after expanding localized digits', () {
+    final localized = Format(numberLocale: _ExpandingZeroLocale());
+
+    expect(localized.sprintf('%010d', 105), '٠٠٠٠٠٠1٠٠5');
+    expect(localized.sprintf('%010d', 105).length, 10);
+    expect(localized.sprintf('%08x', 255), '٠٠٠٠٠٠ff');
+  });
+
+  // `#` on octal is not a prefix. C defines it as forcing the first *digit* of
+  // the result to be a zero, and that difference is invisible under the C
+  // locale and glaring under any other: a marker would stay ASCII and sit next
+  // to localized digits. `0x` on the other hand is a marker and does stay.
+  test('treats the alternate octal zero as a digit', () {
+    final localized = Format(numberLocale: _IntegerPrintfLocale());
+
+    expect(sprintf('%#o', 8), '010');
+    expect(sprintf('%#010o', 8), '0000000010');
+    expect(localized.sprintf('%#o', 8), '٠١٠');
+    expect(localized.sprintf('%#x', 255), '0xff');
+    expect(localized.sprintf('%#X', 255), '0XFF');
+  });
+
+  // Text conversions stay out of it. `%s` prints whatever `toString` gave,
+  // digits included, because it is not a number conversion — localizing there
+  // would rewrite user text — and `%c` prints one scalar.
+  test('leaves text conversions unlocalized', () {
+    final localized = Format(numberLocale: _IntegerPrintfLocale());
+
+    expect(localized.sprintf('%s', -42), '-42');
+    expect(localized.sprintf('%s', 'a1b'), 'a1b');
+    expect(localized.sprintf('%c', 0x31), '1');
+  });
+}
+
+/// Arabic-Indic digits with signs that differ from ASCII in both directions,
+/// so a sign taken from the locale is distinguishable from a literal one.
+final class _IntegerPrintfLocale implements NumberLocale {
+  @override
+  String get decimalSeparator => ',';
+
+  @override
+  String get exponentSeparator => 'e';
+
+  @override
+  String get groupSeparator => '.';
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  bool get groupingEnabled => true;
+
+  @override
+  String get minusSign => '−';
+
+  @override
+  String get plusSign => '＋';
+
+  @override
+  String localizeDigits(String asciiDigits) => asciiDigits
+      .replaceAll('0', '٠')
+      .replaceAll('1', '١')
+      .replaceAll('2', '٢')
+      .replaceAll('3', '٣')
+      .replaceAll('4', '٤')
+      .replaceAll('5', '٥')
+      .replaceAll('6', '٦')
+      .replaceAll('7', '٧')
+      .replaceAll('8', '٨')
+      .replaceAll('9', '٩');
+}
+
+/// A locale whose zero takes two characters, so a width counted before
+/// localization comes out wrong.
+final class _ExpandingZeroLocale implements NumberLocale {
+  @override
+  String get decimalSeparator => '.';
+
+  @override
+  String get exponentSeparator => 'e';
+
+  @override
+  String get groupSeparator => ',';
+
+  @override
+  List<int> get grouping => const [3];
+
+  @override
+  bool get groupingEnabled => false;
+
+  @override
+  String get minusSign => '-';
+
+  @override
+  String get plusSign => '+';
+
+  @override
+  String localizeDigits(String asciiDigits) =>
+      asciiDigits.replaceAll('0', '٠٠');
 }

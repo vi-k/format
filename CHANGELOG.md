@@ -26,6 +26,12 @@ unpublished 2.0.0 below.
   and lowering either bound discards entries immediately.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
+* Extended the configured `NumberLocale` to the printf integer conversions,
+  which previously took their sign and digits from ASCII while `%f` and `%e`
+  already read the locale. `%d`, `%i`, `%u`, `%o`, `%x` and `%X` now use the
+  locale's signs and digits, padding zeros included; the `0x` marker of `%#x`
+  stays ASCII, and the alternate zero of `%#o` localizes as the digit it is.
+  Nothing changes under the default C locale.
 * Cache parsed templates, and expose `templateCacheCapacity`,
   `templateCacheSize`, and `clearTemplateCache()` so an application whose
   working set is larger than the default can widen it, one whose templates

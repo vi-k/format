@@ -232,6 +232,11 @@ final kazakh = Format(numberLocale: IntlNumberLocale('kk_KZ'));
 kazakh.format('{:.8n}', 123456.789);
 ```
 
+The printf dialect has no `n`, so every numeric conversion reads the locale —
+`%d` and `%x` take its digits and signs, `%f` and `%e` its separators too. It
+never groups on its own: a template that did not ask for separators does not
+get them.
+
 A locale may localize signs, separators, and digits beyond what the C locale
 core specifies; the compatibility fixtures pin only the C locale behavior.
 

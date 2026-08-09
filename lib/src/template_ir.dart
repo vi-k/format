@@ -1268,6 +1268,29 @@ final class _PrintfIntOp extends _PrintfOp {
       if (resolved >= 0) precision = resolved;
     }
     final argument = frame._argumentAt(valueArgIndex, node);
+
+    if (!identical(frame.engine.numberLocale, const CNumberLocale())) {
+      // Same escape as _PrintfDoubleOp: a non-default locale replaces the
+      // sign and the digits, which this op writes straight into the sink as
+      // ASCII. The legacy tail reproduces that exactly, at legacy cost.
+      var flags = node.flags;
+      if (effectiveLeft) flags |= _PrintfFlags.left;
+      sink.writeString(
+        _formatPrintfInteger(
+          argument,
+          _ResolvedPrintfConversion(
+            node: node,
+            flags: flags,
+            width: width,
+            precision: precision,
+          ),
+          frame.engine,
+          _valueContext(frame),
+        ),
+      );
+      return;
+    }
+
     late final bool negative;
     late final bool isZero;
     var magnitudeString = ''; // used when digits are pre-materialized below

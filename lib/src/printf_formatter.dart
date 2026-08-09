@@ -129,20 +129,28 @@ String _formatPrintfInteger(
   }
 
   final alternate = _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate);
+  // C defines `#` on octal as forcing the first *digit* of the result to be a
+  // zero, not as prefixing a marker, so that zero belongs with the digits and
+  // is localized with them. The `0x`/`0X` of `x` and `X` are markers and stay
+  // ASCII, exactly as `%a` keeps its own. Under the C locale both spellings
+  // produce the same characters, padded or not.
+  if (alternate && type == 'o' && !digits.startsWith('0')) digits = '0$digits';
   final prefix = switch (type) {
-    'o' when alternate && !digits.startsWith('0') => '0',
     'x' when alternate && !isZero => '0x',
     'X' when alternate && !isZero => '0X',
     _ => '',
   };
-  final sign =
-      signed && negative
-          ? '-'
-          : _hasPrintfFlag(conversion.flags, _PrintfFlags.sign)
-          ? '+'
-          : _hasPrintfFlag(conversion.flags, _PrintfFlags.space)
-          ? ' '
-          : '';
+  final locale = engine.numberLocale;
+  final sign = _localizedSign(
+    signed && negative,
+    _hasPrintfFlag(conversion.flags, _PrintfFlags.sign)
+        ? '+'
+        : _hasPrintfFlag(conversion.flags, _PrintfFlags.space)
+        ? ' '
+        : null,
+    locale,
+    context,
+  );
   final left = _hasPrintfFlag(conversion.flags, _PrintfFlags.left);
   final zero =
       _hasPrintfFlag(conversion.flags, _PrintfFlags.zero) &&
@@ -158,6 +166,13 @@ String _formatPrintfInteger(
       width: conversion.width,
     ),
     textUnit: engine.textUnit,
+    // The C locale maps every digit to itself, and passing no callback at
+    // all keeps its zero padding on the counted path rather than the search
+    // `applyNumericWidth` runs when digits may change width under it.
+    formatDigits:
+        identical(locale, const CNumberLocale())
+            ? null
+            : (asciiDigits) => _localizeAsciiRuns(asciiDigits, locale, context),
   );
 }
 
