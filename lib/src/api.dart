@@ -100,21 +100,77 @@ List<Object?> _collectOptionalValues([
   Object? value9 = _MissingValue.value,
   Object? value10 = _MissingValue.value,
 ]) {
-  final values = <Object?>[];
-  for (final value in [
-    value1,
-    value2,
-    value3,
-    value4,
-    value5,
-    value6,
-    value7,
-    value8,
-    value9,
-    value10,
-  ]) {
-    if (identical(value, _MissingValue.value)) break;
-    values.add(value);
-  }
-  return values;
+  // Counted first, then allocated once. Walking a literal of all ten slots
+  // built a second list nobody outside this function ever saw, and appending
+  // into a growing one reallocated on the way to a length already known — two
+  // allocations and a copy for a call that usually carries one value.
+  const missing = _MissingValue.value;
+  final count =
+      identical(value1, missing)
+          ? 0
+          : identical(value2, missing)
+          ? 1
+          : identical(value3, missing)
+          ? 2
+          : identical(value4, missing)
+          ? 3
+          : identical(value5, missing)
+          ? 4
+          : identical(value6, missing)
+          ? 5
+          : identical(value7, missing)
+          ? 6
+          : identical(value8, missing)
+          ? 7
+          : identical(value9, missing)
+          ? 8
+          : identical(value10, missing)
+          ? 9
+          : 10;
+
+  // Each arm is a literal of its exact length, so the list is allocated at
+  // the size it ends at and never grown.
+  return switch (count) {
+    0 => const <Object?>[],
+    1 => <Object?>[value1],
+    2 => <Object?>[value1, value2],
+    3 => <Object?>[value1, value2, value3],
+    4 => <Object?>[value1, value2, value3, value4],
+    5 => <Object?>[value1, value2, value3, value4, value5],
+    6 => <Object?>[value1, value2, value3, value4, value5, value6],
+    7 => <Object?>[value1, value2, value3, value4, value5, value6, value7],
+    8 => <Object?>[
+      value1,
+      value2,
+      value3,
+      value4,
+      value5,
+      value6,
+      value7,
+      value8,
+    ],
+    9 => <Object?>[
+      value1,
+      value2,
+      value3,
+      value4,
+      value5,
+      value6,
+      value7,
+      value8,
+      value9,
+    ],
+    _ => <Object?>[
+      value1,
+      value2,
+      value3,
+      value4,
+      value5,
+      value6,
+      value7,
+      value8,
+      value9,
+      value10,
+    ],
+  };
 }
