@@ -19,7 +19,7 @@
 /// letting the behaviour drift afterwards fails the exemplar itself.
 ///
 /// The fixture decoder gets its own tests because JSON cannot express what
-/// these fixtures need: negative zero, NaN, infinities, `BigInt`, sets, and the
+/// these fixtures need: negative zero, NaN, infinities, [BigInt], sets, and the
 /// difference between "produced this output" and "raised this error". A decoder
 /// bug would quietly weaken every fixture case at once, so it is checked
 /// directly — including that it rejects malformed input rather than guessing.

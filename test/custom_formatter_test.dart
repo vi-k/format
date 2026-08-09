@@ -1,4 +1,4 @@
-/// The `Formatter` extension point: the third-party conversion, reached either
+/// The [Formatter] extension point: the third-party conversion, reached either
 /// by name (`{:json}`) or automatically by an empty specification (`{}`).
 ///
 /// A custom formatter has to be given enough to do its job and no more, and the
@@ -13,13 +13,13 @@
 /// Automatic selection is the riskier half. An empty `{}` consults every
 /// registered formatter, so built-in types must be answered by the engine
 /// before the extensions are asked (otherwise one registration changes how
-/// every `int` in every template prints), an unclaimed value falls back to
-/// `toString`, and two formatters claiming the same value is an error rather
-/// than list order.
+/// every [int] in every template prints), an unclaimed value falls back to
+/// [Object.toString], and two formatters claiming the same value is an error
+/// rather than list order.
 ///
 /// The rest is the failure contract shared with the other extension points:
 /// both halves of the callback pair are wrapped and attributed by specifier, a
-/// `FormattingException` from inside passes through unwrapped, and a
+/// [FormattingException] from inside passes through unwrapped, and a
 /// specification the engine can reject on its own is rejected before any of the
 /// caller's code runs.
 library;

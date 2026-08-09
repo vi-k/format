@@ -9,9 +9,9 @@
 /// failure mode nobody would notice.
 ///
 /// The values need a tagged encoding because JSON cannot express what the cases
-/// require: it has one number type (so `int`, `double` and `BigInt` collapse),
+/// require: it has one number type (so [int], [double] and [BigInt] collapse),
 /// no negative zero, no NaN or infinities, and no sets. Each value therefore
-/// travels as a `{type, value}` pair, and `decodeFixtureValue` is the only
+/// travels as a `{type, value}` pair, and [decodeFixtureValue] is the only
 /// place that knows how to read them back. Its own tests are in
 /// `python_compatibility_test.dart`.
 library;

@@ -1,5 +1,5 @@
 /// The comparison matrix — the tool that prints how this package measures up
-/// against `format` 1.6 and `sprintf` — tested for the things a benchmark run
+/// against [format] 1.6 and [sprintf] — tested for the things a benchmark run
 /// cannot tell you about itself.
 ///
 /// A benchmark is a program that always produces plausible output. If a

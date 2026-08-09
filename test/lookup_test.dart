@@ -1,5 +1,5 @@
 /// Resolving a field to a value: the argument itself, then `.attribute` and
-/// `[item]` steps on top of it, then the `AttributeLookup` extension point.
+/// `[item]` steps on top of it, then the [AttributeLookup] extension point.
 ///
 /// Lookup is where the engine touches the caller's own objects, so most of what
 /// is pinned here is about *failing well*. A lookup can fail for four different
@@ -13,7 +13,7 @@
 /// ten.
 ///
 /// The other theme is dispatch. Built-in types are resolved by the engine and
-/// never offered to an extension — the `Map` case below is the one that catches
+/// never offered to an extension — the [Map] case below is the one that catches
 /// this — and two extensions claiming the same value is an error rather than a
 /// race won by list order.
 library;

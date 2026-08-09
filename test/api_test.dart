@@ -1,5 +1,5 @@
 /// The public surface of `package:format/format.dart`, used the way a consumer
-/// uses it: the entry points, the configured `Format` object, and the contracts
+/// uses it: the entry points, the configured [Format] object, and the contracts
 /// an extension implements.
 ///
 /// Nothing here reaches into `src/`, and that is the point. These tests fail

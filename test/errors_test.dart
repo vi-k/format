@@ -2,7 +2,7 @@
 /// says.
 ///
 /// These exceptions are a public API. A caller that catches
-/// `FormattingException` and reports the offset, or switches on the subtype to
+/// [FormattingException] and reports the offset, or switches on the subtype to
 /// decide whether the template or the value was at fault, depends on the
 /// payload fields being there and being populated — none of which the engine's
 /// own tests check, since they only assert that the right *type* was thrown.
