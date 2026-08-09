@@ -1,7 +1,7 @@
 /// Floating conversions in the printf dialect, under the `compatible` profile —
 /// including `%a`, which exists nowhere else in the package.
 ///
-/// As in `double_format_test.dart`, `sprintf` is shadowed below with a
+/// As in `double_format_test.dart`, [sprintf] is shadowed below with a
 /// `compatible` instance: these are the digits the package produces itself, and
 /// the reference is C rather than Dart.
 ///

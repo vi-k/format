@@ -1,7 +1,7 @@
 /// Double layout under the `compatible` profile — the package's own digits,
 /// matching C and Python rather than the Dart SDK.
 ///
-/// The whole file shadows `format` with a `compatible` instance (below the
+/// The whole file shadows [format] with a `compatible` instance (below the
 /// locale classes), because that is the profile whose digits the package
 /// produces itself and therefore the only one whose correctness is ours to
 /// prove. The `dartSdk` profile delegates to the SDK and is covered in
@@ -12,8 +12,8 @@
 /// power-of-two denominator, and printing it at high precision must show that
 /// exact value — `{:.50f}` of 1.23456789 is not the digits anyone typed, and
 /// `{:.0f}` of the largest finite double is 309 digits, all of them determined.
-/// Anything shorter would let a `toStringAsFixed` shortcut pass while quietly
-/// rounding.
+/// Anything shorter would let a [double.toStringAsFixed] shortcut pass while
+/// quietly rounding.
 ///
 /// Rounding is ties-to-even, on the binary value and not on its decimal
 /// spelling: 2.675 is really 2.67499…, so `{:.2f}` is `2.67`. Cases that look

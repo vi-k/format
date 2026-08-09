@@ -1,4 +1,4 @@
-/// `CharSink` — the buffer every formatted string is built in — tested directly
+/// [CharSink] — the buffer every formatted string is built in — tested directly
 /// rather than through the engine.
 ///
 /// Most of what is pinned here is one invariant: the sink starts in
@@ -14,9 +14,10 @@
 /// sequence. Here the sequences are written out directly, including the
 /// degenerate ones (empty string first, zero and negative fills).
 ///
-/// The grouped writes (`writeGroupedMagnitude`, `writeGroupedBody`) are not
-/// here — they are covered against the legacy path in `template_ir_diff_test`,
-/// where the expected grouping comes from an oracle rather than from a literal.
+/// The grouped writes ([CharSink.writeGroupedMagnitude],
+/// [CharSink.writeGroupedBody]) are not here — they are covered against the
+/// legacy path in `template_ir_diff_test`, where the expected grouping comes
+/// from an oracle rather than from a literal.
 library;
 
 import 'package:format/src/engine.dart';

@@ -15,9 +15,9 @@
 /// is the input on which the obvious policies degrade to a zero hit rate.
 ///
 /// The cache is global state, so every test starts from
-/// `debugClearTemplateCaches` and some deliberately move
-/// `templateCacheCapacity`. That also makes the import below load-bearing
-/// rather than stylistic.
+/// [engine.debugClearTemplateCaches] and some deliberately move
+/// [engine.templateCacheCapacity]. That also makes the import below
+/// load-bearing rather than stylistic.
 ///
 /// The engine is imported via its package URI: this is the same canonical
 /// library instance the public package:format export resolves to, so the debug

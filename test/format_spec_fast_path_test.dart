@@ -6,8 +6,8 @@
 /// disagreement is invisible from the outside until some template renders
 /// differently than it used to. So the tests come in pairs: what the fast path
 /// claims it can handle, and — through
-/// `debugSimpleBuiltinFormatSpecMatchesGeneralParser` — that the two agree on
-/// every specification it claims.
+/// [engine.debugSimpleBuiltinFormatSpecMatchesGeneralParser] — that the two
+/// agree on every specification it claims.
 ///
 /// The other direction matters just as much. A specification the fast path
 /// *declines* costs a little time and nothing else; one it accepts wrongly is a

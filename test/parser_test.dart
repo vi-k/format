@@ -4,8 +4,8 @@
 /// A template is untrusted input — it can come from a config file, a log format
 /// string, a translation catalogue — so what the parser accepts and rejects is
 /// a contract in itself, and the rejections matter as much as the acceptances.
-/// Going through `format` would only show that a bad template failed somehow;
-/// `debugParseBraceTemplate` shows the parse tree, which is how a template that
+/// Going through [format] would only show that a bad template failed somehow;
+/// [debugParseBraceTemplate] shows the parse tree, which is how a template that
 /// parses into the *wrong* structure gets caught rather than a template that
 /// happens to render the same anyway.
 ///

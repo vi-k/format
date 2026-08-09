@@ -2,7 +2,7 @@
 ///
 /// The compiled IR is an optimization of a path that already worked, so it has
 /// an oracle the rest of the suite does not: the legacy processors
-/// (`debugFormatBraceWithoutIr`, `debugFormatPrintfWithoutIr`), which are kept
+/// ([debugFormatBraceWithoutIr], [debugFormatPrintfWithoutIr]), which are kept
 /// in the package for exactly this reason. Every specification the IR
 /// specializes can be run through both and compared, which is what makes it
 /// affordable to check hundreds of thousands of cases — no expectation has to
@@ -10,7 +10,7 @@
 ///
 /// Parity is defined here as more than equal strings. Two paths agree only if
 /// they produce the same output *or* fail the same way: same exception type,
-/// same type-specific payload, and the same `FormatExceptionContext` down to
+/// same type-specific payload, and the same [FormatExceptionContext] down to
 /// the offset. An IR op that rejected a specification with a different message,
 /// or pointed at a different position, would be a regression a
 /// string-comparison harness would miss entirely.
@@ -30,7 +30,7 @@ import 'package:test/test.dart';
 
 /// A deliberately non-default locale, modeled on `_PrintfNumberLocale` in
 /// test/sprintf_double_test.dart: every symbol and every digit differs from
-/// `CNumberLocale`, so any hot op that skipped localization would show up
+/// [CNumberLocale], so any hot op that skipped localization would show up
 /// immediately in the parity comparison.
 final class IrTestNumberLocale implements NumberLocale {
   const IrTestNumberLocale();

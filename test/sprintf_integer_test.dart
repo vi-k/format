@@ -9,7 +9,7 @@
 /// `18446744073709551615` is exactly the C behaviour that hides bugs, and this
 /// dialect has no fixed width to wrap to in the first place.
 ///
-/// The int/`BigInt` boundary and the minimum int are walked again here, since
+/// The int/[BigInt] boundary and the minimum int are walked again here, since
 /// printf reaches the digits through its own conversions rather than the brace
 /// path's.
 ///

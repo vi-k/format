@@ -133,7 +133,8 @@ void main() {
   // A cold scenario measures parsing, which only happens once per template —
   // so its inputs must still be unparsed when measurement begins, and a hot
   // scenario's must be stable across rounds. Get this wrong and a cold
-  // measurement quietly becomes a warm one, several times faster and meaningless.
+  // measurement quietly becomes a warm one — several times faster, and
+  // meaningless.
   test(
     'scenarios retain cold inputs before measurement and hot inputs stable',
     () {

@@ -1,6 +1,6 @@
 /// What the two platforms disagree about, written down and checked on both.
 ///
-/// On the VM `int` and `double` are distinct types. Under dart2js they are the
+/// On the VM [int] and [double] are distinct types. Under dart2js they are the
 /// same type: `42.0 is int` is true, `identical(1, 1.0)` is true, and there is
 /// no way to ask which one the programmer meant. That difference reaches the
 /// surface of this package — `format('{}', 42.0)` is `'42.0'` on the VM and
@@ -20,7 +20,7 @@
 /// where the platform's own conversion would give something else.
 ///
 /// The third is the option-size ceiling, which used to be a divergence and no
-/// longer is: a digit run too long to be an `int` rounds under dart2js instead
+/// longer is: a digit run too long to be an [int] rounds under dart2js instead
 /// of failing to parse, so a template rejected on the VM was once accepted in a
 /// browser. Both platforms now refuse at the same point, with the same type.
 library;

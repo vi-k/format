@@ -1,7 +1,7 @@
 /// The slug derivation used to check documentation links — a test of the test
 /// support code, not of the package.
 ///
-/// `markdownAnchors` is what lets other tests assert that a link like
+/// [markdownAnchors] is what lets other tests assert that a link like
 /// `[the cache](#template-cache)` actually lands somewhere. That check is only
 /// as trustworthy as the slugging: if this helper derived anchors GitHub would
 /// not, the link tests would either pass on broken links or fail on working

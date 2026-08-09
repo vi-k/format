@@ -38,7 +38,7 @@ import 'parity_harness.dart';
 /// base, so every draw is an exact power of ten. With the former int base the
 /// single exponent 19 overflowed int64 on the VM (turning that draw negative)
 /// while JS yielded `+1e19`, which split the VM and node corpora on ~0.6% of
-/// `_value` draws (analytically 2/8 branches that call `pow` × 1/40 exponents
+/// [_value] draws (analytically 2/8 branches that call [pow] × 1/40 exponents
 /// = 0.625%; a 2000-draw sample happened to show 6, which is low for that
 /// rate). With the double base 2000 consecutive draws agree numerically on
 /// both runtimes. Reproducibility still assumes `Random(seed)`
@@ -46,7 +46,7 @@ import 'parity_harness.dart';
 /// releases. Bump deliberately (with a comment) if the corpus needs
 /// refreshing.
 ///
-/// That `pow` change was itself the last corpus refresh, done without a seed
+/// That [pow] change was itself the last corpus refresh, done without a seed
 /// bump: the generators moved, so the affected draws are new even though the
 /// seed is unchanged. The distinctness and rendering guards below were
 /// re-verified against the refreshed corpus on the VM and on node.

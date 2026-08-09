@@ -1,24 +1,24 @@
-/// The three conversions — `!s`, `!r`, `!a` — and the `Representation`
+/// The three conversions — `!s`, `!r`, `!a` — and the [Representation]
 /// extension point behind `!r`.
 ///
-/// `!s` is Dart's `toString`. `!r` and `!a` are Python's `repr` and `ascii`,
-/// and that is the reason most of this file exists: the spelling they produce
-/// is a compatibility promise, down to which quote character a string gets,
-/// which scalars are escaped and in what notation, and how a container is laid
-/// out. None of it is derivable from Dart's own conventions, so every rule is
-/// pinned against a literal taken from Python's behaviour rather than from
+/// `!s` is Dart's [Object.toString]. `!r` and `!a` are Python's `repr` and
+/// `ascii`, and that is the reason most of this file exists: the spelling they
+/// produce is a compatibility promise, down to which quote character a string
+/// gets, which scalars are escaped and in what notation, and how a container is
+/// laid out. None of it is derivable from Dart's own conventions, so every rule
+/// is pinned against a literal taken from Python's behaviour rather than from
 /// ours.
 ///
 /// Two structural hazards get their own tests. Containers are represented
 /// recursively, so a cycle would be an infinite loop — it is detected and
 /// printed as `...`, the way Python does. And a value can arrive from the
-/// caller, which means `toString`, `canRepresent` and `represent` are all
-/// foreign code that can throw; each has to be attributed to its owner, and a
-/// `FormattingException` from inside must pass through rather than be wrapped
-/// twice.
+/// caller, which means [Object.toString], [Representation.canRepresent] and
+/// [Representation.represent] are all foreign code that can throw; each has to
+/// be attributed to its owner, and a [FormattingException] from inside must
+/// pass through rather than be wrapped twice.
 ///
 /// The dispatch rules mirror those in `lookup_test.dart`: built-in types are
-/// spelled by the engine and never offered to a `Representation`, and two
+/// spelled by the engine and never offered to a [Representation], and two
 /// extensions claiming the same value is an error rather than list order
 /// deciding.
 library;

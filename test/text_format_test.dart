@@ -1,6 +1,6 @@
 /// The two text conversions, `s` and `c`, and the option sets they accept.
 ///
-/// Text formatting is where the configured `TextUnit` becomes visible: width
+/// Text formatting is where the configured [TextUnit] becomes visible: width
 /// and precision count units, not code units, so the same template gives
 /// different answers under `unicodeScalars` and `graphemeClusters`. Both modes
 /// are exercised on values where they genuinely disagree — a combining

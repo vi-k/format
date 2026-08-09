@@ -7,8 +7,8 @@
 /// asterisk, and the type is a single letter — so a template that means nothing
 /// still looks like a conversion, and the parser has to decide which of three
 /// answers it gives: accept it, reject it as bad grammar
-/// (`InvalidFormatException`), or reject it as an option that does not apply to
-/// this conversion (`InvalidSpecifierException`). Those two rejections are
+/// ([InvalidFormatException]), or reject it as an option that does not apply to
+/// this conversion ([InvalidSpecifierException]). Those two rejections are
 /// different complaints and are kept apart deliberately: `%q` is not a
 /// conversion at all, while `%+u` is a real conversion with an option that
 /// cannot mean anything for it.
