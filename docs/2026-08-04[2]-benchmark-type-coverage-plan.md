@@ -1,5 +1,7 @@
 # План: покрытие типов и ускорение сравнительного бенчмарка
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Расширить `example/bin/benchmark.dart` на все распространённые сценарии форматирования (включая fill/align), убрать избыточные строки и сократить прогон с ~2.8 мин до ~33 с (флаг `--full` — точный режим).

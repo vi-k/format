@@ -1,5 +1,7 @@
 # План восстановления пользовательского example benchmark
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **Для agentic workers:** ОБЯЗАТЕЛЬНЫЙ SUB-SKILL: выполнять план через `superpowers:subagent-driven-development` (рекомендуется) или `superpowers:executing-plans`. Шаги используют checkbox (`- [ ]`) для отслеживания выполнения.
 
 **Цель:** Вернуть пользовательский `example/bin/benchmark.dart` с тремя исходными движками, сохранить заменивший его gate-benchmark отдельно и добавить VS Code-конфигурации для всех benchmark entrypoint.

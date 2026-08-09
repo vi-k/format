@@ -1,5 +1,7 @@
 # План: кэш разобранных шаблонов
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Кэшировать AST шаблонов (cap 512, полная очистка при переполнении) и лениво мемоизировать `_FormatSpec` статических спецификаций в узле — парсинг уходит из горячего пути повторяющихся шаблонов.

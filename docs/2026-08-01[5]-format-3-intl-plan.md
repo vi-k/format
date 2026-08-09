@@ -1,5 +1,7 @@
 # Format 3 `format_intl` Implementation Plan
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Вынести locale-интеграцию `intl` в отдельный пакет `format_intl`, внедряемый через `Format(numberLocale: ...)`, без передачи округления и выбора notation библиотеке `intl`.

@@ -1,5 +1,7 @@
 # План реализации переименования benchmark режимов `double`
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Полностью переименовать активный пользовательский benchmark с `float` на `double` и разместить его проверенный результат рядом с документацией compatible-профиля.

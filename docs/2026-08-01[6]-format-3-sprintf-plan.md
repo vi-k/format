@@ -1,5 +1,7 @@
 # Format 3 `sprintf` Implementation Plan
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Добавить стандартный `%...`-диалект C++23 через `sprintf`/`vsprintf`, используя общий типизированный слой Format 3 и сохраняя строгие Dart-ошибки и Unicode-семантику.

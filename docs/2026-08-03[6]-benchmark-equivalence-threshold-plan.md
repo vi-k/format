@@ -1,5 +1,7 @@
 # План реализации порога равной производительности benchmark
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Добавить в пользовательский benchmark настраиваемый порог 5%, ниже которого производительность Dart SDK и Compatible считается равной.

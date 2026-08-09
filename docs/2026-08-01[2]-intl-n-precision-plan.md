@@ -1,5 +1,7 @@
 # Intl `n` Precision Safety Implementation Plan
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Не допустить искажения числового значения specifier `n` при precision, небезопасной для `intl.NumberFormat`.

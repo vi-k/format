@@ -1,5 +1,7 @@
 # Dart-native Double Formatting Implementation Plan
 
+Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Сделать Dart SDK нормативным профилем форматирования `double` по умолчанию, сохранив быстрый Python/C++-совместимый профиль и добавив наглядный пользовательский benchmark обоих режимов.
