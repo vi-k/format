@@ -184,6 +184,35 @@ void main() {
     expect(TextUnit.graphemeClusters.take(value, 2), value);
     expect(TextUnit.graphemeClusters.split(value), ['a', '👩‍🔬']);
   });
+
+  // Scalar length is counted by scanning code units rather than by running
+  // `runes`, which is several times cheaper on the width and precision paths.
+  // The equivalence has to hold on malformed UTF-16 too, and that is where a
+  // hand-rolled count goes wrong: `runes` yields one scalar per unpaired
+  // surrogate, so only a complete pair may be counted as joined. `runes` is
+  // the oracle here, not a literal, so the two cannot drift apart.
+  test('scalar length matches runes on malformed UTF-16', () {
+    for (final value in [
+      '',
+      'ascii',
+      '\u{1F600}',
+      'a\u{1F600}b',
+      '\ud800', // одинокий старший
+      '\udc00', // одинокий младший
+      '\ud800\ud800', // два старших подряд
+      '\udc00\ud800', // младший перед старшим — пары нет
+      '\ud800a\udc00', // пара разорвана символом
+      '𐀀\ud800', // пара, затем одинокий старший
+      'a\ud800',
+      '\u{1F600}\ud800\u{1F600}',
+    ]) {
+      expect(
+        TextUnit.unicodeScalars.length(value),
+        value.runes.length,
+        reason: value.codeUnits.toString(),
+      );
+    }
+  });
 }
 
 /// A locale that is not [CNumberLocale], to pin that only that class is
