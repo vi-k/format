@@ -184,6 +184,13 @@ final class InvalidSpecifierException extends FormattingException {
 /// A placeholder refers to an argument that was not supplied.
 final class MissingFormatArgumentException extends FormattingException {
   /// The positional index or the name that had no argument.
+  ///
+  /// On the web an index above 2^53-1 is reported rounded: there is no `int`
+  /// there that can hold it. Which template was rejected does not change —
+  /// the ceiling is checked as a `BigInt` and is the same on both platforms,
+  /// and no list is long enough for such an index to address anything — so
+  /// only this number is approximate. Read [FormatExceptionContext.fragment]
+  /// for the index exactly as it was written.
   final Object? key;
 
   const MissingFormatArgumentException(FormatExceptionContext context, this.key)

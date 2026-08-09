@@ -279,4 +279,44 @@ void main() {
       expect(format('{:100000d}', 1).length, 100000);
     });
   });
+
+  group('the field index ceiling', () {
+    // The ceiling is checked as a BigInt, which is exact everywhere, so both
+    // platforms accept and refuse at the same value — the property that
+    // matters, and the one worth pinning. What differs is only how the
+    // rejection names the index: above 2^53-1 the web has no int that can
+    // hold it, so `key` comes back rounded.
+    test('accepts and refuses at the same value on both platforms', () {
+      expect(
+        () => formatWith('{9223372036854775807}'),
+        throwsA(isA<MissingFormatArgumentException>()),
+      );
+      expect(
+        () => formatWith('{9223372036854775808}'),
+        throwsA(isA<InvalidFormatException>()),
+      );
+    });
+
+    // No argument can ever be fetched by such an index — no list is that
+    // long — so the rounding reaches the message and nothing else. The exact
+    // digits stay available in the fragment, which is why `key` is left as it
+    // is rather than changing type with magnitude.
+    //
+    // Both values are compared as text: `9223372036854775807` cannot appear
+    // as a literal in this file at all, because dart2js refuses an int
+    // literal it cannot represent exactly — the same platform limit the test
+    // is about.
+    test('names the index exactly on the VM and roundly on the web', () {
+      try {
+        formatWith('{9223372036854775807}');
+        fail('expected a missing argument');
+      } on MissingFormatArgumentException catch (error) {
+        expect(
+          error.key.toString(),
+          isJavaScript ? '9223372036854776000' : '9223372036854775807',
+        );
+        expect(error.context.fragment, '{9223372036854775807}');
+      }
+    });
+  });
 }
