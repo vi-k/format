@@ -788,6 +788,8 @@ GateBaseline _loadBaseline(String path) {
   }
 
   return GateBaseline.fromJson(
+    // `from`, not `of`: jsonDecode yields Map<dynamic, dynamic>, so this is a
+    // real conversion rather than a copy of an already-typed map.
     Map<String, Object?>.from(jsonDecode(file.readAsStringSync()) as Map),
   );
 }
@@ -797,6 +799,7 @@ List<BenchmarkReport> _parseReports(List<String> arguments) {
   return [
     for (final path in paths)
       BenchmarkReport.fromJson(
+        // `from` for the same reason as above: the decoded map is untyped.
         Map<String, Object?>.from(
           jsonDecode(File(path).readAsStringSync()) as Map,
         ),

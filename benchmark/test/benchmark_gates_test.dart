@@ -71,6 +71,7 @@ void main() {
   test('a recorded baseline survives a round trip and rejects gaps', () {
     final baseline = recordGateBaseline(_completeReports(), '2026-01-01');
     final restored = GateBaseline.fromJson(
+      // `from`, not `of`: a decoded map is Map<dynamic, dynamic>.
       Map<String, Object?>.from(
         jsonDecode(jsonEncode(baseline.toJson())) as Map,
       ),
@@ -259,11 +260,9 @@ void main() {
   test('merged gates reject ratios outside performance scenarios', () {
     final reports = _completeReports();
     final altered = reports[0].toJson();
-    final scenarios = List<Object?>.from(
-      altered['scenarios']! as List<Object?>,
-    );
+    final scenarios = List<Object?>.of(altered['scenarios']! as List<Object?>);
     final first =
-        Map<String, Object?>.from(scenarios.first! as Map<String, Object?>)
+        Map<String, Object?>.of(scenarios.first! as Map<String, Object?>)
           ..['comparisonKind'] = 'informational'
           ..['ratio'] = 1.0;
     scenarios[0] = first;
@@ -486,15 +485,13 @@ BenchmarkReport _withPerformanceRatio(
 ) {
   final json = report.toJson();
   final candidate = (ratio * 100).round();
-  final scenarios = List<Object?>.from(json['scenarios']! as List<Object?>);
+  final scenarios = List<Object?>.of(json['scenarios']! as List<Object?>);
   final scenarioIndex = scenarios.indexWhere(
     (scenario) =>
         (scenario! as Map<String, Object?>)['scenarioId'] == scenarioId,
   );
   final scenario =
-      Map<String, Object?>.from(
-          scenarios[scenarioIndex]! as Map<String, Object?>,
-        )
+      Map<String, Object?>.of(scenarios[scenarioIndex]! as Map<String, Object?>)
         ..['candidateMedianNanoseconds'] = candidate
         ..['baselineMedianNanoseconds'] = 200
         ..['candidateOperations'] = 1000
@@ -505,7 +502,7 @@ BenchmarkReport _withPerformanceRatio(
       (json['samples']! as List<Object?>)
           .map(
             (sample) =>
-                Map<String, Object?>.from(sample! as Map<String, Object?>),
+                Map<String, Object?>.of(sample! as Map<String, Object?>),
           )
           .toList();
   for (final sample in samples) {

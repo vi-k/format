@@ -424,20 +424,20 @@ void main() {
             smoke: true,
           ),
         ).toJson();
-    final gateableSmoke = Map<String, Object?>.from(valid)..['gateable'] = true;
+    final gateableSmoke = Map<String, Object?>.of(valid)..['gateable'] = true;
     expect(() => BenchmarkReport.fromJson(gateableSmoke), throwsArgumentError);
     final shortGateable =
-        Map<String, Object?>.from(valid)
+        Map<String, Object?>.of(valid)
           ..['smoke'] = false
           ..['gateable'] = true;
     expect(() => BenchmarkReport.fromJson(shortGateable), throwsArgumentError);
-    final results = List<Object?>.from(valid['scenarios']! as List<Object?>);
+    final results = List<Object?>.of(valid['scenarios']! as List<Object?>);
     final nonPerformance =
-        Map<String, Object?>.from(results.first! as Map<String, Object?>)
+        Map<String, Object?>.of(results.first! as Map<String, Object?>)
           ..['comparisonKind'] = 'informational'
           ..['ratio'] = 1.0;
     results[0] = nonPerformance;
-    final forbiddenRatio = Map<String, Object?>.from(valid)
+    final forbiddenRatio = Map<String, Object?>.of(valid)
       ..['scenarios'] = results;
     expect(() => BenchmarkReport.fromJson(forbiddenRatio), throwsArgumentError);
   });
