@@ -54,6 +54,16 @@ final class _BraceParser {
     var plainStart = _index;
     StringBuffer? escaped;
 
+    // A stack of `{{` offsets, and the reason escapes must balance inside a
+    // specification while staying independent in ordinary text: what ends a
+    // specification is the first unescaped `}`, so the parser has to know
+    // whether a `}}` it meets closes an escape or is the end plus a stray
+    // brace. Ordinary text has no such boundary to find and needs no stack.
+    //
+    // The cost of that rule is an expressive limit, documented in the README:
+    // a specification — and therefore a formatter payload — cannot carry an
+    // unbalanced brace at all.
+    //
     // Only meaningful inside a specification, and most specifications have
     // no escapes at all, so this stays unallocated until one appears.
     List<int>? escapedOpeningOffsets;

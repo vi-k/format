@@ -44,6 +44,11 @@ Use doubled braces to emit literal braces:
 format('{{value}} = {0}', 42); // {value} = 42
 ```
 
+The same doubling works inside a format specification, but there the two
+forms must balance: `{{` requires a later `}}`, because the first unescaped
+`}` is what ends the specification. In ordinary text they are independent, so
+a lone `{{` is fine there and a lone `{` is not.
+
 ## Text formatting
 
 Fill, alignment, and width apply to whatever the placeholder produced, and
@@ -270,6 +275,16 @@ interprets it however it likes:
 ```dart
 jsonFormat.format('{:json:pretty}', <String, Object?>{'answer': 42});
 // JsonFormatter.format receives options.payload == 'pretty'
+```
+
+A payload lives inside the specification, so it inherits the balancing rule
+above: braces reach it doubled, and a lone one cannot be carried at all.
+
+```dart
+jsonFormat.format('{:json:a{{b}}c}', <String, Object?>{'answer': 42});
+// options.payload == 'a{b}c'
+jsonFormat.format('{:json:a{{b}', <String, Object?>{'answer': 42});
+// throws InvalidFormatException — the {{ has no matching }}
 ```
 
 ### Attribute lookup

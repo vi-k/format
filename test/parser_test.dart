@@ -216,6 +216,34 @@ void main() {
     });
   }
 
+  // Escapes behave differently on the two sides of a `:`, and the difference
+  // is a documented rule rather than an accident: what ends a specification
+  // is the first unescaped `}`, so inside one the parser has to know whether
+  // a `}}` closes an escape or is the end plus a stray brace. Ordinary text
+  // has no boundary to find, so there the two forms are independent.
+  test('balances escaped braces inside a specification, not outside', () {
+    expect(format('{{', 1), '{');
+    expect(format('}}', 1), '}');
+
+    final debug = debugParseBraceTemplate('{0:a{{b}}c}');
+    expect(debug, contains('root=0'));
+    expect(debug, contains('literal=a{b}c'));
+  });
+
+  // The price of that rule, and the reason it is in the README: a payload
+  // cannot carry a lone brace in any spelling. Each template below fails for
+  // its own reason — an escape left open, a specification ended early by the
+  // first `}`, a `{` starting a nested field — which is why they are listed
+  // rather than folded into one case.
+  for (final template in ['{0:a{{b}', '{0:a}}b}', '{0:a{b}', '{0:a}b}']) {
+    test('refuses an unbalanced brace in a specification: $template', () {
+      expect(
+        () => debugParseBraceTemplate(template),
+        throwsA(isA<InvalidFormatException>()),
+      );
+    });
+  }
+
   // The rejection table, one test per template so a newly accepted one names
   // itself in the failure. Each line is a different way to be invalid: mixing
   // automatic and manual numbering (which would otherwise silently renumber the
