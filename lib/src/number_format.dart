@@ -171,7 +171,7 @@ String applyNumericWidth({
   bool fitRegroupedZeroPadding = false,
 }) {
   final displayedDigits = formatDigits?.call(digits) ?? digits;
-  final value = sign + prefix + displayedDigits;
+  final value = _signed(sign, prefix, displayedDigits);
   final width = spec.width;
   if (width == null) return value;
 
@@ -180,26 +180,26 @@ String applyNumericWidth({
   if (align == '=' && fill == '0' && formatDigits != null) {
     if (fitRegroupedZeroPadding) {
       var lower = 0;
-      var upper = width - textUnit.length(sign + prefix + displayedDigits);
+      var upper = width - textUnit.length(value);
       while (lower < upper) {
         final middle = (lower + upper) ~/ 2;
         final candidate = formatDigits('${'0' * middle}$digits');
-        if (textUnit.length(sign + prefix + candidate) < width) {
+        if (textUnit.length(_signed(sign, prefix, candidate)) < width) {
           lower = middle + 1;
         } else {
           upper = middle;
         }
       }
-      return sign + prefix + formatDigits('${'0' * lower}$digits');
+      return _signed(sign, prefix, formatDigits('${'0' * lower}$digits'));
     }
     final padding = width - textUnit.length(value);
     if (padding <= 0) return value;
-    return sign + prefix + formatDigits(fill * padding + digits);
+    return _signed(sign, prefix, formatDigits(fill * padding + digits));
   }
 
   final padding = width - textUnit.length(value);
   if (padding <= 0) return value;
-  if (align == '=') return sign + prefix + fill * padding + displayedDigits;
+  if (align == '=') return '$sign$prefix${fill * padding}$displayedDigits';
 
   switch (align) {
     case '<':
@@ -207,13 +207,23 @@ String applyNumericWidth({
     case '>':
       return fill * padding + value;
     case '^':
-      final left = fill * (padding ~/ 2);
-      final right = fill * (padding - padding ~/ 2);
-      return left + value + right;
+      final half = padding ~/ 2;
+      return '${fill * half}$value${fill * (padding - half)}';
     default:
       throw StateError('Unsupported numeric alignment: $align');
   }
 }
+
+/// [sign], [prefix] and [body] joined, without copying when there is nothing
+/// to join.
+///
+/// Both leading parts are empty for the ordinary case — a non-negative value
+/// under a specification that asks for neither a sign nor a base prefix — and
+/// `sign + prefix + body` would then allocate two copies of the digits to
+/// arrive back at the digits. Where they are not empty, one interpolation
+/// allocates once where the chained `+` allocated twice.
+String _signed(String sign, String prefix, String body) =>
+    sign.isEmpty && prefix.isEmpty ? body : '$sign$prefix$body';
 
 String formatBraceDouble(
   Object value,
@@ -599,8 +609,9 @@ String _displayFloatBody(
     body = body.substring(0, body.length - 1);
   }
   if (special) {
-    return (locale == null ? body : _localizeAsciiRuns(body, locale, context)) +
-        suffix;
+    final localized =
+        locale == null ? body : _localizeAsciiRuns(body, locale, context);
+    return suffix.isEmpty ? localized : '$localized$suffix';
   }
 
   final exponentStart = _trailingExponentStart(body);
@@ -654,7 +665,13 @@ String _displayFloatBody(
       fraction = _readLocale(context, () => locale.localizeDigits(fraction));
     }
   }
-  var displayed = integer + decimalSeparator + fraction;
+  // A body without a fractional part leaves both tails empty, and joining
+  // three pieces where two are empty copies the integer twice to arrive back
+  // at the integer.
+  var displayed =
+      decimalSeparator.isEmpty && fraction.isEmpty
+          ? integer
+          : '$integer$decimalSeparator$fraction';
   if (exponentStart >= 0) {
     final marker = body[exponentStart];
     final signCharacter = body[exponentStart + 1];
@@ -672,9 +689,10 @@ String _displayFloatBody(
         locale == null
             ? digits
             : _readLocale(context, () => locale.localizeDigits(digits));
-    displayed += exponentSeparator + exponentSign + exponentDigits;
+    displayed = '$displayed$exponentSeparator$exponentSign$exponentDigits';
   }
-  return displayed + suffix;
+
+  return suffix.isEmpty ? displayed : '$displayed$suffix';
 }
 
 String groupFractionDigits(String digits, String separator) {

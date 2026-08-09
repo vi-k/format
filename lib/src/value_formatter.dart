@@ -270,9 +270,8 @@ String applyFieldWidth(
     case '>':
       return fillUnit * padding + value;
     case '^':
-      final left = fillUnit * (padding ~/ 2);
-      final right = fillUnit * (padding - padding ~/ 2);
-      return left + value + right;
+      final half = padding ~/ 2;
+      return '${fillUnit * half}$value${fillUnit * (padding - half)}';
     default:
       // ignore: prefer_interpolation_to_compose_strings
       throw StateError('Unsupported text alignment: ' + align);
