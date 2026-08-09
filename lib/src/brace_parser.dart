@@ -178,7 +178,7 @@ final class _BraceParser {
   _FieldNode _parseField({required int depth}) {
     final fieldOffset = _index;
     _index++;
-    final root = _parseRoot();
+    final root = _parseRoot(fieldOffset);
     final accesses = <_FieldAccess>[];
 
     while (_index < template.length) {
@@ -247,10 +247,10 @@ final class _BraceParser {
     );
   }
 
-  _FieldRoot _parseRoot() {
+  _FieldRoot _parseRoot(int fieldOffset) {
     if (_index >= template.length ||
         _isRootTerminator(template.codeUnitAt(_index))) {
-      _useAutomaticNumbering(_index);
+      _useAutomaticNumbering(fieldOffset);
       return const _AutomaticRoot();
     }
 
@@ -269,7 +269,7 @@ final class _BraceParser {
           'A numeric argument name may contain only decimal digits.',
         );
       }
-      _useManualNumbering(start);
+      _useManualNumbering(fieldOffset);
       return _PositionalRoot(_decimalIndex(digits, start, _index));
     }
     if (!isPythonIdentifierStart(scalar.value)) {
@@ -399,22 +399,27 @@ final class _BraceParser {
     );
   }
 
-  void _useAutomaticNumbering(int offset) {
+  // Both spans run from the opening brace of the offending field through the
+  // character that revealed its numbering style — the terminator after an
+  // empty name, or the one after the digits. A zero-width span was the one
+  // thing these could not afford: it left the diagnostic with an empty
+  // fragment, so it said that something failed without showing what.
+  void _useAutomaticNumbering(int fieldOffset) {
     if (_numberingMode == _NumberingMode.manual) {
       throw _invalid(
-        offset,
-        offset,
+        fieldOffset,
+        _index + 1,
         'Cannot switch from manual to automatic field numbering.',
       );
     }
     _numberingMode = _NumberingMode.automatic;
   }
 
-  void _useManualNumbering(int offset) {
+  void _useManualNumbering(int fieldOffset) {
     if (_numberingMode == _NumberingMode.automatic) {
       throw _invalid(
-        offset,
-        offset,
+        fieldOffset,
+        _index + 1,
         'Cannot switch from automatic to manual field numbering.',
       );
     }

@@ -198,6 +198,24 @@ void main() {
     }
   });
 
+  // Mixing numbering styles is rejected by the two templates below, and the
+  // rejection used to carry an empty fragment: both call sites reported a
+  // zero-width span. An empty fragment is the one thing a diagnostic must not
+  // be — it turns "here is what failed" into "something failed" — so the span
+  // now runs from the opening brace through the character that revealed the
+  // style, which is the closing brace in both of these.
+  for (final (template, fragment) in [('{}{0}', '{0}'), ('{0}{}', '{}')]) {
+    test('names the field that switched numbering: $template', () {
+      try {
+        debugParseBraceTemplate(template);
+        fail('expected invalid format');
+      } on InvalidFormatException catch (error) {
+        expect(error.context.fragment, fragment);
+        expect(error.context.template, template);
+      }
+    });
+  }
+
   // The rejection table, one test per template so a newly accepted one names
   // itself in the failure. Each line is a different way to be invalid: mixing
   // automatic and manual numbering (which would otherwise silently renumber the
