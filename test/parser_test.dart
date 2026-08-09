@@ -171,6 +171,33 @@ void main() {
     }
   });
 
+  // The conversion character was the one place in the parser that read a
+  // UTF-16 code unit instead of a scalar, so an astral conversion was split
+  // down the middle of its own surrogate pair: the rejection then named an
+  // offset inside a character and carried half of one as its fragment. A
+  // diagnostic that cannot even be printed is worse than the error it
+  // describes, so both properties are pinned rather than the exact wording.
+  test('reads an astral conversion as one scalar, not half a pair', () {
+    const template = '{!\u{1F600}}';
+
+    // Parsed like any other unknown conversion, per the test above: the
+    // grammar is well-formed, so the complaint belongs to the stage that
+    // knows which conversions exist.
+    expect(debugParseBraceTemplate(template), contains('conversion=\u{1F600}'));
+
+    try {
+      format(template, 1);
+      fail('expected an unsupported conversion');
+    } on UnsupportedConversionException catch (error) {
+      expect(error.context.conversion, '\u{1F600}');
+      expect(
+        _hasLoneSurrogate(error.context.fragment ?? ''),
+        isFalse,
+        reason: 'фрагмент диагностики обязан быть валидным UTF-16',
+      );
+    }
+  });
+
   // The rejection table, one test per template so a newly accepted one names
   // itself in the failure. Each line is a different way to be invalid: mixing
   // automatic and manual numbering (which would otherwise silently renumber the
@@ -202,4 +229,24 @@ void main() {
       );
     });
   }
+}
+
+/// Whether [text] contains a surrogate that is not part of a valid pair.
+///
+/// Lives here rather than in the engine because it is the property a
+/// diagnostic must have, not one the formatter produces: a fragment sliced
+/// out of a template can only be printed or logged if its UTF-16 is
+/// well-formed.
+bool _hasLoneSurrogate(String text) {
+  for (var index = 0; index < text.length; index++) {
+    final unit = text.codeUnitAt(index);
+    final isHigh = unit >= 0xd800 && unit <= 0xdbff;
+    final isLow = unit >= 0xdc00 && unit <= 0xdfff;
+    if (!isHigh && !isLow) continue;
+    if (isLow || index + 1 >= text.length) return true;
+    final next = text.codeUnitAt(index + 1);
+    if (next < 0xdc00 || next > 0xdfff) return true;
+    index++;
+  }
+  return false;
 }

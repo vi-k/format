@@ -196,16 +196,22 @@ final class _BraceParser {
     if (_atCodeUnit(0x21)) {
       final conversionOffset = _index;
       _index++;
-      if (_index >= template.length) {
+      // One scalar, not one code unit. Taking a single UTF-16 unit here cut
+      // an astral conversion in half: the parse then tripped over the low
+      // surrogate left behind, and the rejection named an offset inside a
+      // character and carried half of one as its fragment. `_readScalar`
+      // returns null only past the end of the template, which is the same
+      // condition the explicit length check used to catch.
+      final scalar = _readScalar(_index);
+      if (scalar == null) {
         throw _invalid(
           conversionOffset,
           _index,
           'Expected a conversion after !.',
         );
       }
-      final candidate = template[_index];
-      conversion = candidate;
-      _index++;
+      conversion = template.substring(_index, scalar.end);
+      _index = scalar.end;
     }
 
     var specification = const <_BraceNode>[];
