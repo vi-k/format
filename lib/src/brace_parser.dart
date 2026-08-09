@@ -249,10 +249,10 @@ final class _BraceParser {
     }
 
     final start = _index;
-    final scalar = _readScalar(_index);
-    if (scalar == null) {
-      throw _invalid(start, _fieldNameEnd(start), 'Expected an argument name.');
-    }
+    // Never null here: `_readScalarFrom` returns null only past the end of
+    // the template, and the guard above has already taken that case. A lone
+    // surrogate is a scalar like any other and does not produce null either.
+    final scalar = _readScalar(_index)!;
     if (pythonDecimalDigitValue(scalar.value) != null) {
       final digits = _readDecimalDigits();
       if (_index < template.length &&

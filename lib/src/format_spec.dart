@@ -232,9 +232,9 @@ _FormatSpec? _simpleBuiltinFormatSpec(String source) {
   final length = source.length;
   if (length == 0) return null;
   if (length == 1) {
-    return source.codeUnitAt(0) <= 0x7f && _builtInTypes.contains(source)
-        ? _FormatSpec(type: source)
-        : null;
+    // No ASCII guard before the lookup: every built-in type is a
+    // single-character ASCII string, so membership already implies it.
+    return _builtInTypes.contains(source) ? _FormatSpec(type: source) : null;
   }
   if (source.codeUnitAt(0) != 0x2e) {
     return _simpleAsciiFlagWidthSpec(source, length);

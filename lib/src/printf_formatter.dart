@@ -36,6 +36,9 @@ String _formatPrintfValue(
   'G' ||
   'a' ||
   'A' => _formatPrintfDouble(value, conversion, engine, context),
+  // Unreachable, and not removable: a switch expression must be exhaustive,
+  // and a String cannot be. The parser admits no conversion outside the
+  // cases above.
   _ =>
     throw InvalidSpecifierException(
       context,

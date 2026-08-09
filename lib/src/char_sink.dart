@@ -48,6 +48,10 @@ final class CharSink {
               : Uint16List(initialCapacity < 16 ? 16 : initialCapacity),
       _text = _isWeb ? StringBuffer() : null;
 
+  /// How many code units are buffered, counting an unmaterialized single
+  /// string. Read by tests rather than by the engine: it is what lets them
+  /// assert that materializing a single string changes neither the length
+  /// nor the contents.
   int get length => _single?.length ?? _length;
 
   void _ensure(int extra) {

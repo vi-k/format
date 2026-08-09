@@ -1052,10 +1052,6 @@ final class _PrintfFallbackOp extends _PrintfOp {
       );
       if (!node.hasDynamicOptions) node._staticResolved = resolved;
     }
-    if (node.type == '%') {
-      sink.writeCharCode(0x25);
-      return;
-    }
     final argument = frame._argumentAt(valueArgIndex, node);
     var context = node._staticContext;
     if (context == null) {
@@ -1723,7 +1719,10 @@ _PrintfProgram _compilePrintfProgram(
     final precisionArgIndex =
         conversion.precision is _DynamicPrintfOption ? argument++ : -1;
     final valueArgIndex = conversion.type == '%' ? -1 : argument++;
-    if (conversion.type == '%' && !conversion.hasDynamicOptions) {
+    if (conversion.type == '%') {
+      // Unconditional: the parser rejects a width or a precision on `%`
+      // (`printf_parser.dart`, `invalidWidth`/`invalidPrecision`), so a `%`
+      // never carries dynamic options and never reaches the generic op.
       literal.write('%');
       continue;
     }

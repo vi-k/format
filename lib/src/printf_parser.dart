@@ -142,6 +142,9 @@ final class _PrintfParser {
             _PrintfFlags.alternate |
             _PrintfFlags.zero,
       '%' => 0,
+      // Unreachable, and not removable: a switch expression must be
+      // exhaustive, and a String cannot be. Every conversion the parser
+      // admits is named above.
       _ => throw StateError('Unsupported printf conversion ${node.type}.'),
     };
 
