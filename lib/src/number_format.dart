@@ -65,7 +65,6 @@ String formatBraceInteger(
       digits: digits,
       spec: spec,
       textUnit: settings.textUnit,
-      fitRegroupedZeroPadding: true,
       formatDigits: (asciiDigits) {
         final grouped =
             grouping == null
@@ -96,7 +95,6 @@ String formatBraceInteger(
     digits: digits,
     spec: spec,
     textUnit: settings.textUnit,
-    fitRegroupedZeroPadding: true,
     formatDigits: grouping,
   );
 }
@@ -168,7 +166,6 @@ String applyNumericWidth({
   required _FormatSpec spec,
   required TextUnit textUnit,
   String Function(String digits)? formatDigits,
-  bool fitRegroupedZeroPadding = false,
 }) {
   final displayedDigits = formatDigits?.call(digits) ?? digits;
   final value = _signed(sign, prefix, displayedDigits);
@@ -177,24 +174,24 @@ String applyNumericWidth({
 
   final fill = spec.fill ?? (spec.zero ? '0' : ' ');
   final align = spec.align ?? (spec.zero ? '=' : '>');
+  // Zero padding under a regrouping [formatDigits] cannot be counted: every
+  // zero added may pull in a separator and widen the result by more than one.
+  // The count is searched for instead — the smallest number of leading zeros
+  // whose regrouped form reaches the width.
   if (align == '=' && fill == '0' && formatDigits != null) {
-    if (fitRegroupedZeroPadding) {
-      var lower = 0;
-      var upper = width - textUnit.length(value);
-      while (lower < upper) {
-        final middle = (lower + upper) ~/ 2;
-        final candidate = formatDigits('${'0' * middle}$digits');
-        if (textUnit.length(_signed(sign, prefix, candidate)) < width) {
-          lower = middle + 1;
-        } else {
-          upper = middle;
-        }
+    var lower = 0;
+    var upper = width - textUnit.length(value);
+    while (lower < upper) {
+      final middle = (lower + upper) ~/ 2;
+      final candidate = formatDigits('${'0' * middle}$digits');
+      if (textUnit.length(_signed(sign, prefix, candidate)) < width) {
+        lower = middle + 1;
+      } else {
+        upper = middle;
       }
-      return _signed(sign, prefix, formatDigits('${'0' * lower}$digits'));
     }
-    final padding = width - textUnit.length(value);
-    if (padding <= 0) return value;
-    return _signed(sign, prefix, formatDigits(fill * padding + digits));
+
+    return _signed(sign, prefix, formatDigits('${'0' * lower}$digits'));
   }
 
   final padding = width - textUnit.length(value);
@@ -305,7 +302,6 @@ String formatBraceDouble(
     digits: formatted.body + suffix,
     spec: spec,
     textUnit: settings.textUnit,
-    fitRegroupedZeroPadding: true,
     formatDigits:
         (body) =>
             _displayFloatBody(body, spec, locale, context, formatted.special),

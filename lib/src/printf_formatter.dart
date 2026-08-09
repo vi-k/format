@@ -245,7 +245,6 @@ String _formatPrintfDouble(
     digits: formatted.body,
     spec: spec,
     textUnit: engine.textUnit,
-    fitRegroupedZeroPadding: true,
     formatDigits:
         (body) =>
             hexadecimal
