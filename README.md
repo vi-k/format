@@ -403,28 +403,33 @@ templates can come from data and an unbounded cache would be an unbounded
 leak.
 
 ```dart
-templateCacheCapacity;        // 512 entries by default, per mini-language
-templateCacheCharacterLimit;  // 1 Mi characters by default, per mini-language
-templateCacheSize;            // how many parsed templates are resident
-templateCacheCharacters;      // how much template text they hold
-clearTemplateCache();         // discard them all
+templateCacheCapacity;     // 512 entries by default, per mini-language
+templateCacheMemoryLimit;  // 8 MiB by default, per mini-language
+templateCacheSize;         // how many parsed templates are resident
+templateCacheMemory;       // what they are estimated to hold
+clearTemplateCache();      // discard them all
 ```
 
 There are two bounds because a count of entries says nothing about their size.
 A workload with a few very large generated templates stays well inside the
-capacity while holding hundreds of megabytes, so the second bound is on
-template text: whichever binds first evicts. The unit is characters, which is
-what you can see; the memory an entry holds is a multiple of that, and the
-multiple belongs to the template rather than to the cache. Measured on the VM:
-about four bytes per character for text with a few fields, about one for text
-with no fields at all, and around seventy for a template of nothing but `{}`,
-where an entry holds a parse node per field instead of text. The default is
-therefore a few megabytes per mini-language for ordinary templates, and worth
-lowering when templates come from data.
+capacity while holding hundreds of megabytes, so the second bound is on memory:
+whichever binds first evicts.
 
-A template longer than the whole budget is formatted but never cached —
-emptying the cache for one entry that still would not fit costs every other
-template its parse and gains nothing.
+That figure is an estimate, and it has to be — a Dart program cannot measure
+the memory it holds. An entry is priced by a model of what caching it retains:
+the template text as the key, the text each literal slices out of it, the code
+units prepared for those literals on the VM, and a constant per parse node. The
+constants are fitted to measured retention, and the model matters because the
+same amount of text costs wildly different amounts depending on its shape —
+around 1 byte per character for text with no fields, 4 with a few, 76 for a
+template of nothing but `{}` and 120 for one of nothing but `{:d}`, where what
+an entry holds is a parse node each rather than text. The default therefore
+holds about 2 Mi characters of ordinary text, or 110 Ki of the dense kind: the
+budget adapts where a count of characters could not.
+
+An entry priced above the whole budget is formatted but never cached — emptying
+the cache for one that still would not fit costs every other template its parse
+and gains nothing.
 
 Both bounds are per isolate and shared by every `Format` instance — a parsed
 template does not depend on the engine that parsed it. Raise the capacity when
@@ -444,9 +449,9 @@ insertion.
 
 `templateCacheSize` tells "the cache is too small for this workload" apart
 from "this workload never repeats a template", which otherwise look alike from
-the outside. Read with `templateCacheCharacters`, it also tells a cache full of
-small templates from one held by a handful of large ones — the two need
-opposite adjustments. To see the difference the cache makes on the current machine, the
+the outside. Read with `templateCacheMemory`, it also tells a cache full of
+small templates from one held by a handful of large or field-dense ones — the
+two need opposite adjustments. To see the difference the cache makes on the current machine, the
 benchmark measures every case with it on and off:
 
 ```console

@@ -155,18 +155,18 @@ void main() {
     expect(engine.templateCacheSize, 1);
   });
 
-  // The character budget binds where the entry count cannot: five templates
-  // is nothing against a capacity of 512, but a limit of 200 characters holds
-  // only two of these at a time. The count of resident characters is what says
-  // the budget is tracked rather than merely checked once.
-  test('the character budget evicts before the entry count does', () {
-    engine.templateCacheCharacterLimit = 200;
+  // The memory budget binds where the entry count cannot: five templates is
+  // nothing against a capacity of 512, but a budget of 600 bytes holds only two
+  // of these at a time. The resident estimate is what says the budget is
+  // tracked rather than merely checked once.
+  test('the memory budget evicts before the entry count does', () {
+    engine.templateCacheMemoryLimit = 600;
     for (var index = 0; index < 5; index++) {
       engine.format('${'x' * 90} $index {}', 1);
     }
 
     expect(engine.templateCacheSize, lessThan(3));
-    expect(engine.templateCacheCharacters, lessThanOrEqualTo(200));
+    expect(engine.templateCacheMemory, lessThanOrEqualTo(600));
     expect(
       engine.templateCacheCapacity,
       greaterThan(engine.templateCacheSize),
@@ -174,59 +174,80 @@ void main() {
     );
   });
 
+  // Why the budget is in bytes and not in characters, which is what the caller
+  // can count: the same amount of text costs an order of magnitude more when it
+  // is fields, because what an entry then holds is a parse node each. Stated as
+  // a ratio, since the constants behind it are fitted estimates and the point
+  // is the gap, not their values.
+  test('a field-dense template is priced far above the same text', () {
+    engine.format('x' * 200);
+    final text = engine.templateCacheMemory;
+    engine.clearTemplateCache();
+
+    engine.formatWith('{}' * 100, positional: List.filled(100, 1));
+    expect(engine.templateCacheMemory, greaterThan(text * 10));
+  });
+
   // A template larger than the whole budget cannot be held at any point, so it
   // is formatted and dropped rather than emptying the cache on the way in.
   // Evicting everything for an entry that still would not fit costs every
   // other template its parse and gains nothing.
   test('a template past the whole budget is formatted but not cached', () {
-    engine.templateCacheCharacterLimit = 100;
+    engine.templateCacheMemoryLimit = 400;
     engine.format('small {}', 1);
     final resident = engine.templateCacheSize;
 
     expect(engine.format('${'y' * 500} {}', 2), endsWith(' 2'));
     expect(engine.templateCacheSize, resident, reason: 'nothing was evicted');
-    expect(engine.templateCacheCharacters, lessThanOrEqualTo(100));
+    expect(engine.templateCacheMemory, lessThanOrEqualTo(400));
   });
 
   // Same contract as the capacity: a lowered bound takes effect at once, not
   // at the next insertion. A program reducing its budget to free memory would
   // otherwise keep everything until it happened to format something else.
-  test('lowering the character limit discards entries now', () {
+  test('lowering the memory limit discards entries now', () {
     for (var index = 0; index < 20; index++) {
       engine.format('budget $index {}', 1);
     }
     expect(engine.templateCacheSize, 20);
-    final before = engine.templateCacheCharacters;
+    final before = engine.templateCacheMemory;
 
-    engine.templateCacheCharacterLimit = before ~/ 4;
-    expect(engine.templateCacheCharacters, lessThanOrEqualTo(before ~/ 4));
+    engine.templateCacheMemoryLimit = before ~/ 4;
+    expect(engine.templateCacheMemory, lessThanOrEqualTo(before ~/ 4));
     expect(engine.templateCacheSize, lessThan(20));
-    expect(() => engine.templateCacheCharacterLimit = -1, throwsArgumentError);
+    expect(() => engine.templateCacheMemoryLimit = -1, throwsArgumentError);
   });
 
   // Zero means "cache nothing", the same way it does for the capacity — and
   // the two opt-outs must not depend on each other.
-  test('a zero character limit keeps nothing while the capacity is ample', () {
-    engine.templateCacheCharacterLimit = 0;
+  test('a zero memory limit keeps nothing while the capacity is ample', () {
+    engine.templateCacheMemoryLimit = 0;
 
     expect(engine.format('zero {}', 7), 'zero 7');
     expect(engine.sprintf('%d zero', 7), '7 zero');
     expect(engine.templateCacheSize, 0);
-    expect(engine.templateCacheCharacters, 0);
+    expect(engine.templateCacheMemory, 0);
   });
 
   // The two counters answer different questions — how many templates, and how
-  // much text — and a workload held by a few large templates looks nothing
-  // like one holding many small ones. Clearing resets both.
-  test('resident characters track both mini-languages and clearing', () {
+  // much memory — and a workload held by a few large templates looks nothing
+  // like one holding many small ones. Both count the two mini-languages
+  // together, and clearing resets both.
+  test('resident memory tracks both mini-languages and clearing', () {
     engine.format('{:10d}', 1);
+    final brace = engine.templateCacheMemory;
     engine.sprintf('%10d', 1);
 
     expect(engine.templateCacheSize, 2);
-    expect(engine.templateCacheCharacters, '{:10d}'.length + '%10d'.length);
+    expect(
+      engine.templateCacheMemory,
+      greaterThan(brace),
+      reason: 'the printf entry was counted too',
+    );
+    expect(engine.templateCacheMemory, greaterThan('{:10d}%10d'.length));
 
     engine.clearTemplateCache();
-    expect(engine.templateCacheCharacters, 0);
+    expect(engine.templateCacheMemory, 0);
   });
 
   // A template that does not parse produces nothing to cache, and must not

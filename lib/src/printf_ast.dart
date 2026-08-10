@@ -19,10 +19,14 @@ sealed class _PrintfNode {
   const _PrintfNode(this.offset, this.fragment);
 }
 
-final class _PrintfTemplate {
+final class _PrintfTemplate implements _PricedTemplate {
   final List<_PrintfNode> nodes;
 
   _PrintfTemplate(List<_PrintfNode> nodes) : nodes = _sealedInDebug(nodes);
+
+  /// Priced on demand; see [_BraceTemplate.retainedBytes].
+  @override
+  late final int retainedBytes = _printfRetainedBytes(nodes);
 
   // Lazily memoized IR programs, one slot per TextUnit. Shared through the
   // template cache; compilation is total and never throws, so a slot is

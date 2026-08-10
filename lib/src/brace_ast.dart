@@ -4,10 +4,15 @@ sealed class _BraceNode {
   const _BraceNode();
 }
 
-final class _BraceTemplate {
+final class _BraceTemplate implements _PricedTemplate {
   final List<_BraceNode> nodes;
 
   _BraceTemplate(List<_BraceNode> nodes) : nodes = _sealedInDebug(nodes);
+
+  /// Priced on demand rather than at parse time: with the cache switched off
+  /// every call parses, and none of those parses is ever priced.
+  @override
+  late final int retainedBytes = _braceRetainedBytes(nodes);
 
   // Lazily memoized IR programs, one slot per TextUnit. Shared through the
   // template cache; compilation is total and never throws, so a slot is

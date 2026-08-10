@@ -18,13 +18,18 @@ unpublished 2.0.0 below.
 * Represent empty Dart `Map` and `Set` values as `{}`.
 * Added immutable `Format` instances with configurable custom formatters,
   lookups, representations, number locales, and Unicode text units.
-* Bounded the template cache by template text as well as by entry count:
-  `templateCacheCharacterLimit` (about a million characters by default, a few
-  megabytes of retained memory for ordinary templates) and
-  `templateCacheCharacters` join `templateCacheCapacity` and
-  `templateCacheSize`. Whichever bound binds first evicts, a template larger
-  than the whole budget is formatted but not cached, and lowering either bound
-  discards entries immediately.
+* Bounded the template cache by memory as well as by entry count:
+  `templateCacheMemoryLimit` (8 MiB per mini-language by default) and
+  `templateCacheMemory` join `templateCacheCapacity` and `templateCacheSize`.
+  Whichever bound binds first evicts, an entry priced above the whole budget is
+  formatted but not cached, and lowering either bound discards entries
+  immediately. The figure is an estimate — a Dart program cannot measure the
+  memory it holds — priced from the template text, the slices its literals
+  keep, the code units prepared for them, and a constant per parse node, with
+  the constants fitted to measured retention. Bytes rather than characters
+  because the same amount of text costs from 1 to 154 bytes per character
+  depending on how densely it is fielded, which is what a character count
+  cannot see.
 * A template with no fields — or a printf template with no conversion — is now
   formatted without copying it: it compiles to a single op that hands the text
   back by reference. Measured on the VM at 2.6 times faster for a sixteen

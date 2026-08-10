@@ -2,19 +2,22 @@ part of 'engine.dart';
 
 const _defaultTemplateCacheCapacity = 512;
 
-/// The default character budget, a few megabytes of retained memory for
-/// ordinary templates.
+/// The default memory budget, eight mebibytes of parsed templates per
+/// mini-language.
 ///
-/// What an entry costs per character depends on the template, so the budget
-/// buys different amounts of memory for different workloads: see
-/// [templateCacheCharacterLimit]. Ordinary ones never approach it — 512
-/// templates of a hundred characters is fifty thousand — so it only ever binds
-/// on the case that motivated it, where a few templates are enormous.
-const _defaultTemplateCacheCharacterLimit = 1 << 20;
+/// Chosen against the shapes measured for [templateCacheMemoryLimit]: it holds
+/// about 2 Mi characters of ordinary text with a few fields, 110 Ki characters
+/// of a template that is nothing but `{}`, and 70 Ki of one that is nothing but
+/// `{:d}` — the budget adapts where a count of characters could not. Ordinary
+/// workloads
+/// never approach it — 512 templates of a hundred characters is under a
+/// hundred kibibytes — so it only ever binds on the case that motivated it,
+/// where templates come from data and a few of them are enormous.
+const _defaultTemplateCacheMemoryLimit = 8 << 20;
 
 int _templateCacheCapacity = _defaultTemplateCacheCapacity;
 
-int _templateCacheCharacterLimit = _defaultTemplateCacheCharacterLimit;
+int _templateCacheMemoryLimit = _defaultTemplateCacheMemoryLimit;
 
 final _braceTemplateCache = _TemplateCache<_BraceTemplate>();
 final _printfTemplateCache = _TemplateCache<_PrintfTemplate>();
@@ -32,7 +35,7 @@ final _printfTemplateCache = _TemplateCache<_PrintfTemplate>();
 /// generated and never repeat: caching them only pays to evict them.
 ///
 /// This is a bound on entries, not on memory: see
-/// [templateCacheCharacterLimit], which bounds the other one. Both apply.
+/// [templateCacheMemoryLimit], which bounds the other one. Both apply.
 ///
 /// Lowering it discards entries immediately. The caches are per isolate, and
 /// shared by every [Format] instance, which is safe because a parsed template
@@ -48,8 +51,8 @@ set templateCacheCapacity(int value) {
   _printfTemplateCache.trim();
 }
 
-/// How much template text each mini-language keeps, about a million
-/// characters by default.
+/// How much memory the parsed templates of each mini-language may hold, eight
+/// mebibytes by default.
 ///
 /// A count of entries says nothing about their size, and templates can come
 /// from data: a workload with a few very large generated templates stays well
@@ -57,35 +60,52 @@ set templateCacheCapacity(int value) {
 /// the bound that case runs into. Both bounds apply, and whichever binds first
 /// evicts.
 ///
-/// The unit is characters of template text, which is what a caller can see.
-/// The memory an entry actually holds is a multiple of that, and the multiple
-/// is a property of the template rather than a constant. Measured on the VM:
-/// about four bytes per character for text with a few fields, where the text is
-/// reachable from the key, from the literal nodes and from the code units
-/// prepared for them; about one for text with no fields at all, where nothing
-/// is prepared and the literal is handed back by reference; and around seventy
-/// for a template of nothing but `{}`, where what an entry holds is a parse
-/// node per field and not text at all. So the default is a few megabytes for
-/// ordinary templates, and worth lowering when templates come from data — the
-/// bound is on what a caller can count, not on what the shape costs.
+/// The unit is bytes, and the figure is an **estimate**: memory a Dart program
+/// holds cannot be measured from inside it, so an entry is priced by a model of
+/// what caching it retains — the template text as the key, the text each
+/// literal node slices out of it, the code units prepared for those literals on
+/// the VM, and a constant per parse node. The constants are fitted to measured
+/// retention (RSS, three hundred to a thousand cached templates of a hundred
+/// thousand characters each):
 ///
-/// A template longer than the whole budget is formatted but never cached —
-/// evicting the entire cache to hold one entry that cannot fit would be worse
+/// | template shape | measured | priced |
+/// |---|---|---|
+/// | text, no fields | 1.4 B/char | 1.0 |
+/// | text with a few fields | 4.6 | 4.0 |
+/// | `{}` repeated | 74.6 | 76.0 |
+/// | `a{}` repeated | 98.0 | 100.0 |
+/// | `{:d}` repeated | 118.5 | 120.3 |
+/// | printf text, no conversions | 1.4 | 1.0 |
+/// | `%d` repeated | 142.0 | 141.0 |
+/// | `a%d` repeated | 151.0 | 154.0 |
+///
+/// The first and sixth rows are the floor of the whole scheme — a template with
+/// no field is priced at its key and nothing else, which is exactly what it
+/// retains; the 0.4 above it is the slack of measuring by resident set size.
+///
+/// Two things the price cannot see, both of which make it read low: a template
+/// formatted under more than one [TextUnit] compiles a program per unit, and
+/// the platform the constants are fitted on is the VM — a web target keeps
+/// strings instead of code units and pays differently. Treat the number as a
+/// budget with a factor of safety, not as an accounting of the heap.
+///
+/// An entry priced above the whole budget is formatted but never cached —
+/// evicting everything to hold one entry that still cannot fit would be worse
 /// than reparsing it. Set the limit to zero to cache nothing, as with
 /// [templateCacheCapacity].
 ///
 /// Lowering it discards entries immediately.
-int get templateCacheCharacterLimit => _templateCacheCharacterLimit;
+int get templateCacheMemoryLimit => _templateCacheMemoryLimit;
 
-set templateCacheCharacterLimit(int value) {
+set templateCacheMemoryLimit(int value) {
   if (value < 0) {
     throw ArgumentError.value(
       value,
-      'templateCacheCharacterLimit',
+      'templateCacheMemoryLimit',
       'Must be >= 0.',
     );
   }
-  _templateCacheCharacterLimit = value;
+  _templateCacheMemoryLimit = value;
   _braceTemplateCache.trim();
   _printfTemplateCache.trim();
 }
@@ -98,13 +118,15 @@ set templateCacheCharacterLimit(int value) {
 int get templateCacheSize =>
     _braceTemplateCache.length + _printfTemplateCache.length;
 
-/// How much template text is resident, across both mini-languages.
+/// The estimated memory resident templates hold, across both mini-languages,
+/// in the same units as [templateCacheMemoryLimit].
 ///
 /// Read with [templateCacheSize], this is what distinguishes a cache full of
-/// small templates from one held by a handful of large ones — the two need
-/// opposite adjustments, and the entry count alone cannot tell them apart.
-int get templateCacheCharacters =>
-    _braceTemplateCache.characters + _printfTemplateCache.characters;
+/// small templates from one held by a handful of large or field-dense ones —
+/// the two need opposite adjustments, and the entry count alone cannot tell
+/// them apart.
+int get templateCacheMemory =>
+    _braceTemplateCache.memory + _printfTemplateCache.memory;
 
 /// Discards every parsed template.
 ///
@@ -114,8 +136,80 @@ void clearTemplateCache() {
   _printfTemplateCache.clear();
 }
 
-/// A template cache bounded by entries and by characters, evicting a random
-/// entry when either bound is reached.
+/// A parsed template that can price what caching it retains.
+abstract interface class _PricedTemplate {
+  /// Estimated bytes held by caching this template, not counting the key: the
+  /// cache adds the key's own length, which it alone knows.
+  ///
+  /// See [templateCacheMemoryLimit] for the model and what it is fitted to.
+  int get retainedBytes;
+}
+
+// The fitted constants. Each stands for one node's worth of objects — the node
+// itself, the op compiled from it, the slots both take in their lists, and
+// whatever the first call memoizes on it — so they are per node and not per
+// character. See the table on templateCacheMemoryLimit.
+const _braceLiteralNodeBytes = 144;
+const _braceFieldNodeBytes = 150;
+const _braceSpecificationBytes = 180;
+const _printfLiteralNodeBytes = 176;
+const _printfConversionNodeBytes = 280;
+
+/// What a literal's own text costs beyond the key it was sliced from: its
+/// string on both platforms, and on the VM the code units prepared next to it.
+const _literalTextBytesPerCharacter = _isWeb ? 1 : 3;
+
+int _braceRetainedBytes(List<_BraceNode> nodes) {
+  // The one shape that slices nothing: a template that is a single literal is
+  // its own output, so the node holds the key itself and no units are prepared
+  // for it (see _BraceSoleLiteralOp). Everything else is then already paid for
+  // by the key.
+  //
+  // Only the template's own nodes qualify. A specification that is a single
+  // literal — the `d` of `{:d}` — is a slice like any other, and pricing it at
+  // nothing read a field with a specification thirty per cent low.
+  if (nodes case [_LiteralNode()]) return 0;
+  return _braceNodesBytes(nodes);
+}
+
+int _braceNodesBytes(List<_BraceNode> nodes) {
+  var bytes = 0;
+  for (final node in nodes) {
+    if (node case _LiteralNode(:final text)) {
+      bytes +=
+          _braceLiteralNodeBytes + text.length * _literalTextBytesPerCharacter;
+      continue;
+    }
+    final field = node as _FieldNode;
+    bytes += _braceFieldNodeBytes;
+    // A specification is parsed into nodes of its own and its parse is
+    // memoized on the field at the first call, which is the larger half of it.
+    if (field.specification.isNotEmpty) {
+      bytes += _braceSpecificationBytes + _braceNodesBytes(field.specification);
+    }
+  }
+  return bytes;
+}
+
+int _printfRetainedBytes(List<_PrintfNode> nodes) {
+  if (nodes case [_PrintfLiteralNode()]) return 0;
+
+  var bytes = 0;
+  for (final node in nodes) {
+    // A `%%` is priced as a conversion although it folds into the literal
+    // beside it and memoizes nothing, so the estimate reads high on a template
+    // full of escaped percents. That is the safe direction for a budget.
+    bytes +=
+        node is _PrintfLiteralNode
+            ? _printfLiteralNodeBytes +
+                node.text.length * _literalTextBytesPerCharacter
+            : _printfConversionNodeBytes;
+  }
+  return bytes;
+}
+
+/// A template cache bounded by entries and by memory, evicting a random entry
+/// when either bound is reached.
 ///
 /// Random replacement is deliberate. The pathological input for this cache
 /// is a working set slightly larger than the capacity, cycled in order: FIFO
@@ -124,7 +218,7 @@ void clearTemplateCache() {
 /// reparse. Random replacement keeps roughly capacity/size of such a set
 /// resident instead, and it needs no bookkeeping on a hit — which is what
 /// keeps a hit cheap.
-final class _TemplateCache<T extends Object> {
+final class _TemplateCache<T extends _PricedTemplate> {
   final _entries = <String, T>{};
 
   /// The insertion keys, in no meaningful order: it exists only so that a
@@ -135,34 +229,40 @@ final class _TemplateCache<T extends Object> {
   /// makes the policy reproducible in tests.
   final _victims = math.Random(0x5eed);
 
-  /// The summed length of every cached template, maintained on insertion and
-  /// eviction rather than recomputed: the alternative is walking the keys on
+  /// The summed price of every cached entry, maintained on insertion and
+  /// eviction rather than recomputed: the alternative is walking the entries on
   /// every store, which is the one place this cache cannot afford to be
   /// linear.
-  int _characters = 0;
+  int _memory = 0;
 
   int get length => _entries.length;
 
-  int get characters => _characters;
+  int get memory => _memory;
 
   T? operator [](String template) => _entries[template];
 
+  /// What caching [parsed] under [template] would hold: its own estimate plus
+  /// the key, which the entry keeps alive for as long as it is resident.
+  static int _price(String template, _PricedTemplate parsed) =>
+      template.length + parsed.retainedBytes;
+
   /// Stores [parsed] under [template], which must not already be cached.
   T store(String template, T parsed) {
-    if (_templateCacheCapacity == 0 || _templateCacheCharacterLimit == 0) {
+    if (_templateCacheCapacity == 0 || _templateCacheMemoryLimit == 0) {
       return parsed;
     }
-    // A template that cannot fit even in an empty cache is not cached at all:
-    // emptying the cache for one entry that still exceeds the budget costs
-    // every other template its parse and gains nothing.
-    if (template.length > _templateCacheCharacterLimit) return parsed;
+    final price = _price(template, parsed);
+    // An entry that cannot fit even in an empty cache is not cached at all:
+    // emptying the cache for one that still exceeds the budget costs every
+    // other template its parse and gains nothing.
+    if (price > _templateCacheMemoryLimit) return parsed;
 
     while (_entries.length >= _templateCacheCapacity ||
-        _characters + template.length > _templateCacheCharacterLimit) {
+        _memory + price > _templateCacheMemoryLimit) {
       _evict();
     }
     _keys.add(template);
-    _characters += template.length;
+    _memory += price;
 
     return _entries[template] = parsed;
   }
@@ -171,7 +271,7 @@ final class _TemplateCache<T extends Object> {
   void trim() {
     while (_entries.isNotEmpty &&
         (_entries.length > _templateCacheCapacity ||
-            _characters > _templateCacheCharacterLimit)) {
+            _memory > _templateCacheMemoryLimit)) {
       _evict();
     }
   }
@@ -179,8 +279,8 @@ final class _TemplateCache<T extends Object> {
   void _evict() {
     final victim = _victims.nextInt(_keys.length);
     final key = _keys[victim];
-    _entries.remove(key);
-    _characters -= key.length;
+    final parsed = _entries.remove(key);
+    if (parsed != null) _memory -= _price(key, parsed);
     _keys[victim] = _keys.last;
     _keys.removeLast();
   }
@@ -188,7 +288,7 @@ final class _TemplateCache<T extends Object> {
   void clear() {
     _entries.clear();
     _keys.clear();
-    _characters = 0;
+    _memory = 0;
   }
 }
 
@@ -215,13 +315,13 @@ int debugBraceTemplateCacheSize() => _braceTemplateCache.length;
 
 int debugPrintfTemplateCacheSize() => _printfTemplateCache.length;
 
-int debugTemplateCacheCharacterLimit() => _templateCacheCharacterLimit;
+int debugTemplateCacheMemoryLimit() => _templateCacheMemoryLimit;
 
-int debugBraceTemplateCacheCharacters() => _braceTemplateCache.characters;
+int debugBraceTemplateCacheMemory() => _braceTemplateCache.memory;
 
 void debugClearTemplateCaches() {
   templateCacheCapacity = _defaultTemplateCacheCapacity;
-  templateCacheCharacterLimit = _defaultTemplateCacheCharacterLimit;
+  templateCacheMemoryLimit = _defaultTemplateCacheMemoryLimit;
   clearTemplateCache();
 }
 
