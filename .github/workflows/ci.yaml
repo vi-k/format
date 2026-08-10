@@ -16,12 +16,16 @@ permissions:
   contents: read
 
 # Every action below is pinned to a commit, with its version in the comment.
-# A tag is a moving reference the action's owner can repoint, so `@v5` names
+# A major tag is a moving reference its owner can repoint, so `@v7` names
 # whatever that repository decides it means on the day the job runs — which is
 # how a compromised release turns into arbitrary code inside this checkout. The
 # comment is not decoration: Dependabot reads it, and `.github/dependabot.yml`
 # schedules the updates that keep a pin from freezing out the fixes tags exist
 # to deliver.
+#
+# The first such update arrived within the hour and moved four of the five
+# actions two majors forward: the moving tags had been hiding the staleness,
+# because `@v5` kept working while v7 existed.
 
 jobs:
   checks:
