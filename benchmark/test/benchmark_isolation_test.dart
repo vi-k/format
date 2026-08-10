@@ -11,17 +11,16 @@
 /// shows up as a failure rather than as a shifted benchmark.
 library;
 
-import 'dart:io';
-
 import 'package:test/test.dart';
 
+import '../../test/support/repository.dart';
 import '../baselines/format20/format20.dart';
 
 void main() {
   // The baseline is compiled into the benchmark package, so nothing but this
   // check stands between it and the public export.
   test('benchmark baselines are absent from package:format public API', () {
-    final exports = File('lib/format.dart').readAsStringSync();
+    final exports = repositoryFile('lib/format.dart').readAsStringSync();
     expect(exports, isNot(contains('benchmark/')));
     expect(exports, isNot(contains('legacyFormat')));
     expect(exports, isNot(contains('sprintf7')));

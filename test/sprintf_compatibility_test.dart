@@ -29,12 +29,15 @@ import 'package:test/test.dart';
 
 import 'support/fixture_value.dart';
 import 'support/markdown_anchors.dart';
+import 'support/repository.dart';
 
 void main() {
   final compatibleFormat = Format(
     doubleFormatMode: DoubleFormatMode.compatible,
   );
-  final suite = SprintfFixtureSuite.load('test/fixtures/sprintf_common.json');
+  final suite = SprintfFixtureSuite.load(
+    repositoryFile('test/fixtures/sprintf_common.json').path,
+  );
 
   group('committed std::sprintf C++23 fixtures', () {
     // One test per fixture: a regression in one case does not hide the
@@ -72,7 +75,9 @@ void main() {
   test('keeps intentional sprintf divergences sorted and reviewable', () async {
     final document = _object(
       jsonDecode(
-        await File('test/fixtures/sprintf_divergences.json').readAsString(),
+        await repositoryFile(
+          'test/fixtures/sprintf_divergences.json',
+        ).readAsString(),
       ),
       r'$',
     );
@@ -109,7 +114,7 @@ void main() {
     expect(ids, containsAll(_requiredDivergenceIds));
     expect(anchors, {'#sprintf'});
     expect(
-      markdownAnchors(await File('README.md').readAsString()),
+      markdownAnchors(await repositoryFile('README.md').readAsString()),
       containsAll(anchors),
     );
 

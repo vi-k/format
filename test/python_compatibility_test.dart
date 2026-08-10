@@ -37,12 +37,15 @@ import 'package:test/test.dart';
 
 import 'support/fixture_value.dart';
 import 'support/markdown_anchors.dart';
+import 'support/repository.dart';
 
 void main() {
   final compatibleFormat = Format(
     doubleFormatMode: DoubleFormatMode.compatible,
   );
-  final suite = PythonFixtureSuite.load('test/fixtures/python_format.json');
+  final suite = PythonFixtureSuite.load(
+    repositoryFile('test/fixtures/python_format.json').path,
+  );
 
   // The fixtures are only evidence if it is known what produced them. A
   // regenerated file from a different interpreter or version would change
@@ -196,14 +199,16 @@ void main() {
   });
 
   final divergences = PythonDivergenceSuite.load(
-    'test/fixtures/python_divergences.json',
+    repositoryFile('test/fixtures/python_divergences.json').path,
   );
 
   test('points every divergence at a README section that exists', () async {
     // The registry tells a user "we differ from Python here, read the
     // README". An anchor that resolves to nothing breaks that promise
     // silently, so resolve each one against the headings themselves.
-    final anchors = markdownAnchors(await File('README.md').readAsString());
+    final anchors = markdownAnchors(
+      await repositoryFile('README.md').readAsString(),
+    );
     for (final entry in divergences.anchors.entries) {
       expect(anchors, contains(entry.value), reason: entry.key);
     }
