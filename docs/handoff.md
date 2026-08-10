@@ -1,6 +1,6 @@
 # Handoff для новой сессии
 
-Статус: живой документ, обновляется каждую сессию. Обновлён 2026-08-09.
+Статус: живой документ, обновляется каждую сессию. Обновлён 2026-08-10.
 Рабочий каталог: `/Users/user/development/my/format`
 
 Этот файл — точка входа, а не летопись. Предыдущий handoff, который вёлся
@@ -60,7 +60,11 @@ printf-подобный диалект (`%...`) под одним движком
   `-plan`). Папка названа так, а не `archive`, намеренно: отчёт
   `2026-08-05[5]` — живой реестр вердиктов, и «архивом» он не является.
   В корне репозитория только `README.md`, `README.ru.md`,
-  `CHANGELOG.md` и `LICENSE`.
+  `CHANGELOG.md`, `LICENSE` и `CLAUDE.md`. Последний — исключение по
+  необходимости: Claude Code читает его автоматически только из корня, и
+  положить его в `docs/` нельзя. Он намеренно короткий и указывает сюда,
+  а не пересказывает — иначе получится вторая копия, которая разойдётся.
+  В pub-архив не идёт (`/CLAUDE.md` в `.pubignore`).
 - **У каждого замороженного документа под заголовком — строка
   `Статус:`**: исполнен, исполнен частично с перечнем открытого, архив
   или расходится с кодом. По ней видно, можно ли верить документу, не
@@ -142,17 +146,17 @@ printf-подобный диалект (`%...`) под одним движком
 
 ```sh
 dart format . && dart analyze --fatal-infos lib test example tool
-dart test                                    # 523 теста
+dart test                                    # 551 тест
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart \
   test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart \
-  test/js_number_dispatch_test.dart          # 75 тестов
-dart test benchmark/test tool/test           # 32 теста, ~50 с
+  test/js_number_dispatch_test.dart          # 79 тестов
+dart test benchmark/test tool/test           # 39 тестов, ~50 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
 dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
-  && dart run tool/check_coverage.dart --lcov=coverage/lcov.info  # 95.1%, пол 94%
+  && dart run tool/check_coverage.dart --lcov=coverage/lcov.info  # 95.3%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run bin/benchmark.dart) # матрица, ~60 с
 ```
@@ -169,6 +173,9 @@ gh workflow run ci.yaml --ref main
 gh run download <id> -n performance-gate -D /tmp/gate
 dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
   --record=$(date +%F) --output=benchmark/results/gate-baseline.json
+# С 2026-08-10 гейт сверяет ревизию отчётов с рабочим деревом и окружение
+# с эталоном: чужие отчёты разбираются с --allow-unverified-revision, а
+# прогон на другой машине не решает ничего (comparable: false, выход 0).
 ```
 
 Порядок и требования к отчётам — `benchmark/results/README.md`.
@@ -203,6 +210,38 @@ dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
 Отклонены по замеру: **M16** (кэш `decimalPower` выше 400 — некэшируемый
 `pow` зовётся один раз на форматирование и стоит 0.7 % от него) и **M11**
 (`/packages/` в `.pubignore` ломает архив — поймано собственным гейтом).
+
+## Что сделано 2026-08-09…10
+
+Разобрана **секция Low целиком** — вердикт стоит у каждого из тридцати
+пунктов в отчёте, включая отклонения с обоснованием. Мержилось прямо в
+`main`, по коммиту на пункт.
+
+Из тридцати восемь оказались не тем, чем выглядели, и это главный улов
+захода:
+
+| пункт | что выяснилось |
+|---|---|
+| L6 | граница приёма одинакова на VM и в вебе; расходится только сообщаемый `key` |
+| L11 | копия несущая, а брешь была на другой стороне — снимок отсутствовал у `formatWith`, не у `vsprintf` |
+| L13 | реализовано, замерено, **отклонено**: оценка ёмкости изменилась, время нет |
+| L16 | «legacy-пути» оказались живым запасным путём IR; буфер бы не помог, помогло не копировать ради пустых знака и префикса |
+| L17 | пункт про политику кэша сам устарел: FIFO успел смениться случайным вытеснением |
+| L19 | libc расходится не правилом округления, а только на ровных половинках |
+| L22 | рецепт из плана (`Platform.script`) под `dart test` не работает вовсе |
+| L26 | пиннилось единственное, что не менялось; менялся невидимый процессор — ночной гейт падал от смены железа |
+
+Замеренные ускорения: `{:0{}d}` ×1.67, `{:^{}d}` ×1.59, `{:{}d}` ×1.42
+(L16); скалярная длина ×4.6 и `take` ×606 (L14); одна аллокация нужного
+размера на варарг-вызов (L12).
+
+Изменения поведения: локаль в целочисленных printf-конверсиях (L18,
+CHANGELOG), `#` на восьмеричной конверсии — цифра, а не маркер.
+
+Инфраструктура: экшены запинены по коммиту и заведён Dependabot (L20) —
+он тут же показал отставание на два мажора; `--fatal-infos` доведён до
+всего дерева (L21); гейт сверяет ревизию с рабочим деревом (L25) и
+сравнивает окружение вместо пина Node (L26).
 
 ## Что открыто
 
