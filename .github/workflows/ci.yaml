@@ -15,6 +15,14 @@ on:
 permissions:
   contents: read
 
+# Every action below is pinned to a commit, with its version in the comment.
+# A tag is a moving reference the action's owner can repoint, so `@v5` names
+# whatever that repository decides it means on the day the job runs — which is
+# how a compromised release turns into arbitrary code inside this checkout. The
+# comment is not decoration: Dependabot reads it, and `.github/dependabot.yml`
+# schedules the updates that keep a pin from freezing out the fixes tags exist
+# to deliver.
+
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -27,8 +35,8 @@ jobs:
         # the current formatter or linter run on stable only.
         sdk: ['3.7.2', 'stable']
     steps:
-      - uses: actions/checkout@v5
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
         with:
           sdk: ${{ matrix.sdk }}
       - name: Resolve dependencies
@@ -79,11 +87,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
         with:
           sdk: stable
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           # The generators require CPython 3.14: the fixtures record what that
           # version does, and the identifier tables come from the Unicode
@@ -106,8 +114,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
         with:
           sdk: stable
       - name: Resolve dependencies
@@ -128,7 +136,7 @@ jobs:
           --packages=.dart_tool/package_config.json
       - name: Report and enforce the floor
         run: dart run tool/check_coverage.dart --lcov=coverage/lcov.info
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         # Kept whether the floor held or not: the report is how the gap gets
         # closed, and it is most wanted on the run that failed.
         if: always()
@@ -141,8 +149,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
         with:
           sdk: stable
       - name: Resolve root dependencies
@@ -169,11 +177,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v5
-      - uses: dart-lang/setup-dart@v1
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: dart-lang/setup-dart@65eb853c7ba17dde3be364c3d2858773e7144260 # v1.7.2
         with:
           sdk: stable
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           # Pinned exactly: the gate rejects reports from any other Node.
           node-version: 24.8.0
@@ -206,7 +214,7 @@ jobs:
           --output=gate-report.json
       - name: Upload the gate report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: performance-gate
           path: |

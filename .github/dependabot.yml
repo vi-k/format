@@ -1,0 +1,23 @@
+version: 2
+
+updates:
+  # The counterweight to pinning actions by commit in `workflows/ci.yaml`. A
+  # pin that nobody refreshes stops receiving the action's own security fixes,
+  # which is the failure mode tags were meant to prevent; this schedules the
+  # refresh instead of leaving it to memory. Dependabot rewrites both the SHA
+  # and the version comment, so the pair cannot drift apart.
+  #
+  # Only the actions are watched. Dart dependencies are resolved from `pubspec`
+  # ranges on every run and are already exercised by the `3.7.2`/`stable`
+  # matrix, so a bot proposing the same resolution would add noise, not signal.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: 'ci'
+    groups:
+      # One pull request for the lot: these move together often enough that
+      # five separate branches would cost more review than they save.
+      actions:
+        patterns: ['*']
