@@ -36,6 +36,12 @@
       "expected": {"output": "0x1.9p+0"}
     },
     {
+      "id": "double-a-precision-tie",
+      "template": "%.1a",
+      "arguments": [{"type": "double", "value": 1.09375}],
+      "expected": {"allowed": ["0x1.1p+0", "0x1.2p+0"]}
+    },
+    {
       "id": "double-a-subnormal",
       "template": "%a",
       "arguments": [{"type": "double", "value": 5e-324}],

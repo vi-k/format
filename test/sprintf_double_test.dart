@@ -262,6 +262,12 @@ void main() {
   // the last two show rounding at the extremes — where carry would overflow the
   // exponent, and where a subnormal rounds away to zero while keeping the fixed
   // `p-1022`.
+  //
+  // Ties are also where C implementations part company: correct rounding of
+  // `%a` is recommended practice rather than a requirement, and Apple libc
+  // truncates where this rounds. That is registered as
+  // `hexadecimal-tie-rounding` in `sprintf_divergences.json`, with `1.09375`
+  // as its exemplar — the same value as here, on purpose.
   test('rounds hexadecimal precision ties to even', () {
     expect(sprintf('%.0a', 1.5), '0x2p+0');
     expect(sprintf('%.1a', 1.03125), '0x1.0p+0');

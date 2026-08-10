@@ -135,6 +135,7 @@ const _requiredDivergenceIds = {
   'dartsdk-default-double-profile',
   'fixed-rounding-mode',
   'format-intl-locale-extensions',
+  'hexadecimal-tie-rounding',
   'negative-unsigned-error',
   'unsupported-cpp26-binary',
   'unsupported-length-modifiers',
@@ -178,6 +179,10 @@ final _executableResults = <String, ({String output, String Function() run})>{
         () => Format(
           numberLocale: const SpacedNumberLocale(),
         ).vsprintf('%.1f', [-1.5]),
+  ),
+  'hexadecimal-tie-rounding': (
+    output: '0x1.2p+0',
+    run: () => vsprintf('%.1a', [1.09375]),
   ),
   'subnormal-hexadecimal-spelling': (
     output: '0x0.0000000000001p-1022',

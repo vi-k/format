@@ -128,6 +128,12 @@ std::vector<FixtureCase> fixture_cases() {
       {"double-a-max-finite", "%a", [=] { return sprintf_string("%a", max_finite); }},
       {"double-a-min-normal", "%a", [=] { return sprintf_string("%a", min_normal); }},
       {"double-a-precision", "%.1a", [] { return sprintf_string("%.1a", 1.5625); }},
+      // 0x1.18p+0 sits exactly halfway between 0x1.1 and 0x1.2, so this case
+      // asks the C library which way it breaks a tie. C only *recommends*
+      // correct rounding for %a, and implementations disagree: nearest-even
+      // gives 0x1.2p+0, truncation gives 0x1.1p+0. Both spellings are allowed
+      // in the reference; the Dart side is pinned by the divergence registry.
+      {"double-a-precision-tie", "%.1a", [] { return sprintf_string("%.1a", 1.09375); }},
       {"double-a-subnormal", "%a", [=] { return sprintf_string("%a", denormal_min); }},
       {"double-a-upper", "%A", [] { return sprintf_string("%A", 1.5); }},
       {"double-e-default", "%e", [] { return sprintf_string("%e", 12.5); }},

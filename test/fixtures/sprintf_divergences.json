@@ -42,6 +42,14 @@
       "readme_anchor": "#sprintf"
     },
     {
+      "id": "hexadecimal-tie-rounding",
+      "input": {"template": "%.1a", "value": 1.09375},
+      "cpp": {"result": "an implementation-chosen tie break such as 0x1.1p+0"},
+      "dart": {"result": "0x1.2p+0"},
+      "reason": "Correct rounding of %a at an explicit precision is recommended practice in C, not a requirement, so a value exactly halfway between two hexadecimal digits is broken either way: Format always rounds to nearest with ties to even (glibc style), while e.g. Apple libc truncates the tie. Ties are the only disagreement — every other precision rounds identically.",
+      "readme_anchor": "#sprintf"
+    },
+    {
       "id": "negative-unsigned-error",
       "input": {"template": "%u", "value": -1},
       "cpp": {"result": "wraps after an explicit conversion to an unsigned C type"},
