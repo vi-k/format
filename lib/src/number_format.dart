@@ -46,16 +46,20 @@ String _formatBraceInteger(
 
   if (isLocaleDecimal) {
     final locale = settings.numberLocale;
-    final groupingEnabled = _readLocale(context, () => locale.groupingEnabled);
+    final groupingEnabled = _readLocale(
+      context,
+      locale,
+      () => locale.groupingEnabled,
+    );
     List<int>? grouping;
     String? separator;
     if (groupingEnabled) {
       grouping = List<int>.of(
-        _readLocale(context, () => locale.grouping),
+        _readLocale(context, locale, () => locale.grouping),
         growable: false,
       );
       _validateGrouping(grouping, context);
-      separator = _readLocale(context, () => locale.groupSeparator);
+      separator = _readLocale(context, locale, () => locale.groupSeparator);
     }
     final sign = _localizedSign(negative, spec.sign, locale, context);
     return _applyNumericWidth(
@@ -614,14 +618,18 @@ String _displayFloatBody(
 
   String? localeGroupSeparator;
   if (locale != null && localeGrouping) {
-    final enabled = _readLocale(context, () => locale.groupingEnabled);
+    final enabled = _readLocale(context, locale, () => locale.groupingEnabled);
     if (enabled) {
       final grouping = List<int>.of(
-        _readLocale(context, () => locale.grouping),
+        _readLocale(context, locale, () => locale.grouping),
         growable: false,
       );
       _validateGrouping(grouping, context);
-      final separator = _readLocale(context, () => locale.groupSeparator);
+      final separator = _readLocale(
+        context,
+        locale,
+        () => locale.groupSeparator,
+      );
       localeGroupSeparator = separator;
       integer = groupDigits(integer, separator: separator, grouping: grouping);
     }
@@ -641,20 +649,27 @@ String _displayFloatBody(
           ? ''
           : locale == null
           ? '.'
-          : _readLocale(context, () => locale.decimalSeparator);
+          : _readLocale(context, locale, () => locale.decimalSeparator);
   if (locale != null) {
     integer =
         localeGroupSeparator == null
-            ? _readLocale(context, () => locale.localizeDigits(integer))
+            ? _readLocale(context, locale, () => locale.localizeDigits(integer))
             : integer
                 .split(localeGroupSeparator)
                 .map(
-                  (group) =>
-                      _readLocale(context, () => locale.localizeDigits(group)),
+                  (group) => _readLocale(
+                    context,
+                    locale,
+                    () => locale.localizeDigits(group),
+                  ),
                 )
                 .join(localeGroupSeparator);
     if (fraction.isNotEmpty) {
-      fraction = _readLocale(context, () => locale.localizeDigits(fraction));
+      fraction = _readLocale(
+        context,
+        locale,
+        () => locale.localizeDigits(fraction),
+      );
     }
   }
   // A body without a fractional part leaves both tails empty, and joining
@@ -671,7 +686,7 @@ String _displayFloatBody(
     var exponentSeparator =
         locale == null
             ? marker
-            : _readLocale(context, () => locale.exponentSeparator);
+            : _readLocale(context, locale, () => locale.exponentSeparator);
     if (marker == 'E') exponentSeparator = exponentSeparator.toUpperCase();
     final exponentSign =
         locale == null
@@ -680,7 +695,7 @@ String _displayFloatBody(
     final exponentDigits =
         locale == null
             ? digits
-            : _readLocale(context, () => locale.localizeDigits(digits));
+            : _readLocale(context, locale, () => locale.localizeDigits(digits));
     displayed = '$displayed$exponentSeparator$exponentSign$exponentDigits';
   }
 
@@ -715,7 +730,9 @@ String _localizeAsciiRuns(
     final digits = value.substring(run, index);
     output
       ..write(value.substring(start, run))
-      ..write(_readLocale(context, () => locale.localizeDigits(digits)));
+      ..write(
+        _readLocale(context, locale, () => locale.localizeDigits(digits)),
+      );
     start = index;
   }
   return (output..write(value.substring(start))).toString();
@@ -804,9 +821,9 @@ String _localizedSign(
   NumberLocale locale,
   FormatExceptionContext context,
 ) {
-  if (negative) return _readLocale(context, () => locale.minusSign);
+  if (negative) return _readLocale(context, locale, () => locale.minusSign);
   return switch (requestedSign) {
-    '+' => _readLocale(context, () => locale.plusSign),
+    '+' => _readLocale(context, locale, () => locale.plusSign),
     ' ' => ' ',
     _ => '',
   };
@@ -819,21 +836,41 @@ String _localizeDigits(
   FormatExceptionContext context,
 ) {
   if (separator == null) {
-    return _readLocale(context, () => locale.localizeDigits(digits));
+    return _readLocale(context, locale, () => locale.localizeDigits(digits));
   }
   return digits
       .split(separator)
-      .map((group) => _readLocale(context, () => locale.localizeDigits(group)))
+      .map(
+        (group) =>
+            _readLocale(context, locale, () => locale.localizeDigits(group)),
+      )
       .join(separator);
 }
 
-T _readLocale<T>(FormatExceptionContext context, T Function() read) {
+/// Runs [read] on [locale], reporting a failure the way every other
+/// extension point reports one.
+///
+/// The name is taken from the instance rather than written down as
+/// `'NumberLocale'`, which is what lookups, representations and formatters all
+/// do. A literal names the interface, and a diagnostic naming the interface is
+/// the one that helps least: an application with three locales learns that a
+/// locale failed, not which. `runtimeType` is read on the failure path only.
+T _readLocale<T>(
+  FormatExceptionContext context,
+  NumberLocale locale,
+  T Function() read,
+) {
   try {
     return read();
   } on FormattingException {
     rethrow;
   } catch (error, stackTrace) {
-    throw FormatExtensionException(context, 'NumberLocale', error, stackTrace);
+    throw FormatExtensionException(
+      context,
+      locale.runtimeType.toString(),
+      error,
+      stackTrace,
+    );
   }
 }
 

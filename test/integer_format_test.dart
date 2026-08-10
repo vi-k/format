@@ -280,7 +280,18 @@ void main() {
         isA<FormatExtensionException>()
             .having((error) => error.error, 'original error', isA<StateError>())
             .having((error) => error.context.template, 'template', '{:n}')
-            .having((error) => error.context.specifier, 'specifier', 'n'),
+            .having((error) => error.context.specifier, 'specifier', 'n')
+            // The implementation, not the interface. Every other extension
+            // point names itself this way — a lookup, a representation and a
+            // formatter all report their own type — and a locale used to be
+            // the exception, reporting the literal `NumberLocale`. An
+            // application with three locales configured learned from that
+            // only that a locale had failed.
+            .having(
+              (error) => error.extension,
+              'extension',
+              '_ThrowingNumberLocale',
+            ),
       ),
     );
   });

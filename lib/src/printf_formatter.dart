@@ -340,7 +340,9 @@ String _displayPrintfHexBody(
     context,
   );
   final displayedPoint =
-      point < 0 ? '' : _readLocale(context, () => locale.decimalSeparator);
+      point < 0
+          ? ''
+          : _readLocale(context, locale, () => locale.decimalSeparator);
   final displayedFraction =
       point < 0
           ? ''
@@ -358,7 +360,7 @@ String _displayPrintfHexBody(
       displayedFraction +
       body[exponentStart] +
       exponentSign +
-      _readLocale(context, () => locale.localizeDigits(exponentDigits));
+      _readLocale(context, locale, () => locale.localizeDigits(exponentDigits));
 }
 
 /// The index of the `p` or `P` in [_formatHexadecimal] output, or -1 when
