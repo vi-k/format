@@ -124,7 +124,9 @@ void main() {
       expect(documentedDartErrors[entry.key], fixture.type);
       expect(
         () => vsprintf(fixture.template, fixture.arguments),
-        throwsA(fixture.matcher),
+        throwsA(
+          _exceptionType(fixture.type, '_executableErrors[${entry.key}]'),
+        ),
         reason: entry.key,
       );
     }
@@ -212,47 +214,43 @@ final _executableResults = <String, ({String output, String Function() run})>{
   ),
 };
 
-final _executableErrors = <
-  String,
-  ({String template, List<Object?> arguments, String type, Matcher matcher})
->{
-  'negative-unsigned-error': (
-    template: '%u',
-    arguments: [-1],
-    type: 'UnsupportedFormatValueException',
-    matcher: isA<UnsupportedFormatValueException>(),
-  ),
-  'typed-invalid-format-error': (
-    template: '%q',
-    arguments: const [],
-    type: 'InvalidFormatException',
-    matcher: isA<InvalidFormatException>(),
-  ),
-  'unsupported-cpp26-binary': (
-    template: '%b',
-    arguments: [5],
-    type: 'InvalidFormatException',
-    matcher: isA<InvalidFormatException>(),
-  ),
-  'unsupported-length-modifiers': (
-    template: '%lld',
-    arguments: [42],
-    type: 'InvalidFormatException',
-    matcher: isA<InvalidFormatException>(),
-  ),
-  'unsupported-pointer-conversion': (
-    template: '%p',
-    arguments: const [null],
-    type: 'InvalidFormatException',
-    matcher: isA<InvalidFormatException>(),
-  ),
-  'unsupported-posix-indexing': (
-    template: r'%2$d',
-    arguments: [1, 2],
-    type: 'InvalidFormatException',
-    matcher: isA<InvalidFormatException>(),
-  ),
-};
+/// One executable exemplar per error-divergence in the registry. The named
+/// type is the single source: the run below resolves it through
+/// [_exceptionTypes], so an entry cannot claim one exception in the
+/// documentation and assert another here.
+const _executableErrors =
+    <String, ({String template, List<Object?> arguments, String type})>{
+      'negative-unsigned-error': (
+        template: '%u',
+        arguments: [-1],
+        type: 'UnsupportedFormatValueException',
+      ),
+      'typed-invalid-format-error': (
+        template: '%q',
+        arguments: [],
+        type: 'InvalidFormatException',
+      ),
+      'unsupported-cpp26-binary': (
+        template: '%b',
+        arguments: [5],
+        type: 'InvalidFormatException',
+      ),
+      'unsupported-length-modifiers': (
+        template: '%lld',
+        arguments: [42],
+        type: 'InvalidFormatException',
+      ),
+      'unsupported-pointer-conversion': (
+        template: '%p',
+        arguments: [null],
+        type: 'InvalidFormatException',
+      ),
+      'unsupported-posix-indexing': (
+        template: r'%2$d',
+        arguments: [1, 2],
+        type: 'InvalidFormatException',
+      ),
+    };
 
 final class SprintfFixtureSuite {
   final List<SprintfFixture> cases;
@@ -329,6 +327,7 @@ final class SprintfFixture {
       ),
       'error' => _ThrowsFormattingError(
         _string(expected['error'], '$path.error'),
+        '$path.expected.error',
       ),
       _ => throw StateError('Unreachable fixture outcome.'),
     };
@@ -393,10 +392,45 @@ final class _ReturnsAllowed extends Matcher {
   }
 }
 
+/// The exception types a fixture or a registry entry may name.
+///
+/// The names arrive as strings, from the C++ fixture corpus and from the
+/// divergence registry, and the obvious way to check one is to compare it with
+/// `error.runtimeType.toString()`. That works only where type names survive
+/// into the running program: dart2js renames them under minification, so the
+/// comparison would stop matching without a line of this repository changing —
+/// and it fails open in the other direction too, since a misspelled name
+/// simply never matches instead of saying so.
+///
+/// Resolving the name to a matcher fixes both. The check becomes `is`, which
+/// minification cannot touch, and an unknown name is a loud [FormatException]
+/// at load time. Every subtype of `FormattingException` is `final`, so `is` is
+/// as exact here as the name comparison was.
+final _exceptionTypes = <String, TypeMatcher<FormattingException>>{
+  'AmbiguousFormatterException': isA<AmbiguousFormatterException>(),
+  'FormatConfigurationException': isA<FormatConfigurationException>(),
+  'FormatExtensionException': isA<FormatExtensionException>(),
+  'FormatLookupException': isA<FormatLookupException>(),
+  'InvalidFormatException': isA<InvalidFormatException>(),
+  'InvalidSpecifierException': isA<InvalidSpecifierException>(),
+  'MissingFormatArgumentException': isA<MissingFormatArgumentException>(),
+  'UnsupportedConversionException': isA<UnsupportedConversionException>(),
+  'UnsupportedFormatValueException': isA<UnsupportedFormatValueException>(),
+};
+
+TypeMatcher<FormattingException> _exceptionType(String name, String path) =>
+    _exceptionTypes[name] ??
+    (throw FormatException(
+      '$path names "$name", which is not a FormattingException this package '
+      'defines. Known: ${_exceptionTypes.keys.join(', ')}.',
+    ));
+
 final class _ThrowsFormattingError extends Matcher {
   final String expectedType;
+  final TypeMatcher<FormattingException> type;
 
-  const _ThrowsFormattingError(this.expectedType);
+  _ThrowsFormattingError(this.expectedType, String path)
+    : type = _exceptionType(expectedType, path);
 
   @override
   Description describe(Description description) =>
@@ -410,7 +444,9 @@ final class _ThrowsFormattingError extends Matcher {
       return false;
     } on FormattingException catch (error) {
       matchState['error'] = error;
-      return error.runtimeType.toString() == expectedType;
+      // A state map of its own: the inner matcher writes into whatever it is
+      // given, and the keys above are read by `describeMismatch`.
+      return type.matches(error, <Object?, Object?>{});
     } on Object catch (error) {
       matchState['error'] = error;
       return false;
