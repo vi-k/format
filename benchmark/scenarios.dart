@@ -34,7 +34,6 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{0:d}',
     values: const [42],
     expected: '42',
-    apiPath: BenchmarkApiPath.withValues,
   ),
   _braceComparable(
     'brace.tear_off',
@@ -283,7 +282,8 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:n}',
     expected: const TextOutcome('1\u00a0234'),
     rationale:
-        'Pinned kk_KZ Intl output is a golden reference, not a performance competitor.',
+        'Pinned kk_KZ Intl output is a golden reference, not a performance '
+        'competitor.',
     candidate: (_) => _capture(() => _intlFormat.format('{:n}', 1234)),
     reference: (_) => const TextOutcome('1\u00a0234'),
     referenceKind: BenchmarkReferenceKind.golden,
@@ -308,7 +308,6 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '%s:%d',
     values: const ['value', 3],
     expected: 'value:3',
-    apiPath: BenchmarkApiPath.withValues,
   ),
   _printfComparable(
     'printf.tear_off',
@@ -511,6 +510,12 @@ final Format _compatibleFormat = Format(
 );
 final _braceTearOff = defaultFormat.format;
 final _printfTearOff = defaultFormat.sprintf;
+// The C locale is also the default, so spelling it is redundant to the
+// analyzer — and load-bearing to the reader: `brace.locale.n` compares the
+// top-level `format` against this instance precisely because both are C, and
+// its rationale says so. Dropping the argument would leave the scenario
+// comparing two engines with nothing written down to say they match.
+// ignore: avoid_redundant_argument_values
 final Format _cFormat = Format(numberLocale: const CNumberLocale());
 final Format _intlFormat = Format(numberLocale: IntlNumberLocale('kk_KZ'));
 

@@ -3,6 +3,13 @@ include: package:lints/recommended.yaml
 analyzer:
   exclude:
     - 'build/**'
+    # Vendored baselines the benchmark measures against, not code this
+    # repository writes. `format20` is a frozen copy of Format 2 taken at a
+    # named commit and `format16` is fetched from pub; both are supposed to
+    # read exactly as they were released, so a lint fixed here would falsify
+    # the very thing being compared. Excluded rather than suppressed, so the
+    # full-repository pass can run with `--fatal-infos`.
+    - 'benchmark/baselines/**'
   language:
     strict-casts: true
     strict-inference: true

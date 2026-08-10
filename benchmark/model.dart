@@ -179,13 +179,14 @@ final class BenchmarkSample {
     'round': round,
   };
 
-  static BenchmarkSample fromJson(Map<String, Object?> json) => BenchmarkSample(
-    scenarioId: json['scenarioId']! as String,
-    engine: json['engine']! as String,
-    elapsedNanoseconds: json['elapsedNanoseconds']! as int,
-    operations: json['operations']! as int,
-    round: json['round']! as int,
-  );
+  factory BenchmarkSample.fromJson(Map<String, Object?> json) =>
+      BenchmarkSample(
+        scenarioId: json['scenarioId']! as String,
+        engine: json['engine']! as String,
+        elapsedNanoseconds: json['elapsedNanoseconds']! as int,
+        operations: json['operations']! as int,
+        round: json['round']! as int,
+      );
 }
 
 final class BenchmarkScenarioResult {
@@ -259,7 +260,7 @@ final class BenchmarkScenarioResult {
     };
   }
 
-  static BenchmarkScenarioResult fromJson(Map<String, Object?> json) =>
+  factory BenchmarkScenarioResult.fromJson(Map<String, Object?> json) =>
       BenchmarkScenarioResult(
         scenarioId: json['scenarioId']! as String,
         dialect: BenchmarkDialect.values.byName(json['dialect']! as String),
@@ -356,27 +357,29 @@ final class BenchmarkReport {
     'scenarios': scenarios.map((scenario) => scenario.toJson()).toList(),
   };
 
-  static BenchmarkReport fromJson(Map<String, Object?> json) => BenchmarkReport(
-    runtime: json['runtime']! as String,
-    detectedRuntime: json['detectedRuntime']! as String,
-    runtimeProvenance: (json['runtimeProvenance']! as Map<Object?, Object?>)
-        .map((key, value) => MapEntry(key! as String, value! as String)),
-    sourceRevision: json['sourceRevision']! as String,
-    run: json['run']! as int,
-    versions: (json['versions']! as Map<Object?, Object?>).map(
-      (key, value) => MapEntry(key! as String, value! as String),
-    ),
-    executableSizeBytes: json['executableSizeBytes'] as int?,
-    smoke: json['smoke']! as bool,
-    gateable: json['gateable']! as bool,
-    warmupRounds: json['warmupRounds']! as int,
-    recordedRounds: json['recordedRounds']! as int,
-    samples: (json['samples']! as List<Object?>).map(
-      (sample) => BenchmarkSample.fromJson(sample! as Map<String, Object?>),
-    ),
-    scenarios: (json['scenarios']! as List<Object?>).map(
-      (scenario) =>
-          BenchmarkScenarioResult.fromJson(scenario! as Map<String, Object?>),
-    ),
-  );
+  factory BenchmarkReport.fromJson(Map<String, Object?> json) =>
+      BenchmarkReport(
+        runtime: json['runtime']! as String,
+        detectedRuntime: json['detectedRuntime']! as String,
+        runtimeProvenance: (json['runtimeProvenance']! as Map<Object?, Object?>)
+            .map((key, value) => MapEntry(key! as String, value! as String)),
+        sourceRevision: json['sourceRevision']! as String,
+        run: json['run']! as int,
+        versions: (json['versions']! as Map<Object?, Object?>).map(
+          (key, value) => MapEntry(key! as String, value! as String),
+        ),
+        executableSizeBytes: json['executableSizeBytes'] as int?,
+        smoke: json['smoke']! as bool,
+        gateable: json['gateable']! as bool,
+        warmupRounds: json['warmupRounds']! as int,
+        recordedRounds: json['recordedRounds']! as int,
+        samples: (json['samples']! as List<Object?>).map(
+          (sample) => BenchmarkSample.fromJson(sample! as Map<String, Object?>),
+        ),
+        scenarios: (json['scenarios']! as List<Object?>).map(
+          (scenario) => BenchmarkScenarioResult.fromJson(
+            scenario! as Map<String, Object?>,
+          ),
+        ),
+      );
 }

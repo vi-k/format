@@ -161,7 +161,13 @@ jobs:
         run: dart pub get
         working-directory: benchmark/suite
       - name: Analyze (full repository)
-        run: dart analyze
+        # `--fatal-infos` here as well as in `checks`, so the baseline the
+        # comment above claims is the one that is actually enforced. What this
+        # pass adds over that one is `benchmark/` and `benchmark/suite/`, which
+        # need the format16 baseline and the suite's own dependencies resolved
+        # — both done in the steps above. The vendored baselines themselves are
+        # excluded in `analysis_options.yaml`, where the reason is recorded.
+        run: dart analyze --fatal-infos
       - name: Tests (benchmark suite)
         run: dart test
         working-directory: benchmark/suite
