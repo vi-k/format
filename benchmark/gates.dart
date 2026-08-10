@@ -748,11 +748,82 @@ GateBaseline recordGateBaseline(
   );
 }
 
+/// What the checkout disagrees with the reports about, or null when it does
+/// not disagree.
+///
+/// The revision a report carries is supplied from outside — the JavaScript
+/// runtime cannot ask git, so the shell that starts a measurement passes the
+/// same `-D` define to all three runtimes. Checking that the reports agree
+/// with each other, which is what the gate already did, therefore proves only
+/// that one define reached three processes. It says nothing about whether that
+/// define was the source those processes actually ran.
+///
+/// [modifiedTrackedFiles] must come from a status that ignores untracked
+/// files. A measurement writes its reports, its AOT executable and its
+/// compiled JavaScript into the working directory, so "no untracked files"
+/// is never true by the time the gate runs — and demanding it would make this
+/// check fail always, which is the same as not having it.
+///
+/// Separate from running git so the rules can be tested without a repository.
+String? checkoutObjection({
+  required String revision,
+  required String head,
+  required String modifiedTrackedFiles,
+}) {
+  if (head != revision) {
+    return 'Reports name source revision $revision, but HEAD is $head. '
+        'The measurement did not run on the source it claims.';
+  }
+  final modified =
+      modifiedTrackedFiles
+          .split('\n')
+          .map((line) => line.trim())
+          .where((line) => line.isNotEmpty)
+          .toList();
+  if (modified.isNotEmpty) {
+    return 'HEAD is $revision, but ${modified.length} tracked '
+        '${modified.length == 1 ? 'file is' : 'files are'} modified: '
+        '${modified.join('; ')}. The measured source is not that revision.';
+  }
+
+  return null;
+}
+
+/// [checkoutObjection] against the checkout this process runs in, or null when
+/// there is no checkout to ask.
+///
+/// An unpacked archive is not a repository and a gate that refused to run
+/// there would be worse than one that cannot verify; the caller says out loud
+/// which of the two happened.
+String? _checkoutObjection(String revision) {
+  final head = _git(['rev-parse', 'HEAD']);
+  final status = _git(['status', '--porcelain', '--untracked-files=no']);
+  if (head == null || status == null) return null;
+
+  return checkoutObjection(
+    revision: revision,
+    head: head.trim(),
+    modifiedTrackedFiles: status,
+  );
+}
+
+String? _git(List<String> arguments) {
+  final ProcessResult result;
+  try {
+    result = Process.runSync('git', arguments);
+  } on ProcessException {
+    return null;
+  }
+
+  return result.exitCode == 0 ? result.stdout as String : null;
+}
+
 void main(List<String> arguments) {
   try {
     final reports = _parseReports(arguments);
     final output = _outputPath(arguments);
     final record = _recordArgument(arguments);
+    _verifyRevision(reports, arguments);
     final Map<String, Object?> json;
     var passed = true;
     if (record != null) {
@@ -777,6 +848,27 @@ void main(List<String> arguments) {
     exitCode = 1;
   }
 }
+
+/// Refuses to evaluate or record reports whose revision the checkout
+/// contradicts.
+///
+/// Recording is the case that matters most: a reference recorded from a dirty
+/// tree becomes the number every later run is measured against, and nothing
+/// downstream can tell that it was never the revision it names.
+void _verifyRevision(List<BenchmarkReport> reports, List<String> arguments) {
+  if (arguments.contains(_allowUnverifiedRevision)) return;
+  final revisions = reports.map((report) => report.sourceRevision).toSet();
+  if (revisions.length != 1) return; // the evaluator reports this properly
+  final objection = _checkoutObjection(revisions.single);
+  if (objection == null) return;
+
+  throw FormatException(
+    '$objection Commit or stash first and measure again, or pass '
+    '$_allowUnverifiedRevision to evaluate reports recorded elsewhere.',
+  );
+}
+
+const _allowUnverifiedRevision = '--allow-unverified-revision';
 
 GateBaseline _loadBaseline(String path) {
   final file = File(path);
@@ -827,7 +919,13 @@ String? _outputPath(List<String> arguments) {
   if (output.length > 1) {
     throw const FormatException('--output may be supplied once with a path.');
   }
-  const recognized = ['--reports=', '--output=', '--baseline=', '--record='];
+  const recognized = [
+    '--reports=',
+    '--output=',
+    '--baseline=',
+    '--record=',
+    _allowUnverifiedRevision,
+  ];
   if (!arguments.every((argument) => recognized.any(argument.startsWith))) {
     throw const FormatException('Unknown gates argument.');
   }

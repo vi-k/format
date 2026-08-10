@@ -14,6 +14,20 @@ exact value:
 git rev-parse HEAD
 ```
 
+"Clean committed checkout" is checked rather than trusted. Before evaluating
+or recording anything, `gates.dart` compares the revision the reports carry
+with `git rev-parse HEAD` and refuses when they differ or when a tracked file
+is modified — the define is supplied from the shell, because a JavaScript
+runtime cannot ask git, so three reports agreeing with each other proves only
+that one define reached three processes. Untracked files are ignored, since a
+measurement leaves its reports, its AOT executable and its compiled JavaScript
+in the working directory.
+
+Pass `--allow-unverified-revision` to evaluate reports recorded elsewhere —
+on another machine, or before a commit that has since landed. Recording a
+baseline accepts the same flag and is the place to think twice: the file it
+writes becomes the reference every later run is compared against.
+
 Run a gate-eligible JIT measurement with at least seven recorded rounds:
 
 ```sh

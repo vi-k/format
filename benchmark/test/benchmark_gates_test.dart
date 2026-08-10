@@ -200,6 +200,75 @@ void main() {
     );
   });
 
+  // What the reports agreeing with *each other* never proved. The revision is
+  // passed in from the shell, because a JavaScript runtime cannot ask git, so
+  // three matching reports show only that one define reached three processes.
+  // These are the two ways that define can be a lie: it names a commit the
+  // checkout has moved off, or it names the right commit while the tree that
+  // was measured differs from it.
+  //
+  // The rules are tested here rather than against a real repository, which is
+  // the reason they were separated from running git at all: a test that had to
+  // build a checkout would be slow, and it would test git.
+  test('the checkout contradicts a report that misstates its revision', () {
+    const revision = '0123456789abcdef0123456789abcdef01234567';
+    const other = 'fedcba9876543210fedcba9876543210fedcba98';
+
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: revision,
+        modifiedTrackedFiles: '',
+      ),
+      isNull,
+    );
+    // A status that ignored untracked files still ends in a newline, and a
+    // reading that took that for a change would object to every clean tree.
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: revision,
+        modifiedTrackedFiles: '\n',
+      ),
+      isNull,
+    );
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: other,
+        modifiedTrackedFiles: '',
+      ),
+      allOf(contains(revision), contains(other)),
+    );
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: revision,
+        modifiedTrackedFiles: ' M lib/src/engine.dart\n',
+      ),
+      allOf(contains('1 tracked file is'), contains('lib/src/engine.dart')),
+    );
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: revision,
+        modifiedTrackedFiles: ' M lib/src/engine.dart\n M benchmark/gates.dart',
+      ),
+      contains('2 tracked files are'),
+    );
+    // A moved HEAD is reported even when the tree is also dirty: it is the
+    // more fundamental of the two, and naming both at once would read as one
+    // compound problem rather than the first thing to fix.
+    expect(
+      checkoutObjection(
+        revision: revision,
+        head: other,
+        modifiedTrackedFiles: ' M lib/src/engine.dart\n',
+      ),
+      contains('HEAD is $other'),
+    );
+  });
+
   // The four ways a report can be well-formed and still inadmissible: it was a
   // smoke run, it declared itself non-gateable, it was cut short, or it does
   // not match its partner. Each is silently plausible — the numbers look like
@@ -296,6 +365,10 @@ void main() {
             'benchmark/gates.dart',
             '--reports=${paths.join(',')}',
             '--baseline=${baseline.path}',
+            // The reports are built in memory and name an invented revision,
+            // which the checkout would rightly object to. The refusal itself
+            // is asserted in its own test below.
+            '--allow-unverified-revision',
           ]);
         }
 
@@ -338,6 +411,7 @@ void main() {
           '--reports=${paths.join(',')}',
           '--record=2026-01-01',
           '--output=${recorded.path}',
+          '--allow-unverified-revision',
         ]);
         expect(record.exitCode, 0, reason: record.stderr.toString());
 
@@ -345,6 +419,7 @@ void main() {
           'benchmark/gates.dart',
           '--reports=${paths.join(',')}',
           '--baseline=${recorded.path}',
+          '--allow-unverified-revision',
         ]);
         expect(evaluate.exitCode, 0, reason: evaluate.stderr.toString());
       } finally {
@@ -352,6 +427,50 @@ void main() {
       }
     },
   );
+
+  // The escape hatch the two tests above lean on, checked from the other side.
+  // Without it the same invented revision must stop the command — otherwise
+  // those tests would be passing because the check never runs, and the flag
+  // would be decoration.
+  //
+  // Recording is the mode asserted here. It is the one where an unverified
+  // revision does lasting damage: the file it writes becomes the reference
+  // every later run is compared against, and nothing downstream can tell that
+  // it never was the commit it names.
+  test('gate command refuses an unverified revision unless allowed', () async {
+    final directory = await Directory.systemTemp.createTemp('format-unverif-');
+    try {
+      final reports = _completeReports();
+      final paths = <String>[];
+      for (var index = 0; index < reports.length; index++) {
+        final file = File('${directory.path}/report-$index.json');
+        await file.writeAsString(jsonEncode(reports[index].toJson()));
+        paths.add(file.path);
+      }
+      final refused = await Process.run(Platform.resolvedExecutable, [
+        'benchmark/gates.dart',
+        '--reports=${paths.join(',')}',
+        '--record=2026-01-01',
+        '--output=${directory.path}/baseline.json',
+      ]);
+
+      expect(refused.exitCode, 1);
+      expect(
+        refused.stderr.toString(),
+        allOf(
+          contains(reports.first.sourceRevision),
+          contains('--allow-unverified-revision'),
+        ),
+      );
+      expect(
+        File('${directory.path}/baseline.json').existsSync(),
+        isFalse,
+        reason: 'отказ обязан быть до записи, а не после',
+      );
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
 }
 
 List<BenchmarkReport> _completeReports() => [
