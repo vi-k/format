@@ -91,7 +91,7 @@ final class _BraceDynamicValueOp extends _BraceOp {
         // On the web, int is a JS double, so the digit-by-digit `~/ 10`
         // extraction below is inexact above 2^53-1. _formatIntMagnitude
         // materializes exact digits through BigInt there, mirroring the
-        // legacy formatBraceInteger path for '{}' on an int.
+        // legacy _formatBraceInteger path for '{}' on an int.
         sink.writeString(_formatIntMagnitude(value, 10));
       } else {
         sink.writeMagnitude(value, 10);
@@ -103,9 +103,9 @@ final class _BraceDynamicValueOp extends _BraceOp {
       return;
     }
     if (value is double) {
-      // Transliteration of formatBraceDouble under an empty specification:
+      // Transliteration of _formatBraceDouble under an empty specification:
       // no presentation type, no precision, no width, no grouping, so the
-      // body needs neither _displayFloatBody nor applyNumericWidth. On the
+      // body needs neither _displayFloatBody nor _applyNumericWidth. On the
       // web a whole double is an int, so the integer branch above already
       // claimed it; what reaches this point there is what _isIntegerValue
       // rejects — fractional values, negative zero, nan and the infinities —
@@ -126,7 +126,7 @@ final class _BraceDynamicValueOp extends _BraceOp {
     // BigInt, custom formatters, unsupported values: the generic dispatch
     // reproduces today's behavior and errors exactly.
     sink.writeString(
-      formatParsedValue(
+      _formatParsedValue(
         value,
         const _FormatSpec(),
         frame.engine,
@@ -206,7 +206,7 @@ final class _BraceIntOp extends _BraceOp {
       // `n` under any other locale localizes symbols and may group, and `n`
       // is a floating presentation too: both belong to the legacy path.
       sink.writeString(
-        formatParsedValue(value, spec, frame.engine, _context(frame)),
+        _formatParsedValue(value, spec, frame.engine, _context(frame)),
       );
       return;
     }
@@ -276,10 +276,10 @@ final class _BraceIntOp extends _BraceOp {
       );
       return;
     }
-    // Mirrors formatParsedValue's dispatch order for the value types it
+    // Mirrors _formatParsedValue's dispatch order for the value types it
     // routes elsewhere before falling back to UnsupportedFormatValueException:
     // strings always go through _formatText, which rejects any non-'s' type;
-    // doubles always go through formatBraceDouble, whose _validateDoubleSpec
+    // doubles always go through _formatBraceDouble, whose _validateDoubleSpec
     // rejects every integer presentation type. Both raise
     // InvalidSpecifierException rather than UnsupportedFormatValueException.
     if (value is String) {
@@ -416,7 +416,7 @@ final class _BraceTextOp extends _BraceOp {
     if (value is! String) {
       // The generic path throws exactly today's errors for non-strings.
       sink.writeString(
-        formatParsedValue(value, spec, frame.engine, _context(frame)),
+        _formatParsedValue(value, spec, frame.engine, _context(frame)),
       );
       return;
     }
@@ -497,7 +497,7 @@ int _asciiIntegerEnd(String body) {
 /// The body produced by the double generators is always ASCII, so
 /// `body.length` is at once its code-unit count, its scalar count and its
 /// grapheme count: the padding arithmetic below needs no TextUnit. The write
-/// order per alignment mirrors `applyNumericWidth`: `>` fill-sign-body-'%',
+/// order per alignment mirrors `_applyNumericWidth`: `>` fill-sign-body-'%',
 /// `=` sign-fill-body-'%', `<` sign-body-'%'-fill, `^` splits the fill
 /// around sign-body-'%'. Shared by the brace and printf double ops.
 void _writeAsciiFloatDirect(
@@ -562,7 +562,7 @@ void _writeAsciiFloatDirect(
 
 /// Hot op for the floating presentations (`f F e E g G %`) and for typeless
 /// specifications such as `{:10}` or `{:.3}`. The branch order in [write]
-/// is a transliteration of `formatBraceDouble`: it is the parity contract.
+/// is a transliteration of `_formatBraceDouble`: it is the parity contract.
 final class _BraceDoubleOp extends _BraceOp {
   final _FieldNode field;
   final int argumentIndex;
@@ -617,7 +617,7 @@ final class _BraceDoubleOp extends _BraceOp {
         ((value is int && _isIntegerValue(value)) || value is BigInt)) {
       // Only an explicit floating type converts integers here:
       // `_isFloatingFormatType(null)` is false, so under a typeless
-      // specification legacy sends int/BigInt to formatBraceInteger. The
+      // specification legacy sends int/BigInt to _formatBraceInteger. The
       // `_isIntegerValue` guard above keeps the same split on the web,
       // where a whole double is an int and must take integer semantics.
       converted = switch (value) {
@@ -634,7 +634,7 @@ final class _BraceDoubleOp extends _BraceOp {
       // strings under a null type, integer semantics for integers, and
       // today's errors for everything else.
       sink.writeString(
-        formatParsedValue(value, spec, frame.engine, _context(frame)),
+        _formatParsedValue(value, spec, frame.engine, _context(frame)),
       );
       return;
     }
@@ -839,7 +839,7 @@ _BraceOp? _classifyBraceField(
   var spec = field.memoizedSpec(textUnit);
   if (spec == null) {
     try {
-      spec = parseFormatSpec(
+      spec = _parseFormatSpec(
         specText,
         textUnit,
         const FormatExceptionContext(),

@@ -76,7 +76,7 @@ final class _FieldNode extends _BraceNode {
 
   // Lazily memoized parse of a static specification, one slot per TextUnit.
   // Nodes are shared through the template cache, so the slots make repeated
-  // calls skip parseFormatSpec entirely. Failed parses are never memoized.
+  // calls skip _parseFormatSpec entirely. Failed parses are never memoized.
   _FormatSpec? _scalarSpec;
   _FormatSpec? _graphemeSpec;
 

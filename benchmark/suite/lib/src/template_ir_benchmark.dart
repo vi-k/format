@@ -204,7 +204,7 @@ final _scenarios = <_IrScenario>[
         ),
   ),
   // --- fallback-control: zero padding fitted to the grouped width keeps an
-  // integer on the legacy tail; both sides share formatBraceInteger with the
+  // integer on the legacy tail; both sides share _formatBraceInteger with the
   // fitRegroupedZeroPadding binary search, so the A/B must stay EQUAL.
   _IrScenario(
     label: '{:010,d}',

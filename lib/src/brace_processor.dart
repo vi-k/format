@@ -93,10 +93,10 @@ final class _BraceProcessor {
       final context = _context(field, staticSpecification);
       var spec = field.memoizedSpec(engine.textUnit);
       if (spec == null) {
-        spec = parseFormatSpec(staticSpecification, engine.textUnit, context);
+        spec = _parseFormatSpec(staticSpecification, engine.textUnit, context);
         field.memoizeSpec(engine.textUnit, spec);
       }
-      return formatParsedValue(converted, spec, engine, context);
+      return _formatParsedValue(converted, spec, engine, context);
     }
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);

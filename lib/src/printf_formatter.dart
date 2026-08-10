@@ -156,7 +156,7 @@ String _formatPrintfInteger(
       _hasPrintfFlag(conversion.flags, _PrintfFlags.zero) &&
       !left &&
       conversion.precision == null;
-  return applyNumericWidth(
+  return _applyNumericWidth(
     sign: sign,
     prefix: prefix,
     digits: digits,
@@ -168,7 +168,7 @@ String _formatPrintfInteger(
     textUnit: engine.textUnit,
     // The C locale maps every digit to itself, and passing no callback at
     // all keeps its zero padding on the counted path rather than the search
-    // `applyNumericWidth` runs when digits may change width under it.
+    // `_applyNumericWidth` runs when digits may change width under it.
     formatDigits:
         identical(locale, const CNumberLocale())
             ? null
@@ -254,7 +254,7 @@ String _formatPrintfDouble(
     type: type,
   );
   final hexadecimal = (type == 'a' || type == 'A') && !formatted.special;
-  return applyNumericWidth(
+  return _applyNumericWidth(
     sign: sign,
     prefix: hexadecimal ? (uppercase ? '0X' : '0x') : '',
     digits: formatted.body,

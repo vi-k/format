@@ -7,9 +7,8 @@ bool _isIntegerValue(Object? value) {
   return value.isFinite && !(value == 0 && value.isNegative);
 }
 
-String formatBraceInteger(
+String _formatBraceInteger(
   Object value,
-  // ignore: library_private_types_in_public_api
   _FormatSpec spec,
   Format settings,
   FormatExceptionContext context,
@@ -59,7 +58,7 @@ String formatBraceInteger(
       separator = _readLocale(context, () => locale.groupSeparator);
     }
     final sign = _localizedSign(negative, spec.sign, locale, context);
-    return applyNumericWidth(
+    return _applyNumericWidth(
       sign: sign,
       prefix: prefix,
       digits: digits,
@@ -89,7 +88,7 @@ String formatBraceInteger(
           grouping: [groupingSize],
         );
   }
-  return applyNumericWidth(
+  return _applyNumericWidth(
     sign: _asciiSign(negative, spec.sign),
     prefix: prefix,
     digits: digits,
@@ -158,11 +157,10 @@ String groupDigits(
   return groups.reversed.join(separator);
 }
 
-String applyNumericWidth({
+String _applyNumericWidth({
   required String sign,
   required String prefix,
   required String digits,
-  // ignore: library_private_types_in_public_api
   required _FormatSpec spec,
   required TextUnit textUnit,
   String Function(String digits)? formatDigits,
@@ -222,9 +220,8 @@ String applyNumericWidth({
 String _signed(String sign, String prefix, String body) =>
     sign.isEmpty && prefix.isEmpty ? body : '$sign$prefix$body';
 
-String formatBraceDouble(
+String _formatBraceDouble(
   Object value,
-  // ignore: library_private_types_in_public_api
   _FormatSpec spec,
   Format settings,
   FormatExceptionContext context,
@@ -296,7 +293,7 @@ String formatBraceDouble(
           ? _asciiSign(negative, spec.sign)
           : _localizedSign(negative, spec.sign, locale, context);
   final suffix = percent ? '%' : '';
-  return applyNumericWidth(
+  return _applyNumericWidth(
     sign: sign,
     prefix: '',
     digits: formatted.body + suffix,
@@ -592,7 +589,6 @@ int _trailingExponentStart(String body) {
 
 String _displayFloatBody(
   String body,
-  // ignore: library_private_types_in_public_api
   _FormatSpec spec,
   NumberLocale? locale,
   FormatExceptionContext context,

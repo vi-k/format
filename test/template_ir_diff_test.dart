@@ -243,7 +243,7 @@ void main() {
       '{:.3g}',
       '{:G}',
       '{:.1%}',
-      // The '%' suffix rides inside applyNumericWidth's digits, so pad it
+      // The '%' suffix rides inside _applyNumericWidth's digits, so pad it
       // in every direction; a non-space fill exercises fillChar.
       '{:010.1%}',
       '{:<10.1%}',

@@ -1,3 +1,23 @@
+/// The engine, and the seam its own tests reach it through. Not an entry
+/// point for users of this package.
+///
+/// `package:format/format.dart` is the supported surface and the only one the
+/// version number promises anything about. Everything here — the parts below,
+/// the re-exports above, every top-level name they bring with them — may be
+/// renamed, resplit or deleted in any release, including a patch one.
+///
+/// The re-exports exist because the differential tests build engines and
+/// compare exceptions through this library alone, and each carries its reason
+/// where it stands. They are convenience for those tests, not a second
+/// edition of the public API: every symbol among them is also exported by
+/// `format.dart`, which is where an application should take it from.
+///
+/// What is genuinely internal stays private. A function whose signature names
+/// a private type would otherwise have to advertise that type here, so the
+/// functions are private too — `lib/src/` being private by convention is not
+/// a reason to stop at convention.
+library;
+
 import 'dart:math' as math;
 import 'dart:typed_data';
 

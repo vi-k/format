@@ -5,16 +5,15 @@ String formatValue(
   String specification,
   Format engine,
   FormatExceptionContext context,
-) => formatParsedValue(
+) => _formatParsedValue(
   value,
-  parseFormatSpec(specification, engine.textUnit, context),
+  _parseFormatSpec(specification, engine.textUnit, context),
   engine,
   context,
 );
 
-String formatParsedValue(
+String _formatParsedValue(
   Object? value,
-  // ignore: library_private_types_in_public_api
   _FormatSpec spec,
   Format engine,
   FormatExceptionContext context,
@@ -31,12 +30,12 @@ String formatParsedValue(
   }
   if (_isIntegerValue(value)) {
     if (_isFloatingFormatType(spec.type)) {
-      return formatBraceDouble(value!, spec, engine, context);
+      return _formatBraceDouble(value!, spec, engine, context);
     }
-    return formatBraceInteger(value!, spec, engine, context);
+    return _formatBraceInteger(value!, spec, engine, context);
   }
   if (value is double) {
-    return formatBraceDouble(value, spec, engine, context);
+    return _formatBraceDouble(value, spec, engine, context);
   }
 
   if (_isEmptySpecification(spec)) {

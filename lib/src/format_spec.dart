@@ -32,8 +32,7 @@ final class _FormatSpec {
   });
 }
 
-// ignore: library_private_types_in_public_api
-_FormatSpec parseFormatSpec(
+_FormatSpec _parseFormatSpec(
   String source,
   TextUnit textUnit,
   FormatExceptionContext context,
