@@ -2,14 +2,14 @@ part of 'engine.dart';
 
 const _defaultTemplateCacheCapacity = 512;
 
-/// The default character budget, about 5.7 MiB of retained memory.
+/// The default character budget, a few megabytes of retained memory for
+/// ordinary templates.
 ///
-/// A cached entry costs roughly 5.5 bytes per character of its template: the
-/// text is reachable from the key, from the node fragments, from the literal
-/// nodes and from the compiled literal ops. Ordinary workloads never approach
-/// this — 512 templates of a hundred characters is fifty thousand — so the
-/// budget only ever binds on the case that motivated it, where a few templates
-/// are enormous.
+/// What an entry costs per character depends on the template, so the budget
+/// buys different amounts of memory for different workloads: see
+/// [templateCacheCharacterLimit]. Ordinary ones never approach it — 512
+/// templates of a hundred characters is fifty thousand — so it only ever binds
+/// on the case that motivated it, where a few templates are enormous.
 const _defaultTemplateCacheCharacterLimit = 1 << 20;
 
 int _templateCacheCapacity = _defaultTemplateCacheCapacity;
@@ -57,10 +57,17 @@ set templateCacheCapacity(int value) {
 /// the bound that case runs into. Both bounds apply, and whichever binds first
 /// evicts.
 ///
-/// The unit is characters of template text, which is what a caller can see;
-/// the memory a cached entry actually holds is around 5.5 times that, since
-/// the text is reachable from the key, the fragments, the literal nodes and
-/// the compiled literal ops. The default is therefore about 5.7 MiB.
+/// The unit is characters of template text, which is what a caller can see.
+/// The memory an entry actually holds is a multiple of that, and the multiple
+/// is a property of the template rather than a constant. Measured on the VM:
+/// about four bytes per character for text with a few fields, where the text is
+/// reachable from the key, from the literal nodes and from the code units
+/// prepared for them; about one for text with no fields at all, where nothing
+/// is prepared and the literal is handed back by reference; and around seventy
+/// for a template of nothing but `{}`, where what an entry holds is a parse
+/// node per field and not text at all. So the default is a few megabytes for
+/// ordinary templates, and worth lowering when templates come from data — the
+/// bound is on what a caller can count, not on what the shape costs.
 ///
 /// A template longer than the whole budget is formatted but never cached —
 /// evicting the entire cache to hold one entry that cannot fit would be worse

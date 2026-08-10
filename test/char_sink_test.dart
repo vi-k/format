@@ -122,14 +122,33 @@ void main() {
   });
 
   // The payoff of single-string mode, and the only test that states it as an
-  // identity rather than an equality: one write in, the same object out, no
-  // buffer allocated and no copy made. This is what makes `format('{}', s)`
-  // and `'{:s}'` on an already-fitting string cost nothing.
+  // identity rather than an equality: one write in, the same object out, not a
+  // unit copied either way. This is what makes `format('{}', s)`, `'{:s}'` on
+  // an already-fitting string, and a template with no fields at all cost
+  // nothing.
   test('a single writeString is returned by reference', () {
     const text = 'hello world';
     final sink = CharSink(1)..writeString(text);
     expect(sink.length, text.length);
     expect(identical(sink.toString(), text), isTrue);
+  });
+
+  // The capacity a program that writes one string asks for: none, because it
+  // accumulates nothing. The minimum still has to hold for the sink that then
+  // does accumulate after all, which is what the second half writes past.
+  test('a sink asked for no capacity returns and accumulates alike', () {
+    const text = 'hello world';
+    expect(
+      identical((CharSink(0)..writeString(text)).toString(), text),
+      isTrue,
+    );
+    final sink =
+        CharSink(0)
+          ..writeString(text)
+          ..writeCharCode(0x21)
+          ..fill(0x2e, 20);
+    expect(sink.length, text.length + 21);
+    expect(sink.toString(), '$text!${'.' * 20}');
   });
 
   test('a non-positive fill after writeString keeps single-string mode', () {

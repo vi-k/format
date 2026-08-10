@@ -33,15 +33,56 @@ void main() {
   setUp(debugClearTemplateCaches);
 
   // The degenerate program: no fields, so one literal op and nothing else.
-  test('literal-only template compiles to a single literal op', () {
+  //
+  // It compiles to `literal:sole` rather than to `literal`, and the difference
+  // is the whole point of the case. A sole literal is the program's only write,
+  // so the sink keeps the string by reference instead of copying it in and out,
+  // and the compiler prepares no code units for it — the two copies per call
+  // and the two retained bytes per character they cost would buy nothing.
+  // A literal that shares its program with a field still compiles to
+  // `literal`, where prepared units do pay; the lists further down pin that.
+  test('literal-only template compiles to the sole-literal op', () {
     expect(
       debugCompiledProgramDescription(
         'plain text',
         printf: false,
         textUnit: TextUnit.unicodeScalars,
       ),
-      ['literal'],
+      ['literal:sole'],
     );
+    // The payoff, and the one output this file checks for its own sake: the
+    // call hands back the template itself, having copied nothing.
+    expect(identical(format('plain text'), 'plain text'), isTrue);
+  });
+
+  // Escapes are the sole-literal case that is not a slice of the template: the
+  // parser assembles `a{b}c` in a buffer, so this pins that the op writes the
+  // parsed text and not the template it came from.
+  test('escaped braces without fields compile to one sole literal', () {
+    expect(
+      debugCompiledProgramDescription(
+        'a{{b}}c',
+        printf: false,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['literal:sole'],
+    );
+    expect(format('a{{b}}c'), 'a{b}c');
+  });
+
+  // printf reaches the same op through literal merging: `%%` folds into the
+  // literal rather than becoming a conversion, so a template that looks like
+  // it has one is still nothing but text.
+  test('printf template without conversions compiles to one sole literal', () {
+    expect(
+      debugCompiledProgramDescription(
+        'done 100%%',
+        printf: true,
+        textUnit: TextUnit.unicodeScalars,
+      ),
+      ['literal:sole'],
+    );
+    expect(sprintf('done 100%%'), 'done 100%');
   });
 
   // A field with no specification cannot be classified by type — the value

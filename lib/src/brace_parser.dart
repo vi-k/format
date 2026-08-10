@@ -251,7 +251,12 @@ final class _BraceParser {
       template: template,
       end: _index,
       root: root,
-      accesses: accesses,
+      // Most fields have no lookups at all, and a cached template holds one
+      // node per field: handing over the shared empty list rather than the
+      // one built above is what keeps a field-dense template from retaining
+      // a list object per field for nothing, the way an empty specification
+      // already does.
+      accesses: accesses.isEmpty ? const <_FieldAccess>[] : accesses,
       conversion: conversion,
       specification: specification,
     );

@@ -19,11 +19,18 @@ unpublished 2.0.0 below.
 * Added immutable `Format` instances with configurable custom formatters,
   lookups, representations, number locales, and Unicode text units.
 * Bounded the template cache by template text as well as by entry count:
-  `templateCacheCharacterLimit` (about a million characters by default, roughly
-  5.7 MiB of retained memory) and `templateCacheCharacters` join
-  `templateCacheCapacity` and `templateCacheSize`. Whichever bound binds first
-  evicts, a template larger than the whole budget is formatted but not cached,
-  and lowering either bound discards entries immediately.
+  `templateCacheCharacterLimit` (about a million characters by default, a few
+  megabytes of retained memory for ordinary templates) and
+  `templateCacheCharacters` join `templateCacheCapacity` and
+  `templateCacheSize`. Whichever bound binds first evicts, a template larger
+  than the whole budget is formatted but not cached, and lowering either bound
+  discards entries immediately.
+* A template with no fields — or a printf template with no conversion — is now
+  formatted without copying it: it compiles to a single op that hands the text
+  back by reference. Measured on the VM at 2.6 times faster for a sixteen
+  character template and 4600 times for one of a hundred thousand, where the
+  copies were the whole cost, and a cached entry for such a template retains
+  about a third of what it did.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Extended the configured `NumberLocale` to the printf integer conversions,

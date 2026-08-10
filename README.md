@@ -414,9 +414,13 @@ There are two bounds because a count of entries says nothing about their size.
 A workload with a few very large generated templates stays well inside the
 capacity while holding hundreds of megabytes, so the second bound is on
 template text: whichever binds first evicts. The unit is characters, which is
-what you can see; a cached entry holds around 5.5 times that in memory, since
-the text is reachable from the key, the fragments, the literal nodes and the
-compiled literals. The default is therefore about 5.7 MiB per mini-language.
+what you can see; the memory an entry holds is a multiple of that, and the
+multiple belongs to the template rather than to the cache. Measured on the VM:
+about four bytes per character for text with a few fields, about one for text
+with no fields at all, and around seventy for a template of nothing but `{}`,
+where an entry holds a parse node per field instead of text. The default is
+therefore a few megabytes per mini-language for ordinary templates, and worth
+lowering when templates come from data.
 
 A template longer than the whole budget is formatted but never cached —
 emptying the cache for one entry that still would not fit costs every other

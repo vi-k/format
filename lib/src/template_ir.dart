@@ -25,6 +25,10 @@ sealed class _BraceOp {
 
 final class _BraceProgram {
   final List<_BraceOp> ops;
+
+  /// What the sink should preallocate, which is not the same as how long the
+  /// output will be: a program that writes one string accumulates nothing and
+  /// asks for nothing, however long that string is. See [_BraceSoleLiteralOp].
   final int estimatedCapacity;
 
   const _BraceProgram(this.ops, this.estimatedCapacity);
@@ -52,6 +56,31 @@ final class _BraceLiteralOp extends _BraceOp {
 
   @override
   String describe() => 'literal';
+}
+
+/// The literal of a template that has no fields, written by reference.
+///
+/// [CharSink.writeString] on an empty sink keeps the string instead of copying
+/// it in, and `toString` hands that same string back, so the only op of a
+/// program needs no prepared units at all: preparing them would buy two copies
+/// of the whole template per call, and two retained bytes per character in the
+/// template cache, to replace a write that costs nothing. Its program asks for
+/// no buffer either, for the same reason.
+///
+/// Every other program keeps [_BraceLiteralOp], where the units do pay: once a
+/// second write forces the held string into the buffer, copying it from a
+/// `codeUnits` view runs 1.85 times the cost of copying prepared units, at
+/// every length measured from 16 to 100 000.
+final class _BraceSoleLiteralOp extends _BraceOp {
+  final String text;
+
+  const _BraceSoleLiteralOp(this.text);
+
+  @override
+  void write(CharSink sink, _BraceProcessor frame) => sink.writeString(text);
+
+  @override
+  String describe() => 'literal:sole';
 }
 
 final class _BraceFallbackOp extends _BraceOp {
@@ -941,6 +970,13 @@ _BraceOp? _classifyBraceField(
 }
 
 _BraceProgram _compileBraceProgram(_BraceTemplate template, TextUnit textUnit) {
+  // A template that is one literal is its own output. It compiles to the op
+  // that writes it by reference, so that neither the compiler nor the call
+  // prepares a copy of it; see _BraceSoleLiteralOp.
+  if (template.nodes case [_LiteralNode(:final text)]) {
+    return _BraceProgram([_BraceSoleLiteralOp(text)], 0);
+  }
+
   final ops = <_BraceOp>[];
   var automatic = 0;
   var capacity = 0;
@@ -982,6 +1018,8 @@ sealed class _PrintfOp {
 
 final class _PrintfProgram {
   final List<_PrintfOp> ops;
+
+  /// What the sink should preallocate; see [_BraceProgram.estimatedCapacity].
   final int estimatedCapacity;
 
   const _PrintfProgram(this.ops, this.estimatedCapacity);
@@ -1009,6 +1047,21 @@ final class _PrintfLiteralOp extends _PrintfOp {
 
   @override
   String describe() => 'literal';
+}
+
+/// The literal of a template that has no conversion, written by reference.
+/// The printf counterpart of [_BraceSoleLiteralOp], and it covers one case
+/// more: `%%` folds into the literal, so `'50%%'` is a sole literal too.
+final class _PrintfSoleLiteralOp extends _PrintfOp {
+  final String text;
+
+  const _PrintfSoleLiteralOp(this.text);
+
+  @override
+  void write(CharSink sink, _PrintfProcessor frame) => sink.writeString(text);
+
+  @override
+  String describe() => 'literal:sole';
 }
 
 final class _PrintfFallbackOp extends _PrintfOp {
@@ -1767,6 +1820,12 @@ _PrintfProgram _compilePrintfProgram(
             valueArgIndex,
           ),
     );
+  }
+  // Nothing but literal text, so what has accumulated is the whole program:
+  // one op, written by reference, with no units prepared for it. See
+  // _PrintfSoleLiteralOp.
+  if (ops.isEmpty && literal.isNotEmpty) {
+    return _PrintfProgram([_PrintfSoleLiteralOp(literal.toString())], 0);
   }
   flushLiteral();
   return _PrintfProgram(ops, capacity);
