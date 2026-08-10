@@ -59,8 +59,9 @@ printf-подобный диалект (`%...`) под одним движком
   владельца; его ведёт владелец, и в коммиты сессии он не идёт —
   `git add -A ':(exclude)docs/backlog.md'`, обязательно из корня
   репозитория, иначе исключение разрешится относительно текущего
-  каталога и молча не сработает). Датированные записи — дизайны, планы, отчёты ревью —
-  лежат плоско в `docs/records/YYYY-MM-DD[N]-name.md` (`-design`,
+  каталога и молча не сработает). Датированные записи — дизайны, планы,
+  отчёты ревью — лежат плоско в `docs/records/YYYY-MM-DD[N]-name.md`
+  (`-design`,
   `-plan`). Папка названа так, а не `archive`, намеренно: отчёт
   `2026-08-05[5]` — живой реестр вердиктов, и «архивом» он не является.
   В корне репозитория только `README.md`, `README.ru.md`,
@@ -169,7 +170,8 @@ dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++2
 dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
-  && dart run tool/check_coverage.dart --lcov=coverage/lcov.info  # 95.38%, пол 94%
+  && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
+# покрытие 95.38%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run bin/benchmark.dart) # матрица, ~60 с
 ```

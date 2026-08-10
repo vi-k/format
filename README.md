@@ -451,8 +451,8 @@ insertion.
 from "this workload never repeats a template", which otherwise look alike from
 the outside. Read with `templateCacheMemory`, it also tells a cache full of
 small templates from one held by a handful of large or field-dense ones — the
-two need opposite adjustments. To see the difference the cache makes on the current machine, the
-benchmark measures every case with it on and off:
+two need opposite adjustments. To see the difference the cache makes on the
+current machine, the benchmark measures every case with it on and off:
 
 ```console
 cd benchmark/suite
