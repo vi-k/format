@@ -15,6 +15,20 @@ bool _exceedsWebSafeInt(int value) {
   return negative < -9007199254740991;
 }
 
+// Alignment code units, as a specification spells them.
+const _alignLeft = 0x3c; // '<'
+const _alignSign = 0x3d; // '=' — padding goes between the sign and the digits
+const _alignRight = 0x3e; // '>'
+const _alignCenter = 0x5e; // '^'
+
+// The order `> = < ^` is written out at each of the four sites that pad rather
+// than shared through helpers, and that is a measured decision: one helper per
+// fill position cost 24% under dart2js on `%08d` (61.5 -> 76.5 ns), where every
+// call is a real call and none of these three inlined. What keeps the four
+// spellings honest instead is `test/template_ir_diff_test.dart`, which walks
+// every alignment, fill and padding mode of every op past the legacy path: a
+// copy that drifts stops matching the oracle rather than quietly disagreeing
+// with its neighbours.
 sealed class _BraceOp {
   const _BraceOp();
 
@@ -375,20 +389,28 @@ final class _BraceIntOp extends _BraceOp {
   );
 
   void _writeLeading(CharSink sink, int padding, int signChar) {
-    if (align == 0x3e) {
-      sink.fill(fillChar, padding);
-    } else if (align == 0x5e) {
-      sink.fill(fillChar, padding ~/ 2);
+    // Guarding on the padding before looking at the alignment is worth its
+    // line: a value that fits its width is the common case, and `{:d}`
+    // right-aligns by default, so it used to call fill with nothing to write.
+    // Skipping that call measured 55.2 -> 53.9 ns, minimum of six interleaved
+    // pairs — small, and every run of the six agreed on its direction.
+    if (padding > 0) {
+      if (align == _alignRight) {
+        sink.fill(fillChar, padding);
+      } else if (align == _alignCenter) {
+        sink.fill(fillChar, padding ~/ 2);
+      }
     }
     if (signChar != 0) sink.writeCharCode(signChar);
     if (prefix.isNotEmpty) sink.writeString(prefix);
-    if (align == 0x3d) sink.fill(fillChar, padding);
+    if (padding > 0 && align == _alignSign) sink.fill(fillChar, padding);
   }
 
   void _writeTrailing(CharSink sink, int padding) {
-    if (align == 0x3c) {
+    if (padding <= 0) return;
+    if (align == _alignLeft) {
       sink.fill(fillChar, padding);
-    } else if (align == 0x5e) {
+    } else if (align == _alignCenter) {
       sink.fill(fillChar, padding - padding ~/ 2);
     }
   }
@@ -455,15 +477,15 @@ final class _BraceTextOp extends _BraceOp {
       return;
     }
     final padding = width - textUnit.length(text);
-    if (align == 0x3e) {
+    if (align == _alignRight) {
       sink.fill(fillChar, padding);
-    } else if (align == 0x5e) {
+    } else if (align == _alignCenter) {
       sink.fill(fillChar, padding ~/ 2);
     }
     sink.writeString(text);
-    if (align == 0x3c) {
+    if (align == _alignLeft) {
       sink.fill(fillChar, padding);
-    } else if (align == 0x5e) {
+    } else if (align == _alignCenter) {
       sink.fill(fillChar, padding - padding ~/ 2);
     }
   }
@@ -569,22 +591,22 @@ void _writeAsciiFloatDirect(
       groupSeparator == 0 ? body.length : body.length + (integerEnd - 1) ~/ 3;
   final content = grouped + signWidth + suffixWidth;
   final padding = width < 0 ? 0 : width - content;
-  if (align == 0x3e) {
+  if (align == _alignRight) {
     sink.fill(fillChar, padding);
-  } else if (align == 0x5e) {
+  } else if (align == _alignCenter) {
     sink.fill(fillChar, padding ~/ 2);
   }
   if (signChar != 0) sink.writeCharCode(signChar);
-  if (align == 0x3d) sink.fill(fillChar, padding);
+  if (align == _alignSign) sink.fill(fillChar, padding);
   if (groupSeparator == 0) {
     sink.writeString(body);
   } else {
     sink.writeGroupedBody(body, integerEnd, groupSeparator, 3);
   }
   if (percentSuffix) sink.writeCharCode(0x25);
-  if (align == 0x3c) {
+  if (align == _alignLeft) {
     sink.fill(fillChar, padding);
-  } else if (align == 0x5e) {
+  } else if (align == _alignCenter) {
     sink.fill(fillChar, padding - padding ~/ 2);
   }
 }
@@ -1154,11 +1176,22 @@ final class _PrintfFallbackOp extends _PrintfOp {
   String describe() => 'fallback';
 }
 
-/// Hot op for `%s`. Width/precision are resolved to plain ints at compile
-/// time when static; -1 argument indices mean "no dynamic lookup needed" —
-/// `hasWidth`/`hasPrecision` carry presence separately since 0 is a legal
-/// width/precision and can't double as an absence sentinel.
-final class _PrintfStringOp extends _PrintfOp {
+/// The options every hot printf conversion carries, and the one place they are
+/// resolved.
+///
+/// Width and precision are resolved to plain ints at compile time when static;
+/// -1 argument indices mean "no dynamic lookup needed" — [hasWidth] and
+/// [hasPrecision] carry presence separately since 0 is a legal width or
+/// precision and cannot double as an absence sentinel.
+///
+/// A width or a precision comes either from the template or from an argument
+/// (`%*d`, `%.*f`), and the rules around that do not depend on the conversion:
+/// a dynamic width arriving negative means left alignment with its magnitude,
+/// and a negative precision means no precision at all. Each of the three hot
+/// ops carried its own verbatim copy of that resolution — nineteen lines,
+/// three times — which is the shape of duplication where a fix to one spelling
+/// leaves `%s`, `%d` and `%f` disagreeing with each other.
+sealed class _PrintfOptionsOp extends _PrintfOp {
   final _PrintfConversionNode node;
   final int valueArgIndex;
   final bool left;
@@ -1168,9 +1201,8 @@ final class _PrintfStringOp extends _PrintfOp {
   final bool hasPrecision;
   final int staticPrecision;
   final int precisionArgIndex; // -1 static
-  final TextUnit textUnit;
 
-  const _PrintfStringOp({
+  const _PrintfOptionsOp({
     required this.node,
     required this.valueArgIndex,
     required this.left,
@@ -1180,6 +1212,50 @@ final class _PrintfStringOp extends _PrintfOp {
     required this.hasPrecision,
     required this.staticPrecision,
     required this.precisionArgIndex,
+  });
+
+  /// The width, from the template or from an argument, still carrying its
+  /// sign: negative means the conversion aligns left in that many columns.
+  ///
+  /// Callers test [hasWidth] themselves rather than have this return null for
+  /// its absence. The flag test is two instructions and the call is not always
+  /// inlined, and most conversions have no width at all: routing them through
+  /// here cost `%s` nineteen per cent.
+  int _resolvedWidth(_PrintfProcessor frame) =>
+      widthArgIndex < 0
+          ? staticWidth
+          : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
+
+  /// The precision, or null when a dynamic one resolves negative, which C
+  /// reads as no precision rather than as an error. Guarded by [hasPrecision]
+  /// at the call site, for the reason given on [_resolvedWidth].
+  int? _resolvedPrecision(_PrintfProcessor frame) {
+    final resolved =
+        precisionArgIndex < 0
+            ? staticPrecision
+            : _resolveIrPrintfOption(
+              frame,
+              node,
+              precisionArgIndex,
+              'precision',
+            );
+    return resolved < 0 ? null : resolved;
+  }
+}
+
+final class _PrintfStringOp extends _PrintfOptionsOp {
+  final TextUnit textUnit;
+
+  const _PrintfStringOp({
+    required super.node,
+    required super.valueArgIndex,
+    required super.left,
+    required super.hasWidth,
+    required super.staticWidth,
+    required super.widthArgIndex,
+    required super.hasPrecision,
+    required super.staticPrecision,
+    required super.precisionArgIndex,
     required this.textUnit,
   });
 
@@ -1188,29 +1264,11 @@ final class _PrintfStringOp extends _PrintfOp {
     var effectiveLeft = left;
     int? width;
     if (hasWidth) {
-      var resolved =
-          widthArgIndex < 0
-              ? staticWidth
-              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
-      if (resolved < 0) {
-        effectiveLeft = true;
-        resolved = -resolved;
-      }
-      width = resolved;
+      final resolved = _resolvedWidth(frame);
+      if (resolved < 0) effectiveLeft = true;
+      width = resolved.abs();
     }
-    int? precision;
-    if (hasPrecision) {
-      final resolved =
-          precisionArgIndex < 0
-              ? staticPrecision
-              : _resolveIrPrintfOption(
-                frame,
-                node,
-                precisionArgIndex,
-                'precision',
-              );
-      if (resolved >= 0) precision = resolved;
-    }
+    final precision = hasPrecision ? _resolvedPrecision(frame) : null;
     final argument = frame._argumentAt(valueArgIndex, node);
     late final String text;
     try {
@@ -1249,20 +1307,11 @@ final class _PrintfStringOp extends _PrintfOp {
   }
 }
 
-/// Hot op for `d/i/u/o/x/X`. Width/precision resolution mirrors
-/// `_PrintfStringOp`; the value branch (int vs. BigInt) mirrors
+/// Hot op for `d/i/u/o/x/X`. Width and precision come from
+/// [_PrintfOptionsOp]; the value branch (int vs. BigInt) mirrors
 /// `_formatPrintfInteger`, writing digits straight into the sink instead of
 /// building an intermediate string.
-final class _PrintfIntOp extends _PrintfOp {
-  final _PrintfConversionNode node;
-  final int valueArgIndex;
-  final bool left;
-  final bool hasWidth;
-  final int staticWidth; // meaningful when hasWidth && widthArgIndex < 0
-  final int widthArgIndex; // -1 static
-  final bool hasPrecision;
-  final int staticPrecision;
-  final int precisionArgIndex; // -1 static
+final class _PrintfIntOp extends _PrintfOptionsOp {
   final String type; // d i u o x X
   final int radix;
   final bool uppercase;
@@ -1273,15 +1322,15 @@ final class _PrintfIntOp extends _PrintfOp {
   final bool zeroFlag;
 
   const _PrintfIntOp({
-    required this.node,
-    required this.valueArgIndex,
-    required this.left,
-    required this.hasWidth,
-    required this.staticWidth,
-    required this.widthArgIndex,
-    required this.hasPrecision,
-    required this.staticPrecision,
-    required this.precisionArgIndex,
+    required super.node,
+    required super.valueArgIndex,
+    required super.left,
+    required super.hasWidth,
+    required super.staticWidth,
+    required super.widthArgIndex,
+    required super.hasPrecision,
+    required super.staticPrecision,
+    required super.precisionArgIndex,
     required this.type,
     required this.radix,
     required this.uppercase,
@@ -1297,29 +1346,11 @@ final class _PrintfIntOp extends _PrintfOp {
     var effectiveLeft = left;
     int? width;
     if (hasWidth) {
-      var resolved =
-          widthArgIndex < 0
-              ? staticWidth
-              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
-      if (resolved < 0) {
-        effectiveLeft = true;
-        resolved = -resolved;
-      }
-      width = resolved;
+      final resolved = _resolvedWidth(frame);
+      if (resolved < 0) effectiveLeft = true;
+      width = resolved.abs();
     }
-    int? precision;
-    if (hasPrecision) {
-      final resolved =
-          precisionArgIndex < 0
-              ? staticPrecision
-              : _resolveIrPrintfOption(
-                frame,
-                node,
-                precisionArgIndex,
-                'precision',
-              );
-      if (resolved >= 0) precision = resolved;
-    }
+    final precision = hasPrecision ? _resolvedPrecision(frame) : null;
     final argument = frame._argumentAt(valueArgIndex, node);
 
     if (!identical(frame.engine.numberLocale, const CNumberLocale())) {
@@ -1419,15 +1450,15 @@ final class _PrintfIntOp extends _PrintfOp {
     final fillChar = zero ? 0x30 : 0x20;
     final align =
         effectiveLeft
-            ? 0x3c
+            ? _alignLeft
             : zero
-            ? 0x3d
-            : 0x3e;
+            ? _alignSign
+            : _alignRight;
 
-    if (align == 0x3e) sink.fill(fillChar, padding);
+    if (align == _alignRight) sink.fill(fillChar, padding);
     if (signChar != 0) sink.writeCharCode(signChar);
     if (prefix.isNotEmpty) sink.writeString(prefix);
-    if (align == 0x3d) sink.fill(fillChar, padding);
+    if (align == _alignSign) sink.fill(fillChar, padding);
     sink.fill(0x30, zeroPad);
     if (effectiveDigits > 0) {
       if (digitsAsString) {
@@ -1436,7 +1467,7 @@ final class _PrintfIntOp extends _PrintfOp {
         sink.writeMagnitude(intValue, radix, uppercase: uppercase);
       }
     }
-    if (align == 0x3c) sink.fill(fillChar, padding);
+    if (align == _alignLeft) sink.fill(fillChar, padding);
   }
 
   FormatExceptionContext _valueContext(_PrintfProcessor frame) =>
@@ -1453,21 +1484,12 @@ final class _PrintfIntOp extends _PrintfOp {
   }
 }
 
-/// Hot op for `f F e E g G`. Width/precision resolution mirrors
-/// `_PrintfStringOp`; the body branches are a transliteration of
+/// Hot op for `f F e E g G`. Width and precision come from
+/// [_PrintfOptionsOp]; the body branches are a transliteration of
 /// `_formatPrintfDouble`, whose order is the parity contract. `a`/`A` are
 /// deliberately absent: their bodies ride an `0x`/`0X` prefix through
 /// `_displayPrintfHexBody`, which this op does not reproduce.
-final class _PrintfDoubleOp extends _PrintfOp {
-  final _PrintfConversionNode node;
-  final int valueArgIndex;
-  final bool left;
-  final bool hasWidth;
-  final int staticWidth; // meaningful when hasWidth && widthArgIndex < 0
-  final int widthArgIndex; // -1 static
-  final bool hasPrecision;
-  final int staticPrecision;
-  final int precisionArgIndex; // -1 static
+final class _PrintfDoubleOp extends _PrintfOptionsOp {
   final String type; // f F e E g G
   final bool uppercase; // 'E' 'F' 'G' spell their bodies in upper case
   // Meaningful when precisionArgIndex < 0; see _rejectsDartDoublePrecision.
@@ -1478,15 +1500,15 @@ final class _PrintfDoubleOp extends _PrintfOp {
   final bool zeroFlag;
 
   const _PrintfDoubleOp({
-    required this.node,
-    required this.valueArgIndex,
-    required this.left,
-    required this.hasWidth,
-    required this.staticWidth,
-    required this.widthArgIndex,
-    required this.hasPrecision,
-    required this.staticPrecision,
-    required this.precisionArgIndex,
+    required super.node,
+    required super.valueArgIndex,
+    required super.left,
+    required super.hasWidth,
+    required super.staticWidth,
+    required super.widthArgIndex,
+    required super.hasPrecision,
+    required super.staticPrecision,
+    required super.precisionArgIndex,
     required this.type,
     required this.uppercase,
     required this.staticPrecisionRejected,
@@ -1501,29 +1523,11 @@ final class _PrintfDoubleOp extends _PrintfOp {
     var effectiveLeft = left;
     int? width;
     if (hasWidth) {
-      var resolved =
-          widthArgIndex < 0
-              ? staticWidth
-              : _resolveIrPrintfOption(frame, node, widthArgIndex, 'width');
-      if (resolved < 0) {
-        effectiveLeft = true;
-        resolved = -resolved;
-      }
-      width = resolved;
+      final resolved = _resolvedWidth(frame);
+      if (resolved < 0) effectiveLeft = true;
+      width = resolved.abs();
     }
-    int? precision;
-    if (hasPrecision) {
-      final resolved =
-          precisionArgIndex < 0
-              ? staticPrecision
-              : _resolveIrPrintfOption(
-                frame,
-                node,
-                precisionArgIndex,
-                'precision',
-              );
-      if (resolved >= 0) precision = resolved;
-    }
+    final precision = hasPrecision ? _resolvedPrecision(frame) : null;
     final argument = frame._argumentAt(valueArgIndex, node);
     if (argument is! double) {
       throw UnsupportedFormatValueException(_valueContext(frame), argument);
@@ -1613,10 +1617,10 @@ final class _PrintfDoubleOp extends _PrintfOp {
       width ?? -1,
       zero ? 0x30 : 0x20,
       effectiveLeft
-          ? 0x3c
+          ? _alignLeft
           : zero
-          ? 0x3d
-          : 0x3e,
+          ? _alignSign
+          : _alignRight,
     );
   }
 
