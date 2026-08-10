@@ -93,6 +93,42 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: '9007199254740991',
     key: true,
   ),
+  // The three scenarios below are the whole reason the web-unsafe magnitude is
+  // spelled 2^53 and not something rounder. `brace.int.large_decimal` above is
+  // 2^53-1, which does *not* exceed the web-safe range, so until these existed
+  // the branch that makes an int exact on the web — BigInt for a radix, fixed
+  // point for decimal — ran in no measurement at all, on any runtime. It cost
+  // 939 ns against 174 on the safe path when it was last looked at directly,
+  // and nothing in the matrix would have shown that returning.
+  //
+  // 2^53 is the first magnitude past the boundary that both comparators still
+  // agree on: a JS double prints it exactly, so `String(n)` in Format 2 and
+  // sprintf 7 spells the same digits the exact path does. One power of two
+  // higher and the comparators print the shortest round-trip form instead
+  // (2^62 becomes 4611686018427388000), which is a different string, not a
+  // slower one — there would be nothing left to compare.
+  //
+  // Each of the three reaches a separately written copy of the branch: the
+  // dynamic op, the integer op's decimal path, and its radix path. Drift
+  // between them is the defect these are here to catch.
+  _braceComparable(
+    'brace.int.web_unsafe.default',
+    template: '{}',
+    values: const [9007199254740992],
+    expected: '9007199254740992',
+  ),
+  _braceComparable(
+    'brace.int.web_unsafe.decimal',
+    template: '{:d}',
+    values: const [9007199254740992],
+    expected: '9007199254740992',
+  ),
+  _braceComparable(
+    'brace.int.web_unsafe.hex',
+    template: '{:x}',
+    values: const [9007199254740992],
+    expected: '20000000000000',
+  ),
   _braceComparable(
     'brace.bigint.default',
     template: '{}',
@@ -365,6 +401,14 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '%+d',
     values: const [42],
     expected: '+42',
+  ),
+  // The printf integer op writes its own copy of the web-unsafe branch, so it
+  // needs its own measurement for the same reason the brace ones above do.
+  _printfComparable(
+    'printf.int.web_unsafe',
+    template: '%d',
+    values: const [9007199254740992],
+    expected: '9007199254740992',
   ),
   _printfInformation(
     'printf.unsigned',

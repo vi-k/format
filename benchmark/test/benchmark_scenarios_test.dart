@@ -45,6 +45,10 @@ void main() {
     for (final required in [
       'brace.literal.cold',
       'brace.int.large_decimal.hot',
+      'brace.int.web_unsafe.default.hot',
+      'brace.int.web_unsafe.decimal.hot',
+      'brace.int.web_unsafe.hex.hot',
+      'printf.int.web_unsafe.hot',
       'brace.double.fixed.dart.hot',
       'brace.double.fixed.compatible.hot',
       'brace.double.fixed_large.dart.hot',
@@ -82,6 +86,43 @@ void main() {
     );
     expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
     expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
+  });
+
+  // These four exist for one property, and it is not visible in the strings
+  // they produce: the value has to be past 2^53-1, where an int on the web
+  // stops being exact and the package materializes its digits through fixed
+  // point or BigInt instead of extracting them. The key scenario above sits
+  // exactly *on* that boundary and takes the ordinary path, so a value lowered
+  // by one here would keep every expectation passing while quietly measuring
+  // nothing — which is the state the matrix was in before these were added.
+  test('web-unsafe integer scenarios sit past the web-safe boundary', () {
+    const webSafeMaximum = 9007199254740991; // 2^53-1
+    final byId = {
+      for (final scenario in benchmarkScenarios) scenario.id: scenario,
+    };
+    String outcomeOf(String id) => (byId[id]!.expected as TextOutcome).value;
+
+    expect(
+      outcomeOf('brace.int.large_decimal.hot'),
+      '$webSafeMaximum',
+      reason: 'the key comparison stays on the safe side of the boundary',
+    );
+    for (final id in [
+      'brace.int.web_unsafe.default.hot',
+      'brace.int.web_unsafe.decimal.hot',
+      'printf.int.web_unsafe.hot',
+    ]) {
+      expect(
+        outcomeOf(id),
+        '${webSafeMaximum + 1}',
+        reason: '$id must exceed the web-safe range, not sit on its edge',
+      );
+    }
+    expect(
+      outcomeOf('brace.int.web_unsafe.hex.hot'),
+      (webSafeMaximum + 1).toRadixString(16),
+      reason: 'the radix path materializes through BigInt, decimal does not',
+    );
   });
 
   // The double-side key comparison, on the profile whose digits the package
