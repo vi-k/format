@@ -269,6 +269,143 @@ void main() {
     );
   });
 
+  // The gate's other half: the arithmetic can be perfect and still mean
+  // nothing, because a ratio only describes the code when both sides of it ran
+  // in the same place. Three consecutive nightly runs landed on an Intel Xeon
+  // 8573C, an EPYC 7763 and an EPYC 9V74, and the two hardware changes were
+  // reported as regressions — which is what these tests are about.
+  //
+  // A machine the reference does not describe therefore decides nothing rather
+  // than failing: the hosted pool hands out a different processor most nights,
+  // and a gate that went red for each of them would teach its reader to stop
+  // looking.
+  test('a reference from another machine decides nothing', () {
+    final baseline = _baseline();
+    expect(
+      evaluateGateReports(_completeReports(), baseline).comparable,
+      isTrue,
+    );
+
+    for (final change in <(String, Map<String, String>)>[
+      ('cpu', {'dartVersion': 'test', 'os': 'test', 'cpu': 'other'}),
+      ('dart', {'dartVersion': 'other', 'os': 'test', 'cpu': 'test'}),
+    ]) {
+      final reports = [
+        for (final report in _completeReports())
+          report.runtime == 'js'
+              ? report
+              : _copyReport(report, versions: change.$2),
+      ];
+      final result = evaluateGateReports(reports, baseline);
+
+      expect(result.comparable, isFalse, reason: change.$1);
+      expect(result.decisive, isFalse, reason: change.$1);
+      expect(result.environmentDifferences.single, startsWith(change.$1));
+    }
+
+    // Node comes from the JavaScript reports rather than the VM ones, so it
+    // travels a different path into the comparison and is checked separately.
+    final otherNode = [
+      for (final report in _completeReports())
+        report.runtime == 'js'
+            ? _copyReport(
+              report,
+              runtimeProvenance: const {
+                'detector': 'dart2js.compile-time-define',
+                'dartCompilerVersion': '3.12.2',
+                'nodeVersion': 'v24.9.0',
+              },
+            )
+            : report,
+    ];
+    final node = evaluateGateReports(otherNode, baseline);
+    expect(node.comparable, isFalse);
+    expect(node.environmentDifferences.single, startsWith('node'));
+  });
+
+  // The operating system string is recorded and deliberately not compared: on
+  // a hosted runner it carries a kernel build number that changes with every
+  // image refresh without moving a timing, so gating on it would gate on image
+  // releases. Stated as a test because it is a decision, not an oversight.
+  test('a different operating system string is still comparable', () {
+    final reports = [
+      for (final report in _completeReports())
+        report.runtime == 'js'
+            ? report
+            : _copyReport(
+              report,
+              versions: const {
+                'dartVersion': 'test',
+                'os': 'other kernel build',
+                'cpu': 'test',
+              },
+            ),
+    ];
+
+    expect(evaluateGateReports(reports, _baseline()).comparable, isTrue);
+  });
+
+  // A machine change is not allowed to hide behind a passing verdict either:
+  // the ratios are still evaluated and still reported, so the numbers can be
+  // read as information. What changes is that they decide nothing.
+  test('an incomparable run still reports its ratios', () {
+    final regressed = _completeReports();
+    const id = 'brace.double.fixed.compatible.hot';
+    regressed[0] = _withPerformanceRatio(regressed[0], id, 1.6);
+    regressed[1] = _withPerformanceRatio(regressed[1], id, 1.6);
+    final baseline = _baseline();
+    expect(evaluateGateReports(regressed, baseline).passed, isFalse);
+
+    final elsewhere = [
+      for (final report in regressed)
+        report.runtime == 'js'
+            ? report
+            : _copyReport(
+              report,
+              versions: const {
+                'dartVersion': 'test',
+                'os': 'test',
+                'cpu': 'other',
+              },
+            ),
+    ];
+    final result = evaluateGateReports(elsewhere, baseline);
+
+    expect(result.passed, isFalse, reason: 'арифметика та же');
+    expect(result.decisive, isFalse);
+    expect(result.toJson()['gates'], hasLength(6));
+  });
+
+  // The migration case. A reference recorded before environments were written
+  // down cannot say which processor it ran on, so nothing is claimed about
+  // one — but the Node pin that used to live in the gate is still implied by
+  // it, and is the one thing such a reference can still be held to.
+  test('a reference without an environment claims only its Node', () {
+    final legacy = _baselineWithoutEnvironment();
+
+    final matching = evaluateGateReports(_completeReports(), legacy);
+    expect(matching.comparable, isNull, reason: 'сравнивать не с чем');
+    expect(matching.decisive, isTrue);
+
+    final otherNode = [
+      for (final report in _completeReports())
+        report.runtime == 'js'
+            ? _copyReport(
+              report,
+              runtimeProvenance: const {
+                'detector': 'dart2js.compile-time-define',
+                'dartCompilerVersion': '3.12.2',
+                'nodeVersion': 'v25.0.0',
+              },
+            )
+            : report,
+    ];
+    final result = evaluateGateReports(otherNode, legacy);
+    expect(result.comparable, isFalse);
+    expect(result.decisive, isFalse);
+    expect(result.environmentDifferences.single, contains('v24.8.0'));
+  });
+
   // The four ways a report can be well-formed and still inadmissible: it was a
   // smoke run, it declared itself non-gateable, it was cut short, or it does
   // not match its partner. Each is silently plausible — the numbers look like
@@ -428,6 +565,66 @@ void main() {
     },
   );
 
+  // The exit code is where "decides nothing" has to be visible to CI, and it
+  // is the one piece the unit tests above cannot reach: a regressed set of
+  // reports measured on another processor must leave the command green, while
+  // the report it writes still says the ratios breached.
+  test('gate command exits green when the machine does not match', () async {
+    final directory = await Directory.systemTemp.createTemp('format-machine-');
+    try {
+      final regressed = _completeReports();
+      const id = 'brace.double.fixed.compatible.hot';
+      regressed[0] = _withPerformanceRatio(regressed[0], id, 1.6);
+      regressed[1] = _withPerformanceRatio(regressed[1], id, 1.6);
+      final elsewhere = [
+        for (final report in regressed)
+          report.runtime == 'js'
+              ? report
+              : _copyReport(
+                report,
+                versions: const {
+                  'dartVersion': 'test',
+                  'os': 'test',
+                  'cpu': 'a processor the reference never saw',
+                },
+              ),
+      ];
+
+      final baseline = File('${directory.path}/baseline.json');
+      await baseline.writeAsString(jsonEncode(_baseline().toJson()));
+      final paths = <String>[];
+      for (var index = 0; index < elsewhere.length; index++) {
+        final file = File('${directory.path}/report-$index.json');
+        await file.writeAsString(jsonEncode(elsewhere[index].toJson()));
+        paths.add(file.path);
+      }
+      final report = File('${directory.path}/gate.json');
+      final result = await Process.run(Platform.resolvedExecutable, [
+        'benchmark/gates.dart',
+        '--reports=${paths.join(',')}',
+        '--baseline=${baseline.path}',
+        '--output=${report.path}',
+        '--allow-unverified-revision',
+      ]);
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      expect(
+        result.stderr.toString(),
+        contains('a processor the reference never saw'),
+      );
+      final decoded =
+          jsonDecode(await report.readAsString()) as Map<String, Object?>;
+      expect(decoded['comparable'], isFalse);
+      expect(
+        decoded['passed'],
+        isFalse,
+        reason: 'отчёт обязан сохранить арифметику, а не приукрасить её',
+      );
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
   // The escape hatch the two tests above lean on, checked from the other side.
   // Without it the same invented revision must stop the command — otherwise
   // those tests would be passing because the check never runs, and the flag
@@ -494,6 +691,14 @@ List<BenchmarkReport> _completeReports() => [
 /// so an unchanged build sits exactly on its own recorded numbers.
 GateBaseline _baseline() =>
     recordGateBaseline(_completeReports(), '2026-01-01');
+
+/// A reference in the shape the committed one still has: recorded before the
+/// environment was written down, so the field is absent rather than empty.
+GateBaseline _baselineWithoutEnvironment() {
+  final json = _baseline().toJson()..remove('environment');
+
+  return GateBaseline.fromJson(json);
+}
 
 BenchmarkScenarioResult _scenarioFor(BenchmarkScenario scenario) {
   final candidate = switch ((scenario.dialect, scenario.phase)) {
@@ -581,13 +786,14 @@ BenchmarkReport _copyReport(
   String? detectedRuntime,
   Map<String, String>? runtimeProvenance,
   String? sourceRevision,
+  Map<String, String>? versions,
 }) => BenchmarkReport(
   runtime: report.runtime,
   detectedRuntime: detectedRuntime ?? report.detectedRuntime,
   runtimeProvenance: runtimeProvenance ?? report.runtimeProvenance,
   sourceRevision: sourceRevision ?? report.sourceRevision,
   run: run ?? report.run,
-  versions: report.versions,
+  versions: versions ?? report.versions,
   smoke: smoke ?? report.smoke,
   gateable: gateable ?? report.gateable,
   warmupRounds: report.warmupRounds,

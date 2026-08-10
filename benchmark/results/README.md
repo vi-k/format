@@ -133,6 +133,26 @@ against a 15% tolerance. Treat a local gate run as indicative and the CI one
 as authoritative, and re-record from a CI run — dispatch the workflow, then
 take the reports from its artifact.
 
+"Comparable" is now recorded rather than assumed. A reference carries the
+processor, the operating system, the Dart version and the Node version it was
+measured on, and a run whose processor, Dart or Node differs decides nothing:
+the report says `"comparable": false`, lists what moved, and the command
+still exits zero. The ratios are computed and kept, so they can be read as
+information — they are simply not a verdict about the code.
+
+That is not a hypothetical. Three consecutive nightly runs landed on an Intel
+Xeon 8573C, an EPYC 7763 and an EPYC 9V74, because a hosted pool hands out
+what it has; the two hardware changes were reported as failures. A gate that
+goes red for the pool teaches its reader to ignore it.
+
+The operating system string is recorded and deliberately not compared: on a
+hosted runner it carries a kernel build number that changes with every image
+refresh without moving a timing.
+
+The reference committed today predates this and has no environment, so only
+its Node version is still implied. Re-recording it from a CI run is what
+turns the rest of the check on.
+
 Each round is timed to a duration rather than to a fixed operation count, so
 the two engines run different counts and a ratio is read per operation. The
 target is `max(10 ms, 100 clock ticks)`, measured per machine: under dart2js

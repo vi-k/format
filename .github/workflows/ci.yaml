@@ -193,7 +193,12 @@ jobs:
           sdk: stable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          # Pinned exactly: the gate rejects reports from any other Node.
+          # Pinned because JavaScript performance moves between Node releases,
+          # so an upgrade invalidates the recorded reference rather than
+          # beating it. The gate no longer holds this number itself: it
+          # compares the Node a run used with the Node its reference was
+          # recorded on, and a mismatch makes the run undecidable rather than
+          # failed. Bumping here without re-recording is what that catches.
           node-version: 24.8.0
       - name: Resolve dependencies
         run: dart pub get

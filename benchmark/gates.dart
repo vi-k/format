@@ -38,6 +38,24 @@ const double _meanTolerance = 1.25;
 const double _scenarioTolerance = 1.60;
 const double _keyScenarioTolerance = 1.35;
 
+/// The one environment fact a reference recorded before environments were
+/// written down still implies: the Node pin that used to be checked in this
+/// file. The processor and the Dart version of that recording are written
+/// down nowhere, so nothing else can be said about it.
+///
+/// Remove together with [_legacyEnvironmentDifferences] once the committed
+/// reference carries its own environment.
+const _legacyNodePin = 'v24.8.0';
+
+List<String> _legacyEnvironmentDifferences(GateEnvironment measured) {
+  if (measured.nodeVersion == _legacyNodePin) return const [];
+  final difference =
+      'node: reference predates recorded environments and assumed '
+      '$_legacyNodePin, measured on ${measured.nodeVersion}';
+
+  return [difference];
+}
+
 const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   'jit': {BenchmarkDialect.braces, BenchmarkDialect.printf},
   'aot': {BenchmarkDialect.braces, BenchmarkDialect.printf},
@@ -46,18 +64,96 @@ const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   'js': {BenchmarkDialect.braces, BenchmarkDialect.printf},
 };
 
+/// The machine a set of reports was measured on, reduced to the facts a
+/// comparison depends on.
+///
+/// [os] is recorded and deliberately not compared. On a hosted runner it
+/// carries a kernel build number that changes with every image refresh
+/// without moving a timing, so gating on it would reduce the gate to a gate
+/// on image releases. The three that are compared each move numbers directly:
+/// the processor, the Dart that compiled and ran the VM side, and the Node
+/// that ran the JavaScript.
+final class GateEnvironment {
+  final String cpu;
+  final String os;
+  final String dartVersion;
+  final String nodeVersion;
+
+  const GateEnvironment({
+    required this.cpu,
+    required this.os,
+    required this.dartVersion,
+    required this.nodeVersion,
+  });
+
+  factory GateEnvironment.fromJson(Map<String, Object?> json) =>
+      GateEnvironment(
+        cpu: json['cpu']! as String,
+        os: json['os']! as String,
+        dartVersion: json['dartVersion']! as String,
+        nodeVersion: json['nodeVersion']! as String,
+      );
+
+  /// The environment [reports] were measured in.
+  ///
+  /// The VM reports and the JavaScript one describe the same machine in
+  /// different words — the Dart version especially, which is a full SDK banner
+  /// on the VM and a bare compiler version under dart2js — so each field is
+  /// taken from the side that knows it best rather than from whichever report
+  /// happens to come first.
+  factory GateEnvironment.of(Iterable<BenchmarkReport> reports) {
+    final vm = reports.firstWhere((report) => report.runtime != 'js');
+    final js = reports.firstWhere((report) => report.runtime == 'js');
+
+    return GateEnvironment(
+      cpu: vm.versions['cpu'] ?? 'unknown',
+      os: vm.versions['os'] ?? 'unknown',
+      dartVersion: vm.versions['dartVersion'] ?? 'unknown',
+      nodeVersion: js.runtimeProvenance['nodeVersion'] ?? 'unknown',
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'cpu': cpu,
+    'os': os,
+    'dartVersion': dartVersion,
+    'nodeVersion': nodeVersion,
+  };
+
+  /// How this environment differs from [other] where it matters, most
+  /// significant first. Empty when the two are comparable.
+  List<String> differencesFrom(GateEnvironment other) => [
+    if (cpu != other.cpu) 'cpu: recorded on ${other.cpu}, measured on $cpu',
+    if (nodeVersion != other.nodeVersion)
+      'node: recorded on ${other.nodeVersion}, measured on $nodeVersion',
+    if (dartVersion != other.dartVersion)
+      'dart: recorded on ${other.dartVersion}, measured on $dartVersion',
+  ];
+}
+
 /// The recorded per-scenario and per-phase ratios an evaluation compares
 /// against, keyed `runtime/dialect` and, within that, by phase name and by
 /// scenario id.
 final class GateBaseline {
   final String sourceRevision;
   final String recordedAt;
+
+  /// The machine the reference was measured on, or null for a reference
+  /// recorded before this was written down.
+  ///
+  /// A ratio is only a number about the code when both sides of it ran in the
+  /// same place. Without this, a comparison across machines is
+  /// indistinguishable from a regression — which is not hypothetical: three
+  /// consecutive nightly runs landed on an Intel Xeon 8573C, an EPYC 7763 and
+  /// an EPYC 9V74, and the gate reported the two hardware changes as failures.
+  final GateEnvironment? environment;
   final Map<String, Map<String, double>> phaseMeans;
   final Map<String, Map<String, double>> scenarioRatios;
 
   const GateBaseline({
     required this.sourceRevision,
     required this.recordedAt,
+    required this.environment,
     required this.phaseMeans,
     required this.scenarioRatios,
   });
@@ -77,9 +173,16 @@ final class GateBaseline {
         },
     };
 
+    final environment = json['environment'];
     return GateBaseline(
       sourceRevision: json['sourceRevision']! as String,
       recordedAt: json['recordedAt']! as String,
+      environment:
+          environment == null
+              ? null
+              : GateEnvironment.fromJson(
+                Map<String, Object?>.from(environment as Map),
+              ),
       phaseMeans: read('phaseMeans'),
       scenarioRatios: read('scenarioRatios'),
     );
@@ -89,6 +192,7 @@ final class GateBaseline {
     'schemaVersion': 1,
     'sourceRevision': sourceRevision,
     'recordedAt': recordedAt,
+    if (environment != null) 'environment': environment!.toJson(),
     'phaseMeans': phaseMeans,
     'scenarioRatios': scenarioRatios,
   };
@@ -154,6 +258,15 @@ double geometricMean(Iterable<double> ratios) {
 
 final class GateReport {
   final bool passed;
+
+  /// Whether the reference and these reports describe the same machine.
+  ///
+  /// Null when the reference predates recorded environments and there is
+  /// nothing to compare it with. Separate from [passed] on purpose: the
+  /// arithmetic still ran and is still worth reading, but a verdict drawn from
+  /// it would be a verdict about two different computers.
+  final bool? comparable;
+  final List<String> environmentDifferences;
   final String sourceRevision;
   final int aotExecutableSizeBytes;
   final List<DialectGate> gates;
@@ -161,15 +274,23 @@ final class GateReport {
 
   const GateReport({
     required this.passed,
+    required this.comparable,
+    required this.environmentDifferences,
     required this.sourceRevision,
     required this.aotExecutableSizeBytes,
     required this.gates,
     required this.reports,
   });
 
+  /// Whether this run may decide anything. A comparison across machines is
+  /// not a failure, it is an absence of evidence.
+  bool get decisive => comparable ?? true;
+
   Map<String, Object?> toJson() => {
     'schemaVersion': 1,
     'passed': passed,
+    'comparable': comparable,
+    'environmentDifferences': environmentDifferences,
     'sourceRevision': sourceRevision,
     'aotExecutableSizeBytes': aotExecutableSizeBytes,
     'reports': reports.map(_reportSummary).toList(),
@@ -214,8 +335,25 @@ GateReport evaluateGateReports(
       );
     }
   }
+  final recorded = baseline.environment;
+  final measured = GateEnvironment.of(reports);
+  final differences =
+      recorded == null
+          // The bridge for references recorded before environments were: the
+          // Node pin that used to live in this file, and nothing else, since
+          // the processor and the Dart version of that recording are not
+          // written down anywhere. Delete once the committed reference carries
+          // its environment.
+          ? _legacyEnvironmentDifferences(measured)
+          : measured.differencesFrom(recorded);
+
   return GateReport(
     passed: gates.every((gate) => gate.passed),
+    comparable:
+        recorded == null
+            ? (differences.isEmpty ? null : false)
+            : differences.isEmpty,
+    environmentDifferences: List.unmodifiable(differences),
     sourceRevision: sourceRevision,
     aotExecutableSizeBytes: aotSize!,
     gates: List.unmodifiable(gates),
@@ -295,9 +433,15 @@ void _validateReport(BenchmarkReport report) {
           'js run ${report.run} lacks a concrete Dart compiler version.',
         );
       }
-      if (report.runtimeProvenance['nodeVersion'] != 'v24.8.0') {
+      // The version is checked for shape here and for *value* against the
+      // reference, in `differencesFrom`: which Node a measurement needs is a
+      // property of the reference it will be compared with, not of this file.
+      // A reference recorded before environments were written down has no such
+      // property, so the constant below stands in until one is re-recorded.
+      final node = report.runtimeProvenance['nodeVersion'];
+      if (node == null || !RegExp(r'^v\d+\.\d+\.\d+$').hasMatch(node)) {
         throw FormatException(
-          'js run ${report.run} requires Node v24.8.0 provenance.',
+          'js run ${report.run} lacks a concrete Node version.',
         );
       }
   }
@@ -743,6 +887,7 @@ GateBaseline recordGateBaseline(
   return GateBaseline(
     sourceRevision: _sourceRevisionFor(reports),
     recordedAt: recordedAt,
+    environment: GateEnvironment.of(reports),
     phaseMeans: phaseMeans,
     scenarioRatios: scenarioRatios,
   );
@@ -834,7 +979,20 @@ void main(List<String> arguments) {
         _loadBaseline(_baselineArgument(arguments)),
       );
       json = result.toJson();
-      passed = result.passed;
+      // A run on a machine the reference does not describe decides nothing,
+      // and failing it would teach the reader to ignore the gate: the hosted
+      // pool hands out a different processor most nights, and every one of
+      // those would read as a regression. Reported on stderr, where a CI log
+      // shows it without the report having to be opened.
+      passed = !result.decisive || result.passed;
+      if (!result.decisive) {
+        stderr.writeln(
+          'Not comparable with the recorded reference, so nothing is '
+          'decided:\n  ${result.environmentDifferences.join('\n  ')}\n'
+          'Re-record on this machine, or read the ratios in the report as '
+          'information.',
+        );
+      }
     }
     final encoded = '${const JsonEncoder.withIndent('  ').convert(json)}\n';
     if (output == null) {
