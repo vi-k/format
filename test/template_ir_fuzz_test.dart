@@ -19,11 +19,14 @@
 /// found in one could not be investigated in the other. The seed comment below
 /// records what that cost.
 ///
-/// Two guards keep the fuzzer from silently degenerating. Distinctness catches
-/// a generator that collapsed to a handful of templates; the rendered count
-/// catches the subtler failure where the corpus stays varied but every case
-/// turns into an error, so the layout paths stop being exercised while
-/// everything still passes.
+/// Three guards keep the fuzzer from silently degenerating. Distinctness
+/// catches a generator that collapsed to a handful of templates; the rendered
+/// count catches the subtler failure where the corpus stays varied but every
+/// case turns into an error, so the layout paths stop being exercised while
+/// everything still passes. Neither notices a corpus that was merely *swapped*
+/// for a different one of the same quality, which is what an SDK changing
+/// `Random`'s stream would do — so the stream itself is pinned, first test in
+/// the file.
 library;
 
 import 'dart:math';
@@ -43,8 +46,9 @@ import 'parity_harness.dart';
 /// rate). With the double base 2000 consecutive draws agree numerically on
 /// both runtimes. Reproducibility still assumes `Random(seed)`
 /// keeps its stream, which the SDK does not contractually guarantee across
-/// releases. Bump deliberately (with a comment) if the corpus needs
-/// refreshing.
+/// releases — that assumption is no longer only written down here, it is
+/// checked by the first test in the file. Bump deliberately (with a comment)
+/// if the corpus needs refreshing.
 ///
 /// That [pow] change was itself the last corpus refresh, done without a seed
 /// bump: the generators moved, so the affected draws are new even though the
@@ -211,6 +215,57 @@ bool _renders(void Function() probe) {
 
 void main() {
   setUp(debugClearTemplateCaches);
+
+  // The assumption every other test in this file rests on, made executable.
+  //
+  // `Random(seed)` is documented as free to change its stream between SDK
+  // releases, and the whole corpus below is that stream. A change would not
+  // break anything visibly: the fuzzer would keep passing, on a different
+  // set of cases, and a failure recorded as "#137 e2" would stop naming what
+  // it named. The guards further down do not catch it either — they check
+  // that the corpus is varied, and a different corpus is just as varied.
+  //
+  // So the stream is pinned directly. The three sequences cover the raw
+  // draw (a power-of-two bound, no rejection), the rejection loop a
+  // non-power-of-two bound runs, and the bit-level `nextBool`. The values
+  // are recorded from both runtimes, which is the other half of the
+  // assumption: the VM and node must draw alike, or a divergence found in
+  // one could not be investigated in the other.
+  //
+  // If this fails, nothing is wrong with the package. The corpus has moved:
+  // re-verify the distinctness and rendering guards on the VM *and* on node,
+  // then record the new values here with a note saying which SDK moved them.
+  test('the seeded stream both runtimes draw from is unchanged', () {
+    final raw = Random(_seed);
+    expect(
+      [for (var i = 0; i < 8; i++) raw.nextInt(1 << 30)],
+      [
+        247297275,
+        837082294,
+        1035072399,
+        673894849,
+        449363615,
+        32463177,
+        255370889,
+        497945114,
+      ],
+    );
+
+    final bounded = Random(_seed);
+    expect(
+      [for (var i = 0; i < 10; i++) bounded.nextInt(7)],
+      [4, 1, 4, 0, 3, 0, 5, 2, 4, 4],
+    );
+
+    // Continues the same generator rather than reseeding: these are the draws
+    // that follow the ten above, so the pair also pins that mixing call shapes
+    // does not desynchronize the stream — which is how the generators below
+    // actually use it.
+    expect(
+      [for (var i = 0; i < 6; i++) bounded.nextBool()],
+      [false, true, true, false, true, false],
+    );
+  });
 
   // Random specification, random value, random engine — the two drawn
   // independently, so the value usually does not suit the specification and
