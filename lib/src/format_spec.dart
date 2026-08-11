@@ -87,7 +87,7 @@ _FormatSpec _parseFormatSpecGeneral(
     take();
   }
   if (index < units.length && _isAsciiDigit(units[index])) {
-    width = _readDecimal(units, index, () => index++, context);
+    width = _readDecimal(units, index, () => index++);
     if (width > _maximumSafeFormatOption) {
       throw _invalidSpecifier(
         context,
@@ -104,7 +104,7 @@ _FormatSpec _parseFormatSpecGeneral(
         'Precision must contain decimal digits.',
       );
     }
-    precision = _readDecimal(units, index, () => index++, context);
+    precision = _readDecimal(units, index, () => index++);
     if (precision > _maximumSafeFormatOption) {
       throw _invalidSpecifier(
         context,
@@ -391,27 +391,39 @@ bool _isCustomNameContinue(String value) =>
     _isAsciiDigit(value) ||
     (value.length == 1 && value.codeUnitAt(0) == 0x5f);
 
-int _readDecimal(
-  List<String> units,
-  int start,
-  void Function() advance,
-  FormatExceptionContext context,
-) {
-  final digits = StringBuffer();
+/// The decimal at [start], or a marker one past [_maximumSafeFormatOption]
+/// when the digits spell something larger.
+///
+/// Accumulated rather than collected and parsed. The old shape built a
+/// `StringBuffer`, wrote every digit into it, took its string and handed that
+/// to `int.tryParse` — four allocations to read the `8` of `{:>8,d}`, on a
+/// path that runs once per field of every template parsed. It also made the
+/// cost of *rejecting* a width scale with the digits it was spelled with,
+/// which is the property H3 removed from field indexes for the same reason:
+/// a template is untrusted input.
+///
+/// Accumulation stops as soon as the value passes the ceiling, so nothing can
+/// overflow — the largest value reachable is ten times the ceiling plus nine —
+/// while the loop still walks the rest of the run, because the caller's
+/// position has to end up past it either way.
+///
+/// A run too long to be an int is not a different failure from one merely
+/// past the ceiling, and on the web the two cannot even be told apart: an int
+/// is a double there. Both come back as the same marker, and the caller
+/// reports it against its own option, so a template rejected on the server is
+/// rejected in the browser too.
+int _readDecimal(List<String> units, int start, void Function() advance) {
+  var value = 0;
   var index = start;
   while (index < units.length && _isAsciiDigit(units[index])) {
-    digits.write(units[index]);
+    if (value <= _maximumSafeFormatOption) {
+      value = value * 10 + (units[index].codeUnitAt(0) - 0x30);
+    }
     advance();
     index++;
   }
-  final value = int.tryParse(digits.toString());
-  // A run of digits too long to be an int is not a different failure from
-  // one merely past the safety ceiling, and on the web the two cannot even
-  // be told apart: an int is a double there, so `tryParse` rounds instead of
-  // returning null. Both come back as the same out-of-range marker, and the
-  // caller reports it against its own option, so a template rejected on the
-  // server is rejected in the browser too.
-  return value == null || value > _maximumSafeFormatOption
+
+  return value > _maximumSafeFormatOption
       ? _maximumSafeFormatOption + 1
       : value;
 }
