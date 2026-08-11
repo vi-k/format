@@ -92,13 +92,23 @@ Future<int> _runCompiled(
   }
 }
 
+/// `-O4`, the same level the performance gate compiles its runner with, and
+/// the one a package actually ships behind. It is not a detail: on cold
+/// parsing `-O4` runs 24 to 37 per cent faster than `-O2`, because the levels
+/// past `-O2` drop the implicit type checks dart2js otherwise emits on every
+/// typed list write. Measuring at `-O2` therefore reports a build nobody
+/// deploys, and reports the parser as slower than it is.
 Future<List<String>> _compileJs(Directory directory, String entryPoint) async {
   final output = '${directory.path}/benchmark.js';
-  await _compile('js', ['compile', 'js', '-O2', entryPoint, '-o', output]);
+  await _compile('js', ['compile', 'js', '-O4', entryPoint, '-o', output]);
 
   return ['node', output];
 }
 
+/// `-O2` matches the gate here too, and unlike dart2js the level barely
+/// matters: cold parsing moves by one to three per cent between `-O1` and
+/// `-O4`, because dart2wasm keeps its checks either way.
+///
 /// dart2wasm emits a module plus a JavaScript loader, and neither starts on
 /// its own: something has to read the bytes, instantiate, and call `main`.
 /// That host is written here rather than committed, because it is three lines
