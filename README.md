@@ -168,8 +168,9 @@ For finite `double` values in the benchmark scenarios,
 `DoubleFormatMode.dartSdk` is faster than compatible mode or falls within the
 default 5% equivalence threshold. The report prints both formatted results and
 median times; this performance conclusion does not include `NaN` or
-`Infinity`. VS Code also provides the **Benchmark: double modes** launch
-configuration.
+`Infinity`, and it is measured on the Dart VM — the benchmark runs there, and
+the two modes have not been compared under dart2js. VS Code also provides the
+**Benchmark: double modes** launch configuration.
 
 In Dart SDK mode, non-finite values are `NaN` and `Infinity` by default. Their
 short spellings can be selected independently; compatible mode always uses
@@ -396,11 +397,27 @@ entries.
 
 ## Template cache
 
-Parsed templates are cached, which is what makes repeated formatting cheap:
-in the package's own benchmark a first call costs roughly two to three times a
-cached one, depending on the mini-language. The cache is bounded, because
-templates can come from data and an unbounded cache would be an unbounded
-leak.
+Parsed templates are cached, which is what makes repeated formatting cheap.
+How much cheaper depends on the template, and the spread is wide: parsing is
+paid per template, while formatting is paid per field, so the denser the
+template the smaller the share parsing takes. Measured on the package's own
+benchmark, a first call costs this much more than a cached one:
+
+| template | Dart VM | dart2js |
+|---|---|---|
+| `literal {}` | 4.5× | 14.1× |
+| ten `{i:d}` fields | 20.6× | 21.5× |
+| five `%d` conversions | 4.3× | 8.1× |
+| fifty `%d` conversions | 5.1× | 7.7× |
+
+The two runtimes differ, and not in the direction the table might suggest at a
+glance: under dart2js parsing is dearer than on the VM while formatting is
+cheaper, so it is the cached call that pulls the quotient up. The cache is
+therefore worth more on the web, not less. Figures quoted anywhere in this
+README are measured on the Dart VM unless a runtime is named.
+
+The cache is bounded, because templates can come from data and an unbounded
+cache would be an unbounded leak.
 
 ```dart
 templateCacheCapacity;     // 512 entries by default, per mini-language
