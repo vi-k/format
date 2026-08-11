@@ -461,6 +461,45 @@ caching would only pay to evict:
 templateCacheCapacity = 0;  // discards what is cached, and keeps nothing
 ```
 
+### When to turn it off
+
+What decides is not how often a template repeats but whether the working set
+fits inside both bounds. If it fits, the cache pays for itself almost at once;
+if it does not, it never pays at all, at any repetition rate — an entry is
+evicted before the workload comes back to it. Measured as cached time over
+uncached time, so below 1 means the cache is winning:
+
+| distinct templates | shape | ×1 | ×2 | ×3 | ×5 | ×10 |
+|---|---|---|---|---|---|---|
+| inside the bounds | ten `{i:>8,d}` fields | 1.16 | **0.66** | 0.50 | 0.36 | 0.26 |
+| inside the bounds | ten `{}` fields | 1.47 | **0.93** | 0.69 | 0.54 | 0.45 |
+| inside the bounds | one literal, no fields | 5.82 | 1.85 | 1.40 | 1.04 | **0.68** |
+| past the bounds | ten `{i:>8,d}` fields | 1.34 | 1.30 | 1.28 | 1.33 | 1.30 |
+| past the bounds | ten `{}` fields | 1.75 | 1.58 | 1.57 | 1.52 | 1.48 |
+| past the bounds | one literal, no fields | 8.17 | 4.52 | 5.10 | 4.04 | 3.95 |
+
+So a template with fields repays its own caching on the second use, and a
+template that is nothing but literal text takes until about the seventh —
+there is nothing to parse there, while the cache still charges two table
+operations. The rows past the bounds are flat, which is the point: repetition
+buys nothing once the set no longer fits.
+
+Before turning the cache off, weigh raising both bounds so that the set does
+fit — and size that with `templateCacheMemory` rather than by eye, because
+capacity alone will not do it. What an entry holds depends on its shape far
+more than on its length:
+
+| shape | per entry | fit in the default 8 MiB |
+|---|---|---|
+| one literal, no fields | 5 bytes | about 1 750 000 |
+| ten `{}` fields | about 1.7 KiB | about 5 000 |
+| ten `{i:>8,d}` fields | about 5 KiB | about 1 640 |
+
+A template with no fields is its own output and holds only the key, which is
+why it is nearly free to cache and also the one shape least worth caching.
+A field-dense template holds a parse node per field, so raising the capacity
+to 8192 without raising the memory limit leaves it evicting exactly as before.
+
 Lowering either bound discards entries immediately, rather than at the next
 insertion.
 
