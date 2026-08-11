@@ -55,6 +55,32 @@ void main() {
     }
   });
 
+  // Indexes up to fifteen digits are computed by arithmetic and wider ones
+  // through BigInt, because the short path is three allocations cheaper and
+  // fifteen digits still fit a JavaScript double exactly. That split is an
+  // implementation detail and must stay one: the values either side of it are
+  // reported identically, and a template does not get to notice where the
+  // parser changed its mind. Checked through `key`, which carries the parsed
+  // number rather than the digits it came from.
+  test('reads the same index either side of the arithmetic cutoff', () {
+    for (final crossing
+        in const {
+          '999999999999999': 999999999999999, // fifteen digits
+          '1000000000000000': 1000000000000000, // sixteen, the wide path
+          '0000000000000000005': 5, // nineteen digits, all but one a zero
+        }.entries) {
+      final digits = crossing.key;
+      final value = crossing.value;
+      try {
+        formatWith('{$digits}');
+        fail('expected a missing argument for $digits');
+      } on MissingFormatArgumentException catch (error) {
+        expect(error.key, value, reason: digits);
+        expect(error.context.fragment, '{$digits}', reason: digits);
+      }
+    }
+  });
+
   test('rejects an unbounded digit run without parsing it as a number', () {
     // A template is untrusted input, so the cost of rejecting it must not
     // scale with the size of the number it spells.

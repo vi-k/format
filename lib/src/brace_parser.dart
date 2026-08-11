@@ -16,6 +16,11 @@ final class _BraceParser {
   /// without being parsed.
   static const _maximumIndexDigits = 19;
 
+  /// The widest index that plain `int` arithmetic gets exactly right on both
+  /// number models: 10^15 is under 2^53, so a dart2js double still names every
+  /// value below it, and it is far under 2^63.
+  static const _exactIndexDigits = 15;
+
   final String template;
   var _index = 0;
   var _numberingMode = _NumberingMode.unset;
@@ -402,7 +407,24 @@ final class _BraceParser {
     while (start < digits.length - 1 && digits[start] == 0) {
       start++;
     }
-    if (digits.length - start <= _maximumIndexDigits) {
+    final significant = digits.length - start;
+    // Almost every index in a real template is one or two digits, and the wide
+    // path costs three allocations to say so: a lazy iterable, the string it
+    // joins to, and the BigInt parsed out of it. Up to fifteen digits the
+    // value fits a JavaScript double exactly as well as it fits a 64-bit int,
+    // so plain arithmetic gets the same answer on every platform with none of
+    // them. Wider indexes stay on the old path rather than being reasoned
+    // about: they cannot occur in a template anyone meant to write, and the
+    // point of keeping them identical is that the boundary is not a behaviour.
+    if (significant <= _exactIndexDigits) {
+      var value = 0;
+      for (var index = start; index < digits.length; index++) {
+        value = value * 10 + digits[index];
+      }
+
+      return value;
+    }
+    if (significant <= _maximumIndexDigits) {
       final value = BigInt.parse(digits.skip(start).join());
       if (value <= _maximumIndex) return value.toInt();
     }
