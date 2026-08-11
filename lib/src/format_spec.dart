@@ -42,12 +42,37 @@ _FormatSpec _parseFormatSpec(
   return _parseFormatSpecGeneral(source, textUnit, context);
 }
 
+/// The units of [source], for the specification parser's own use.
+///
+/// [TextUnitOperations.split] is public and hands its caller a defensive
+/// copy — a lazy iterable mapped into a growable list and then wrapped
+/// unmodifiable, so two copies and a wrapper. The parser needs none of that:
+/// it reads the list once, never mutates it and never keeps it, and it runs on
+/// every specification of every template parsed.
+///
+/// Nearly every specification is ASCII, and there one unit is one code unit
+/// under both text units alike — no scalar spans two units, no cluster spans
+/// two scalars — so the whole split is a fixed-length list of single
+/// characters. Anything else falls back to the public split rather than
+/// reimplementing what it means to be a grapheme cluster.
+List<String> _specificationUnits(String source, TextUnit textUnit) {
+  for (var index = 0; index < source.length; index++) {
+    if (source.codeUnitAt(index) >= 0x80) return textUnit.split(source);
+  }
+
+  return List<String>.generate(
+    source.length,
+    (index) => source[index],
+    growable: false,
+  );
+}
+
 _FormatSpec _parseFormatSpecGeneral(
   String source,
   TextUnit textUnit,
   FormatExceptionContext context,
 ) {
-  final units = textUnit.split(source);
+  final units = _specificationUnits(source, textUnit);
   var index = 0;
   String? fill;
   String? align;
