@@ -126,6 +126,18 @@ final _compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
 String format(String template, Object? value) =>
     _compatibleFormat.format(template, value);
 
+/// Where an integral `double` *is* an `int`, so a bare `{}` on `1.0` prints
+/// `1` rather than `1.0`: dart2js, and only dart2js — dart2wasm keeps the two
+/// types apart like the VM does.
+///
+/// The four tests keyed off this assert the VM's spelling of integral doubles,
+/// which is not a claim about the engine but about the platform's number
+/// model. The web side of that divergence is not skipped, it is pinned:
+/// `js_number_dispatch_test.dart` asserts both answers side by side, which is
+/// where a reader should look for what the web actually does.
+const _integralDoublesAreInts =
+    identical(1, 1.0) ? 'dart2js prints integral doubles as ints' : false;
+
 void main() {
   // Ties to even, and what a "tie" actually is. 2.5 and −2.5 are exact, so both
   // round to 2; 1.25 is exact and rounds down while 1.35 is not exact and
@@ -193,15 +205,19 @@ void main() {
   // down to 1e-4 and up to 1e16, exponential outside. `1.0` keeps its `.0` so
   // the result still looks like a double, and negative zero keeps its sign. The
   // two pairs at the boundaries are where an off-by-one threshold shows.
-  test('default double uses Python shortest policy', () {
-    expect(format('{}', 1.23456789), '1.23456789');
-    expect(format('{}', 1.0), '1.0');
-    expect(format('{}', -0.0), '-0.0');
-    expect(format('{}', 0.0001), '0.0001');
-    expect(format('{}', 0.00001), '1e-05');
-    expect(format('{}', 999999999999999.0), '999999999999999.0');
-    expect(format('{}', 1e16), '1e+16');
-  });
+  test(
+    'default double uses Python shortest policy',
+    skip: _integralDoublesAreInts,
+    () {
+      expect(format('{}', 1.23456789), '1.23456789');
+      expect(format('{}', 1.0), '1.0');
+      expect(format('{}', -0.0), '-0.0');
+      expect(format('{}', 0.0001), '0.0001');
+      expect(format('{}', 0.00001), '1e-05');
+      expect(format('{}', 999999999999999.0), '999999999999999.0');
+      expect(format('{}', 1e16), '1e+16');
+    },
+  );
 
   // The three values where binary64 stops behaving uniformly: the smallest
   // subnormal, the smallest normal, and the largest finite. Subnormals have
@@ -252,15 +268,19 @@ void main() {
   // `1.2e+01`: two significant digits cannot express 12 in fixed notation. The
   // grouping case also shows padding fitted to the grouped length, as with
   // integers.
-  test('applies Python empty-type options to shortest digits', () {
-    expect(format('{:#}', 1e-5), '1.e-05');
-    expect(format('{:08,}', 1e-5), '0,001e-05');
-    expect(format('{:.2}', 1.234), '1.2');
-    expect(format('{:.2}', 1.0), '1.0');
-    expect(format('{:.1}', 0.0), '0e+00');
-    expect(format('{:.2}', 12.0), '1.2e+01');
-    expect(format('{:.3}', 12.0), '12.0');
-  });
+  test(
+    'applies Python empty-type options to shortest digits',
+    skip: _integralDoublesAreInts,
+    () {
+      expect(format('{:#}', 1e-5), '1.e-05');
+      expect(format('{:08,}', 1e-5), '0,001e-05');
+      expect(format('{:.2}', 1.234), '1.2');
+      expect(format('{:.2}', 1.0), '1.0');
+      expect(format('{:.1}', 0.0), '0e+00');
+      expect(format('{:.2}', 12.0), '1.2e+01');
+      expect(format('{:.3}', 12.0), '12.0');
+    },
+  );
 
   // `z` asks for "no negative zero in the output", which is a statement about
   // the *printed* value, not the input: −0.0001 at three fixed digits rounds to
@@ -362,27 +382,35 @@ void main() {
   // signs, and — unique to doubles — the exponent separator, which is a whole
   // string here (`×10^`) rather than a letter, with its own sign localized
   // after it. The padded case does all of that at once over a fitted width.
-  test('formats double n through every locale callback', () {
-    final localized = Format(
-      numberLocale: _LocalizedNumberLocale(),
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
-    expect(localized.format('{:n}', 1234567.5), '١,٢٣٤٥٧×10^＋٠٦');
-    expect(localized.format('{:+n}', 1e20), '＋١×10^＋٢٠');
-    expect(localized.format('{:012n}', -1234.5), '−٠٠.٠١.٢٣٤,٥');
-  });
+  test(
+    'formats double n through every locale callback',
+    skip: _integralDoublesAreInts,
+    () {
+      final localized = Format(
+        numberLocale: _LocalizedNumberLocale(),
+        doubleFormatMode: DoubleFormatMode.compatible,
+      );
+      expect(localized.format('{:n}', 1234567.5), '١,٢٣٤٥٧×10^＋٠٦');
+      expect(localized.format('{:+n}', 1e20), '＋١×10^＋٢٠');
+      expect(localized.format('{:012n}', -1234.5), '−٠٠.٠١.٢٣٤,٥');
+    },
+  );
 
   // A contract on what the engine hands the locale: runs of ASCII digits, and
   // never an empty one. `1e+20` has three separate runs with punctuation
   // between them, so a naive splitter produces empty pieces — this locale
   // throws on one, which turns a silent contract into a failing test.
-  test('passes only non-empty ASCII digit runs to locale localization', () {
-    final configured = Format(
-      numberLocale: _NonEmptyDigitsLocale(),
-      doubleFormatMode: DoubleFormatMode.compatible,
-    );
-    expect(configured.format('{:n}', 1e20), '1e+20');
-  });
+  test(
+    'passes only non-empty ASCII digit runs to locale localization',
+    skip: _integralDoublesAreInts,
+    () {
+      final configured = Format(
+        numberLocale: _NonEmptyDigitsLocale(),
+        doubleFormatMode: DoubleFormatMode.compatible,
+      );
+      expect(configured.format('{:n}', 1e20), '1e+20');
+    },
+  );
 
   // The same extension-failure contract as on the integer side, through a
   // different callback: the double path reaches `decimalSeparator`, which the

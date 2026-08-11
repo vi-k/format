@@ -161,13 +161,9 @@ CPython 3.14 и компилятор C++23; на машине без них за
 
 ```sh
 dart format . && dart analyze --fatal-infos lib test example tool
-dart test                                    # 555 тестов
-dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart \
-  test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart \
-  test/js_number_dispatch_test.dart          # 82 теста
-dart test -p node -c dart2wasm test/char_sink_test.dart \
-  test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart \
-  test/js_number_dispatch_test.dart          # 61 тест, ~10 с
+dart test                                    # VM, 555 тестов
+dart test -p node                            # dart2js, 376 + 4 пропущено, ~12 с
+dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 359, ~7 с
 dart test benchmark/test tool/test           # 42 теста, ~50 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
@@ -177,9 +173,10 @@ dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
 # покрытие 95.27%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
-(cd benchmark/suite && dart run bin/benchmark.dart) # матрица, ~60 с
-# Тот же сьют под другими рантаймами (в список проверок не входит):
-# (cd benchmark/suite && dart run tool/run.dart --runtime=js|wasm [--bin=...])
+(cd benchmark/suite && dart run tool/run.dart --runtime=vm)   # матрица, ~60 с
+(cd benchmark/suite && dart run tool/run.dart --runtime=js)   # ~70 с
+(cd benchmark/suite && dart run tool/run.dart --runtime=wasm) # ~70 с
+# У tool/run.dart есть --bin=comparison|template_ir|double_modes|list_snapshot
 ```
 
 У обоих новых инструментов есть `--self-test`: он проверяет саму сверку
@@ -614,10 +611,26 @@ wasm и **656 нс** под dart2js — а быстрейшая стратеги
   только явное `{:name}`. Это регулярно ломает наивные пробы: чтобы
   дотянуться до расширения без спецификатора, нужен тип, которого движок
   не знает (`Object()`).
-- **VM-only тесты**: `integer_format_test.dart`, `sprintf_integer_test.dart`,
-  `template_ir_vm_test.dart` — литералы за 2^63 не компилируются dart2js.
-  У всех трёх стоит `@TestOn('vm')`, так что под node они пропускаются,
-  а не падают на компиляции; до PR #27 это держалось на комментарии здесь.
+- **Тесты гоняются на трёх рантаймах целиком, а не выборкой файлов.**
+  Выборка и была тем, что спрятало дефект: под wasm не гонялось ничего, а
+  под dart2js — пять файлов из тридцати. С 2026-08-11 в проверках и в CI
+  стоят три полных прогона. Что рантайм действительно не может, сказано в
+  самом файле, и способов ровно три:
+  - `@TestOn('vm')` на файле — фикстуры суть файлы (`python_compatibility`,
+    `sprintf_compatibility`, `repository`) или литералы за 2^63 не
+    компилируются dart2js (`integer_format`, `sprintf_integer`,
+    `template_ir_vm`);
+  - `skip:` на тесте — утверждение пинит числовую модель VM. Четыре таких в
+    `double_format_test.dart`; веб-сторона не пропущена, а закреплена в
+    `js_number_dispatch_test.dart`, где оба ответа стоят рядом;
+  - тег `no-dart2wasm` — единственный файл, `template_ir_compile_test.dart`,
+    падает под wasm внутри `package:test` (`Uri.base`), а не в пакете:
+    по одному и парами его тесты проходят. Теги объявлены в `dart_test.yaml`,
+    иначе опечатка в теге молча выбрала бы пустое множество.
+
+  Четвёртого способа быть не должно: если рантайм не может чего-то, это
+  свойство рантайма и его место — рядом с утверждением, а не в списке
+  команд.
 - **Покрытие меряется только на VM** и 100 % выразить не может: сбор идёт
   через VM service, которого у вывода dart2js нет, поэтому веб-ветки
   (`_isWeb`) там недостижимы **по построению**. Отсюда `char_sink.dart`

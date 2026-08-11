@@ -18,7 +18,10 @@
 /// a README anchor that resolves against the actual headings. That is what
 /// keeps "we differ here, see the README" from becoming a broken promise.
 ///
+///
 /// VM-only in practice: it reads the fixture and registry files from disk.
+/// VM-only for the same reason as the Python side: the fixtures are files.
+@TestOn('vm')
 library;
 
 import 'dart:convert';

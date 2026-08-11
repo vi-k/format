@@ -24,9 +24,16 @@
 /// bug would quietly weaken every fixture case at once, so it is checked
 /// directly — including that it rejects malformed input rather than guessing.
 ///
+///
 /// VM-only in practice: it reads the fixture files from disk. The one
 /// divergence whose Dart side exists only on the web is exempted by name and
 /// pinned in `js_number_dispatch_test.dart` instead.
+/// VM-only, and annotated as such: the fixtures are files, and finding them
+/// means asking the filesystem where the repository is. What the file checks —
+/// that the package agrees with CPython, and that every documented divergence
+/// still holds — is a property of the engine, not of the runtime, so the web
+/// backends lose nothing by skipping it.
+@TestOn('vm')
 library;
 
 import 'dart:convert';

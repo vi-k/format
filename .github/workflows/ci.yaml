@@ -57,31 +57,23 @@ jobs:
         run: dart analyze --fatal-infos lib test example tool
       - name: Tests (VM, includes dart2js/AOT/node runners)
         run: dart test
-      - name: Tests (node platform)
+      # The whole suite on both web backends, not a hand-picked list of files.
+      # The list was the thing that hid a defect: dart2wasm is the third
+      # web-shaped target and it does not answer like dart2js, because its
+      # integers are real 64-bit ones. Exactly that combination — the web
+      # string path over 64-bit integers — printed `--9223372036854775808` for
+      # the minimum int, and no job here could see it.
+      #
+      # What a backend genuinely cannot run says so in the file: `@TestOn('vm')`
+      # where the fixtures are files, `skip:` where an assertion pins the VM's
+      # number model, and the `no-dart2wasm` tag on the one file that crashes
+      # inside `package:test` rather than in this package.
+      - name: Tests (node platform, dart2js)
         if: matrix.sdk == 'stable'
-        run: >-
-          dart test -p node
-          test/char_sink_test.dart
-          test/template_ir_compile_test.dart
-          test/template_ir_diff_test.dart
-          test/template_ir_fuzz_test.dart
-          test/js_number_dispatch_test.dart
-      # dart2wasm is the third web-shaped target and it does not answer like
-      # dart2js: its integers are real 64-bit ones. A defect that needed
-      # exactly that combination — the web string path over 64-bit integers —
-      # printed `--9223372036854775808` for the minimum int and was invisible
-      # to every job above. `template_ir_compile_test.dart` is left out: it
-      # passes here in subsets and crashes as a whole inside `package:test`'s
-      # own path handling, and what it asserts (which op a spec compiles to)
-      # does not vary by runtime.
+        run: dart test -p node
       - name: Tests (node platform, dart2wasm)
         if: matrix.sdk == 'stable'
-        run: >-
-          dart test -p node -c dart2wasm
-          test/char_sink_test.dart
-          test/template_ir_diff_test.dart
-          test/template_ir_fuzz_test.dart
-          test/js_number_dispatch_test.dart
+        run: dart test -p node -c dart2wasm -x no-dart2wasm
       - name: Tests (harness, outside the published archive)
         if: matrix.sdk == 'stable'
         run: dart test benchmark/test tool/test
@@ -190,6 +182,19 @@ jobs:
         run: dart analyze --fatal-infos
       - name: Tests (benchmark suite)
         run: dart test
+        working-directory: benchmark/suite
+      # The matrix itself on all three runtimes. Nobody reads these numbers in
+      # CI — the point is that the suite still starts everywhere, since two of
+      # the three paths compile the package afresh and only ever break at the
+      # compiler. Quick mode; a measurement worth recording is the gate's job.
+      - name: Comparison matrix (Dart VM)
+        run: dart run tool/run.dart --runtime=vm
+        working-directory: benchmark/suite
+      - name: Comparison matrix (dart2js)
+        run: dart run tool/run.dart --runtime=js
+        working-directory: benchmark/suite
+      - name: Comparison matrix (dart2wasm)
+        run: dart run tool/run.dart --runtime=wasm
         working-directory: benchmark/suite
 
   performance-gate:

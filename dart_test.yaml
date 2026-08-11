@@ -1,0 +1,8 @@
+# Tags used by the suite, declared so that a typo in one is an error rather
+# than a silently empty selection.
+tags:
+  # Runs everywhere except dart2wasm. Not a statement about the package: the
+  # one file carrying it passes there in subsets and crashes as a whole inside
+  # `package:test`'s own path handling, and what it asserts does not vary by
+  # runtime. The wasm command excludes it with `-x no-dart2wasm`.
+  no-dart2wasm:

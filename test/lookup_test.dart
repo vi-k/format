@@ -81,6 +81,25 @@ final class ThrowingLookup extends AttributeLookup<Person> {
       Error.throwWithStackTrace(error, stackTrace);
 }
 
+/// The original stack trace, as far as the running platform lets it be
+/// compared.
+///
+/// `Error.throwWithStackTrace` hands a trace to the throw and `catch` hands one
+/// back. On the VM and under dart2wasm that is the same object, so identity is
+/// the sharpest thing to assert and the one that catches a rethrow. Under
+/// dart2js the trace makes the round trip through a JavaScript error and comes
+/// back as an equal but distinct wrapper, so identity there would pin the
+/// platform rather than the package. What the contract is actually about — the
+/// frames belong to the caller, not to the engine — survives either way, and
+/// that is what is checked when identity is unavailable.
+Matcher _carries(StackTrace original) =>
+    identical(1, 1.0)
+        ? predicate<StackTrace>(
+          (trace) => trace.toString() == original.toString(),
+          'carries the frames of the original stack trace',
+        )
+        : same(original);
+
 void main() {
   // The built-in resolutions in one template: an index into a positional list,
   // a named root, and both step kinds on a `Map` — where `.name` and
@@ -267,7 +286,7 @@ void main() {
         fail('expected extension error');
       } on FormatExtensionException catch (error) {
         expect(error.error, same(originalError));
-        expect(error.stackTrace, same(originalStack));
+        expect(error.stackTrace, _carries(originalStack));
         expect(error.extension, 'ThrowingCanLookup');
         expect(error.context.fragment, '{person.name}');
       }
@@ -292,7 +311,7 @@ void main() {
       fail('expected extension error');
     } on FormatExtensionException catch (error) {
       expect(error.error, same(originalError));
-      expect(error.stackTrace, same(originalStack));
+      expect(error.stackTrace, _carries(originalStack));
       expect(error.extension, 'ThrowingLookup');
       expect(error.context.fragment, '{person.name}');
     }

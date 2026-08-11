@@ -24,6 +24,13 @@
 /// Two tests here compare the IR against the legacy path directly. They are a
 /// smoke check; the real comparison happens at scale in `template_ir_diff_test`
 /// and `template_ir_fuzz_test`.
+///
+/// Tagged `no-dart2wasm`, and not because the package misbehaves there: run one
+/// or two of these under dart2wasm and they pass, run the file and it crashes
+/// inside `package:test`'s own path handling (`Uri.base`). What the file
+/// asserts — which op a specification compiles to — is a property of the
+/// compiler, not of the runtime, and the VM and dart2js both run it.
+@Tags(['no-dart2wasm'])
 library;
 
 import 'package:format/src/engine.dart';
