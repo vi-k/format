@@ -266,3 +266,4 @@ jobs:
             jit-*.json
             aot-*.json
             js-*.json
+            wasm-*.json
