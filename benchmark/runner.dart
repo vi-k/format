@@ -277,24 +277,35 @@ _ScenarioOperations _calibrateScenario(
 /// trial is noisy, so growth is held between doubling and eightfold: that
 /// converges in a few trials without letting one slow reading pick an
 /// enormous count. Calibration doubles as extra warm-up.
+///
+/// Each trial is timed twice and the shorter reading is kept, which corrects
+/// two errors that push the same way. Noise only ever adds time, so of two
+/// readings of the same work the smaller is the honest one; and the second
+/// reading runs on a warmer JIT than the first, which is the state every
+/// recorded round will actually be in. Both make a single first reading an
+/// overestimate, and an overestimated trial ends calibration early — leaving
+/// every recorded round too short for the clock to resolve. That failure is
+/// quiet: the numbers still look like numbers, only noisier. A shared runner
+/// produced exactly it, landing a round at half the length it was calibrated
+/// for.
 int _calibrate(
   BenchmarkScenario scenario,
   BenchmarkOperation operation,
   int target,
 ) {
+  final throwing = scenario.expected is ErrorOutcome;
   var operations = _minimumOperations;
   while (true) {
-    final round = _timeRound(
-      operation,
-      0,
-      operations,
-      throwing: scenario.expected is ErrorOutcome,
-    );
-    // Calibration rounds are rounds: an operation that stops doing its work
-    // is caught here, before it has been extrapolated into an operation count
-    // that then looks merely fast.
-    _verifyChecksum(scenario, operations, round.checksum);
-    final elapsed = round.elapsedNanoseconds;
+    var elapsed = 0;
+    for (var probe = 0; probe < 2; probe++) {
+      final round = _timeRound(operation, 0, operations, throwing: throwing);
+      // Calibration rounds are rounds: an operation that stops doing its work
+      // is caught here, before it has been extrapolated into an operation
+      // count that then looks merely fast.
+      _verifyChecksum(scenario, operations, round.checksum);
+      final probed = round.elapsedNanoseconds;
+      if (probe == 0 || probed < elapsed) elapsed = probed;
+    }
     if (elapsed >= target || operations >= _maximumOperations) {
       return operations;
     }
