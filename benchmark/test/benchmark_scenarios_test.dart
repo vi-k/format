@@ -84,8 +84,14 @@ void main() {
         '9007199254740991',
       ),
     );
-    expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
-    expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
+    expect(
+      outcomesEqual(captureOutcome(scenario.candidate, 0), scenario.expected),
+      isTrue,
+    );
+    expect(
+      outcomesEqual(captureOutcome(scenario.baseline!, 0), scenario.expected),
+      isTrue,
+    );
   });
 
   // These four exist for one property, and it is not visible in the strings
@@ -144,8 +150,14 @@ void main() {
         '12345678901234.57',
       ),
     );
-    expect(outcomesEqual(scenario.candidate(0), scenario.expected), isTrue);
-    expect(outcomesEqual(scenario.baseline!(0), scenario.expected), isTrue);
+    expect(
+      outcomesEqual(captureOutcome(scenario.candidate, 0), scenario.expected),
+      isTrue,
+    );
+    expect(
+      outcomesEqual(captureOutcome(scenario.baseline!, 0), scenario.expected),
+      isTrue,
+    );
   });
 
   // The two double profiles are separate measurements even for the same value,
@@ -167,8 +179,17 @@ void main() {
       compatible.expected,
       isA<TextOutcome>().having((value) => value.value, 'value', '2'),
     );
-    expect(outcomesEqual(dart.candidate(0), dart.expected), isTrue);
-    expect(outcomesEqual(compatible.candidate(0), compatible.expected), isTrue);
+    expect(
+      outcomesEqual(captureOutcome(dart.candidate, 0), dart.expected),
+      isTrue,
+    );
+    expect(
+      outcomesEqual(
+        captureOutcome(compatible.candidate, 0),
+        compatible.expected,
+      ),
+      isTrue,
+    );
   });
 
   // A cold scenario measures parsing, which only happens once per template —
@@ -369,8 +390,7 @@ void main() {
     );
     expect(scenario.referenceKind, BenchmarkReferenceKind.golden);
     expect(scenario.referenceLabel, 'golden-intl:kk_KZ:1234');
-    final outcome = scenario.baseline!(0);
-    expect((outcome as TextOutcome).value, '1\u00a0234');
+    expect(scenario.baseline!(0), '1\u00a0234');
   });
 
   // Where the comparator has no equivalent conversion there is nothing to
@@ -494,8 +514,8 @@ void main() {
       keyScenario: false,
       expected: const TextOutcome('candidate'),
       templateFor: (_) => 'ignored',
-      candidate: (_) => const TextOutcome('candidate'),
-      baseline: (_) => const TextOutcome('baseline'),
+      candidate: (_) => 'candidate',
+      baseline: (_) => 'baseline',
     );
 
     expect(
@@ -511,6 +531,86 @@ void main() {
       ),
       throwsA(isA<StateError>()),
     );
+  });
+
+  // The output check above runs once, on iteration 0. Everything after it is
+  // timed and, until the checksum, unobserved — so a round that produced
+  // nothing, or produced something other than what iteration 0 promised, was
+  // indistinguishable from a fast one. That is the shape dead-code
+  // elimination would take if a compiler ever took it: numbers that still
+  // look like numbers. The scenario below passes validation and then changes
+  // its answer, which is the closest a test can come to being elided.
+  test('runner refuses a round whose output does not add up', () {
+    var call = 0;
+    final scenario = BenchmarkScenario(
+      id: 'test.elided.hot',
+      comparisonKind: BenchmarkComparisonKind.informational,
+      dialect: BenchmarkDialect.braces,
+      phase: BenchmarkPhase.hot,
+      keyScenario: false,
+      expected: const TextOutcome('candidate'),
+      templateFor: (_) => 'ignored',
+      candidate: (_) => call++ == 0 ? 'candidate' : '',
+    );
+
+    expect(
+      () => runBenchmark(
+        const BenchmarkRunOptions(
+          dialect: BenchmarkDialect.braces,
+          phase: BenchmarkPhase.hot,
+          run: 1,
+          samples: 1,
+          smoke: true,
+        ),
+        scenarios: [scenario],
+      ),
+      throwsA(
+        isA<StateError>().having(
+          (error) => error.message,
+          'message',
+          contains('checksum'),
+        ),
+      ),
+    );
+  });
+
+  // The counterpart: a scenario that keeps its promise measures cleanly, and
+  // an error scenario satisfies the checksum by throwing every time rather
+  // than by producing text. Without this the test above would pass against a
+  // checksum that rejected everything.
+  test('checksum admits steady text and steady throwing', () {
+    const options = BenchmarkRunOptions(
+      dialect: BenchmarkDialect.braces,
+      phase: BenchmarkPhase.hot,
+      run: 1,
+      samples: 1,
+      smoke: true,
+    );
+    final steady = BenchmarkScenario(
+      id: 'test.steady.hot',
+      comparisonKind: BenchmarkComparisonKind.informational,
+      dialect: BenchmarkDialect.braces,
+      phase: BenchmarkPhase.hot,
+      keyScenario: false,
+      expected: const TextOutcome('candidate'),
+      templateFor: (_) => 'ignored',
+      candidate: (_) => 'candidate',
+    );
+    final throwing = BenchmarkScenario(
+      id: 'test.throwing.hot',
+      comparisonKind: BenchmarkComparisonKind.informational,
+      dialect: BenchmarkDialect.braces,
+      phase: BenchmarkPhase.hot,
+      keyScenario: false,
+      expected: const ErrorOutcome('StateError'),
+      templateFor: (_) => 'ignored',
+      candidate: (_) => throw StateError('always'),
+    );
+
+    for (final scenario in [steady, throwing]) {
+      final report = runBenchmark(options, scenarios: [scenario]);
+      expect(report.scenarios.single.scenarioId, scenario.id);
+    }
   });
 
   // The harness compiled under dart2js and run for real: a scenario that fails

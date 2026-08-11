@@ -54,7 +54,19 @@ bool outcomesEqual(BenchmarkOutcome first, BenchmarkOutcome second) => switch ((
   _ => false,
 };
 
-typedef BenchmarkOperation = BenchmarkOutcome Function(int iteration);
+/// One measured operation: the call itself, returning the text it produced.
+///
+/// Deliberately not an outcome. Wrapping every call in a try/catch and an
+/// allocated [TextOutcome] is what the harness used to measure alongside the
+/// call, and on the VM that shape cost up to 26% of a fast candidate against
+/// 2% of a slow comparator — an overhead the printed ratio then carried. The
+/// outcome is still built, but once per scenario, at validation, where its
+/// cost buys the check that the two engines agree.
+///
+/// A scenario whose expected outcome is an [ErrorOutcome] throws instead of
+/// returning, and the runner times it inside a catch: there the frame is not
+/// overhead but the thing being measured.
+typedef BenchmarkOperation = String Function(int iteration);
 
 final class BenchmarkScenario {
   final String id;

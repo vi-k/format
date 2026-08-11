@@ -232,7 +232,7 @@ BenchmarkReport runBenchmark(
 }
 
 void _validateScenario(BenchmarkScenario scenario) {
-  final candidate = scenario.candidate(0);
+  final candidate = captureOutcome(scenario.candidate, 0);
   if (!outcomesEqual(candidate, scenario.expected)) {
     throw StateError(
       '${scenario.id}: candidate produced ${candidate.toJson()}, '
@@ -241,7 +241,7 @@ void _validateScenario(BenchmarkScenario scenario) {
   }
   final baseline = scenario.baseline;
   if (baseline == null) return;
-  final reference = baseline(0);
+  final reference = captureOutcome(baseline, 0);
   if (!outcomesEqual(reference, scenario.expected)) {
     throw StateError(
       '${scenario.id}: reference produced ${reference.toJson()}, '
@@ -266,8 +266,8 @@ _ScenarioOperations _calibrateScenario(
   final target = benchmarkTargetRoundNanoseconds(smoke: smoke);
 
   return _ScenarioOperations(
-    _calibrate(scenario.candidate, target),
-    baseline == null ? null : _calibrate(baseline, target),
+    _calibrate(scenario, scenario.candidate, target),
+    baseline == null ? null : _calibrate(scenario, baseline, target),
   );
 }
 
@@ -277,10 +277,24 @@ _ScenarioOperations _calibrateScenario(
 /// trial is noisy, so growth is held between doubling and eightfold: that
 /// converges in a few trials without letting one slow reading pick an
 /// enormous count. Calibration doubles as extra warm-up.
-int _calibrate(BenchmarkOperation operation, int target) {
+int _calibrate(
+  BenchmarkScenario scenario,
+  BenchmarkOperation operation,
+  int target,
+) {
   var operations = _minimumOperations;
   while (true) {
-    final elapsed = _timeRound(operation, 0, operations);
+    final round = _timeRound(
+      operation,
+      0,
+      operations,
+      throwing: scenario.expected is ErrorOutcome,
+    );
+    // Calibration rounds are rounds: an operation that stops doing its work
+    // is caught here, before it has been extrapolated into an operation count
+    // that then looks merely fast.
+    _verifyChecksum(scenario, operations, round.checksum);
+    final elapsed = round.elapsedNanoseconds;
     if (elapsed >= target || operations >= _maximumOperations) {
       return operations;
     }
@@ -297,14 +311,68 @@ int _calibrate(BenchmarkOperation operation, int target) {
   }
 }
 
-int _timeRound(BenchmarkOperation operation, int seed, int operations) {
+/// One round, timed, with a checksum of everything it produced.
+///
+/// Nothing else in the round is observable. A compiler entitled to notice
+/// that would be entitled to delete the call, and the report would keep
+/// printing plausible numbers for an empty loop — so the round consumes what
+/// each call returned and [_verifyChecksum] holds the total against what the
+/// scenario's expected outcome implies. No elision happens today on any of
+/// the three runtimes; that is luck, and this is the contract.
+///
+/// [throwing] belongs to scenarios whose expected outcome is an error. There
+/// the frame is not overhead but the measurement, and the count of throws is
+/// the checksum.
+({int elapsedNanoseconds, int checksum}) _timeRound(
+  BenchmarkOperation operation,
+  int seed,
+  int operations, {
+  required bool throwing,
+}) {
+  var checksum = 0;
   final stopwatch = Stopwatch()..start();
-  for (var index = 0; index < operations; index++) {
-    operation(seed + index);
+  if (throwing) {
+    for (var index = 0; index < operations; index++) {
+      try {
+        operation(seed + index);
+      } on Object {
+        checksum++;
+      }
+    }
+  } else {
+    for (var index = 0; index < operations; index++) {
+      checksum += operation(seed + index).length;
+    }
   }
   stopwatch.stop();
 
-  return stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency;
+  return (
+    elapsedNanoseconds:
+        stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency,
+    checksum: checksum,
+  );
+}
+
+/// Refuses a round whose output does not add up to what the scenario promised.
+///
+/// A hot scenario writes the same text every time, so its total is exact. A
+/// cold one suffixes the iteration, and the suffix only grows, so its total
+/// has a floor rather than a value. An error scenario throws once per
+/// operation and counts the throws.
+void _verifyChecksum(BenchmarkScenario scenario, int operations, int checksum) {
+  final expected = switch (scenario.expected) {
+    TextOutcome(:final value) => operations * value.length,
+    ErrorOutcome() => operations,
+  };
+  final exact = scenario.phase == BenchmarkPhase.hot;
+  if (exact ? checksum == expected : checksum >= expected) return;
+
+  throw StateError(
+    '${scenario.id}: a round of $operations operations produced a checksum '
+    'of $checksum, expected ${exact ? '' : 'at least '}$expected. The work '
+    'was elided, or the operation stopped producing what the scenario says '
+    'it produces.',
+  );
 }
 
 void _measureRound(
@@ -357,13 +425,21 @@ void _measure(
   bool record,
   List<BenchmarkSample> sink,
 ) {
-  final elapsed = _timeRound(operation, round * operations, operations);
+  final result = _timeRound(
+    operation,
+    round * operations,
+    operations,
+    throwing: scenario.expected is ErrorOutcome,
+  );
+  // Checked on every round, warm-up included: a round that measured nothing
+  // is worth catching where it happened, not after it has been averaged in.
+  _verifyChecksum(scenario, operations, result.checksum);
   if (!record) return;
   sink.add(
     BenchmarkSample(
       scenarioId: scenario.id,
       engine: engine,
-      elapsedNanoseconds: elapsed,
+      elapsedNanoseconds: result.elapsedNanoseconds,
       operations: operations,
       round: round,
     ),

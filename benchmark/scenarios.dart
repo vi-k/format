@@ -70,7 +70,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.text.scalars',
     template: _braceScalarTemplate,
     expected: const TextOutcome('e'),
-    candidate: (_) => _capture(() => format(_braceScalarTemplate, 'e\u0301')),
+    candidate: (_) => format(_braceScalarTemplate, 'e\u0301'),
   ),
   _braceComparable(
     'brace.text.graphemes_ascii',
@@ -167,13 +167,13 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.double.half_tie.dart',
     template: '{:.0f}',
     expected: const TextOutcome('3'),
-    candidate: (_) => _capture(() => format('{:.0f}', 2.5)),
+    candidate: (_) => format('{:.0f}', 2.5),
   ),
   _braceInformation(
     'brace.double.half_tie.compatible',
     template: '{:.0f}',
     expected: const TextOutcome('2'),
-    candidate: (_) => _capture(() => _compatibleFormat.format('{:.0f}', 2.5)),
+    candidate: (_) => _compatibleFormat.format('{:.0f}', 2.5),
   ),
   _braceComparable(
     'brace.grouping',
@@ -204,27 +204,23 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.auto_manual',
     template: '{} {1}',
     expected: const ErrorOutcome('InvalidFormatException'),
-    candidate: (_) => _capture(() => format('{} {1}', 'zero', 'one')),
+    candidate: (_) => format('{} {1}', 'zero', 'one'),
   ),
   _braceInformation(
     'brace.named',
     template: '{name}',
     expected: const TextOutcome('Ada'),
-    candidate:
-        (_) =>
-            _capture(() => formatWith('{name}', named: const {'name': 'Ada'})),
+    candidate: (_) => formatWith('{name}', named: const {'name': 'Ada'}),
   ),
   _braceInformation(
     'brace.mixed_named.hot.10',
     template: '{name} {} {} {} {} {} {} {} {} {}',
     expected: const TextOutcome('Ada 1 2 3 4 5 6 7 8 9'),
     candidate:
-        (_) => _capture(
-          () => formatWith(
-            '{name} {} {} {} {} {} {} {} {} {}',
-            positional: const [1, 2, 3, 4, 5, 6, 7, 8, 9],
-            named: const {'name': 'Ada'},
-          ),
+        (_) => formatWith(
+          '{name} {} {} {} {} {} {} {} {} {}',
+          positional: const [1, 2, 3, 4, 5, 6, 7, 8, 9],
+          named: const {'name': 'Ada'},
         ),
     fieldCount: 10,
   ),
@@ -233,17 +229,15 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{:.1s}',
     expected: const TextOutcome('e\u0301'),
     candidate:
-        (_) => _capture(
-          () => Format(
-            textUnit: TextUnit.graphemeClusters,
-          ).format('{:.1s}', 'e\u0301'),
-        ),
+        (_) => Format(
+          textUnit: TextUnit.graphemeClusters,
+        ).format('{:.1s}', 'e\u0301'),
   ),
   _braceInformation(
     'brace.double.exponential',
     template: '{:e}',
     expected: const TextOutcome('1.000000e+00'),
-    candidate: (_) => _capture(() => _compatibleFormat.format('{:e}', 1.0)),
+    candidate: (_) => _compatibleFormat.format('{:e}', 1.0),
   ),
   _braceComparable(
     'brace.double.general',
@@ -257,24 +251,22 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.percent',
     template: '{:.1%}',
     expected: const TextOutcome('12.5%'),
-    candidate: (_) => _capture(() => format('{:.1%}', .125)),
+    candidate: (_) => format('{:.1%}', .125),
   ),
   _braceInformation(
     'brace.equals_width',
     template: '{:=+08d}',
     expected: const TextOutcome('+0000042'),
-    candidate: (_) => _capture(() => format('{:=+08d}', 42)),
+    candidate: (_) => format('{:=+08d}', 42),
   ),
   _braceInformation(
     'brace.nested_precision.hot',
     template: '{value:{width}.{precision}f}',
     expected: const TextOutcome('   12.35'),
     candidate:
-        (_) => _capture(
-          () => formatWith(
-            '{value:{width}.{precision}f}',
-            named: const {'value': 12.3456, 'width': 8, 'precision': 2},
-          ),
+        (_) => formatWith(
+          '{value:{width}.{precision}f}',
+          named: const {'value': 12.3456, 'width': 8, 'precision': 2},
         ),
   ),
   _braceInformation(
@@ -282,26 +274,24 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     template: '{user[name]}',
     expected: const TextOutcome('Ada'),
     candidate:
-        (_) => _capture(
-          () => formatWith(
-            '{user[name]}',
-            named: const {
-              'user': {'name': 'Ada'},
-            },
-          ),
+        (_) => formatWith(
+          '{user[name]}',
+          named: const {
+            'user': {'name': 'Ada'},
+          },
         ),
   ),
   _braceInformation(
     'brace.conversion',
     template: '{!s:.2s}',
     expected: const TextOutcome('nu'),
-    candidate: (_) => _capture(() => format('{!s:.2s}', null)),
+    candidate: (_) => format('{!s:.2s}', null),
   ),
   _braceInformation(
     'brace.custom_extension',
     template: '{:bench}',
     expected: const TextOutcome('bench:7'),
-    candidate: (_) => _capture(() => _benchmarkFormat.format('{:bench}', 7)),
+    candidate: (_) => _benchmarkFormat.format('{:bench}', 7),
   ),
   _braceReference(
     'brace.locale.n',
@@ -310,8 +300,8 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     rationale:
         'Format 2 has no n conversion; explicit CNumberLocale is an '
         'output-only reference.',
-    candidate: (_) => _capture(() => format('{:n}', 1234567)),
-    reference: (_) => _capture(() => _cFormat.format('{:n}', 1234567)),
+    candidate: (_) => format('{:n}', 1234567),
+    reference: (_) => _cFormat.format('{:n}', 1234567),
   ),
   _braceReference(
     'brace.format_intl',
@@ -320,8 +310,8 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     rationale:
         'Pinned kk_KZ Intl output is a golden reference, not a performance '
         'competitor.',
-    candidate: (_) => _capture(() => _intlFormat.format('{:n}', 1234)),
-    reference: (_) => const TextOutcome('1\u00a0234'),
+    candidate: (_) => _intlFormat.format('{:n}', 1234),
+    reference: (_) => '1\u00a0234',
     referenceKind: BenchmarkReferenceKind.golden,
     referenceLabel: 'golden-intl:kk_KZ:1234',
   ),
@@ -394,7 +384,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'printf.character',
     template: '%c',
     expected: const TextOutcome('A'),
-    candidate: (_) => _capture(() => sprintf('%c', 65)),
+    candidate: (_) => sprintf('%c', 65),
   ),
   _printfComparable(
     'printf.signed',
@@ -414,7 +404,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'printf.unsigned',
     template: '%u',
     expected: const TextOutcome('42'),
-    candidate: (_) => _capture(() => sprintf('%u', 42)),
+    candidate: (_) => sprintf('%u', 42),
   ),
   _printfComparable(
     'printf.fixed',
@@ -450,13 +440,13 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'printf.hex_float.hot',
     template: '%a',
     expected: const TextOutcome('0x1.8p+0'),
-    candidate: (_) => _capture(() => sprintf('%a', 1.5)),
+    candidate: (_) => sprintf('%a', 1.5),
   ),
   _printfInformation(
     'printf.uppercase',
     template: '%A',
     expected: const TextOutcome('0X1.8P+0'),
-    candidate: (_) => _capture(() => sprintf('%A', 1.5)),
+    candidate: (_) => sprintf('%A', 1.5),
   ),
   _printfComparable(
     'printf.specials',
@@ -470,19 +460,19 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'printf.unicode',
     template: '%.1s',
     expected: const TextOutcome('e'),
-    candidate: (_) => _capture(() => sprintf('%.1s', 'e\u0301')),
+    candidate: (_) => sprintf('%.1s', 'e\u0301'),
   ),
   _printfInformation(
     'printf.locale',
     template: '%.1f',
     expected: const TextOutcome('1234,5'),
-    candidate: (_) => _capture(() => _intlFormat.sprintf('%.1f', 1234.5)),
+    candidate: (_) => _intlFormat.sprintf('%.1f', 1234.5),
   ),
   _printfInformation(
     'printf.invalid.hot',
     template: '%q',
     expected: const ErrorOutcome('InvalidFormatException'),
-    candidate: (_) => _capture(() => sprintf('%q', 1)),
+    candidate: (_) => sprintf('%q', 1),
   ),
   _braceComparable(
     'brace.parser_heavy',
@@ -503,7 +493,7 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     'brace.double.default',
     template: '{}',
     expected: const TextOutcome('1.23456789'),
-    candidate: (_) => _capture(() => format('{}', 1.23456789)),
+    candidate: (_) => format('{}', 1.23456789),
   ),
   _printfComparable(
     'printf.conversions',
@@ -590,25 +580,21 @@ BenchmarkScenario _braceComparable(
     expected: TextOutcome(cold ? '$expected [0]' : expected),
     templateFor: templateFor,
     candidate:
-        (iteration) => _capture(
-          () => switch (apiPath) {
-            BenchmarkApiPath.topLevel => format(
-              templateFor(iteration),
-              values.first,
-            ),
-            BenchmarkApiPath.tearOff => _braceTearOff(
-              templateFor(iteration),
-              values.first,
-            ),
-            _ => (engine?.formatWith ?? formatWith)(
-              templateFor(iteration),
-              positional: values,
-            ),
-          },
-        ),
-    baseline:
-        (iteration) =>
-            _capture(() => legacyFormat(templateFor(iteration), values)),
+        (iteration) => switch (apiPath) {
+          BenchmarkApiPath.topLevel => format(
+            templateFor(iteration),
+            values.first,
+          ),
+          BenchmarkApiPath.tearOff => _braceTearOff(
+            templateFor(iteration),
+            values.first,
+          ),
+          _ => (engine?.formatWith ?? formatWith)(
+            templateFor(iteration),
+            positional: values,
+          ),
+        },
+    baseline: (iteration) => legacyFormat(templateFor(iteration), values),
   );
 }
 
@@ -635,26 +621,22 @@ BenchmarkScenario _printfComparable(
     expected: TextOutcome(cold ? '$expected [0]' : expected),
     templateFor: templateFor,
     candidate:
-        (iteration) => _capture(
-          () => switch (apiPath) {
-            _ when candidateFormat != null => candidateFormat.vsprintf(
-              templateFor(iteration),
-              values,
-            ),
-            BenchmarkApiPath.topLevel => sprintf(
-              templateFor(iteration),
-              values.first,
-            ),
-            BenchmarkApiPath.tearOff => _printfTearOff(
-              templateFor(iteration),
-              values.first,
-            ),
-            _ => vsprintf(templateFor(iteration), values),
-          },
-        ),
-    baseline:
-        (iteration) =>
-            _capture(() => sprintf70.sprintf(templateFor(iteration), values)),
+        (iteration) => switch (apiPath) {
+          _ when candidateFormat != null => candidateFormat.vsprintf(
+            templateFor(iteration),
+            values,
+          ),
+          BenchmarkApiPath.topLevel => sprintf(
+            templateFor(iteration),
+            values.first,
+          ),
+          BenchmarkApiPath.tearOff => _printfTearOff(
+            templateFor(iteration),
+            values.first,
+          ),
+          _ => vsprintf(templateFor(iteration), values),
+        },
+    baseline: (iteration) => sprintf70.sprintf(templateFor(iteration), values),
   );
 }
 
@@ -730,9 +712,15 @@ String _braceFields(int count) =>
 
 String _printfFields(int count) => List.filled(count, '%d').join();
 
-BenchmarkOutcome _capture(String Function() operation) {
+/// What [operation] produced on [iteration], as an outcome two engines can be
+/// compared by.
+///
+/// Called once per scenario per engine, never inside a measured round: the
+/// try/catch frame and the allocated outcome are why it is not called there.
+/// See [BenchmarkOperation].
+BenchmarkOutcome captureOutcome(BenchmarkOperation operation, int iteration) {
   try {
-    return TextOutcome(operation());
+    return TextOutcome(operation(iteration));
   } on Object catch (error) {
     return ErrorOutcome(_errorCategory(error));
   }
