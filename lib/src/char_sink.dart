@@ -130,6 +130,29 @@ final class CharSink {
     _length += count;
   }
 
+  /// The digits of |[value]| in [radix], for the web backends.
+  ///
+  /// Written as "convert, then drop the sign" rather than the shorter "negate,
+  /// then convert", because negating is the one step that is not total: the
+  /// minimum int has no positive counterpart, so `-value` hands it straight
+  /// back and `toRadixString` then supplies a minus of its own — which the
+  /// caller, having already written the sign, doubles into
+  /// `--9223372036854775808`.
+  ///
+  /// That was a live defect under dart2wasm, and it survived because [_isWeb]
+  /// answers a different question than the branch needed. It asks how strings
+  /// are built, and both web backends build them the same way; the branch
+  /// wanted to know whether an `int` is a JS double, which is [_isWebInt] and
+  /// is false under dart2wasm. Only dart2js routes wide integers through
+  /// `BigInt` before reaching here, so only there was negating safe. Asking
+  /// nothing about the platform removes the distinction from this code
+  /// entirely.
+  static String _webMagnitudeDigits(int value, int radix) {
+    final text = value.toRadixString(radix);
+
+    return value < 0 ? text.substring(1) : text;
+  }
+
   /// Counts the digits of |value| in [radix]. Runs in negative space, so the
   /// minimum int does not overflow, and uses division only, which is also
   /// exact on dart2js within the web-safe integer range.
@@ -147,9 +170,7 @@ final class CharSink {
   void writeMagnitude(int value, int radix, {bool uppercase = false}) {
     _materialize();
     if (_isWeb) {
-      // Callers route anything past the web-safe range through BigInt before
-      // reaching here, so negating is exact and toRadixString is faithful.
-      final digits = (value < 0 ? -value : value).toRadixString(radix);
+      final digits = _webMagnitudeDigits(value, radix);
       _text!.write(uppercase ? digits.toUpperCase() : digits);
       _length += digits.length;
       return;
@@ -191,9 +212,7 @@ final class CharSink {
     final count = significant + leadingZeros;
     final total = groupedLength(count, groupSize);
     if (_isWeb) {
-      // Above the web-safe range callers take the BigInt branch, so negating
-      // and converting stay exact here.
-      final magnitude = (value < 0 ? -value : value).toRadixString(radix);
+      final magnitude = _webMagnitudeDigits(value, radix);
       _text!.write(
         _groupAscii(
           (uppercase ? magnitude.toUpperCase() : magnitude).padLeft(count, '0'),

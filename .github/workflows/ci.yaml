@@ -66,6 +66,22 @@ jobs:
           test/template_ir_diff_test.dart
           test/template_ir_fuzz_test.dart
           test/js_number_dispatch_test.dart
+      # dart2wasm is the third web-shaped target and it does not answer like
+      # dart2js: its integers are real 64-bit ones. A defect that needed
+      # exactly that combination — the web string path over 64-bit integers —
+      # printed `--9223372036854775808` for the minimum int and was invisible
+      # to every job above. `template_ir_compile_test.dart` is left out: it
+      # passes here in subsets and crashes as a whole inside `package:test`'s
+      # own path handling, and what it asserts (which op a spec compiles to)
+      # does not vary by runtime.
+      - name: Tests (node platform, dart2wasm)
+        if: matrix.sdk == 'stable'
+        run: >-
+          dart test -p node -c dart2wasm
+          test/char_sink_test.dart
+          test/template_ir_diff_test.dart
+          test/template_ir_fuzz_test.dart
+          test/js_number_dispatch_test.dart
       - name: Tests (harness, outside the published archive)
         if: matrix.sdk == 'stable'
         run: dart test benchmark/test tool/test

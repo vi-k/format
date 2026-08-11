@@ -165,6 +165,9 @@ dart test                                    # 555 тестов
 dart test -p node test/char_sink_test.dart test/template_ir_compile_test.dart \
   test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart \
   test/js_number_dispatch_test.dart          # 82 теста
+dart test -p node -c dart2wasm test/char_sink_test.dart \
+  test/template_ir_diff_test.dart test/template_ir_fuzz_test.dart \
+  test/js_number_dispatch_test.dart          # 61 тест, ~10 с
 dart test benchmark/test tool/test           # 42 теста, ~50 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
@@ -172,7 +175,7 @@ dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
   && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
-# покрытие 95.36%, пол 94%
+# покрытие 95.27%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run bin/benchmark.dart) # матрица, ~60 с
 # Тот же сьют под другими рантаймами (в список проверок не входит):
@@ -437,6 +440,40 @@ wasm и **656 нс** под dart2js — а быстрейшая стратеги
 другая (`[...values]`, 37.9 нс, против `List.of(growable: false)` на VM). В
 бэклоге владельца есть пункт про замену `List.unmodifiable`; веб-цена у него
 на порядок больше, чем видно с VM.
+
+## Что сделано 2026-08-11 (после сьюта под wasm)
+
+**Двойной минус на минимальном int под dart2wasm — исправлено.** Дефект
+нашёлся сразу же, первым прогоном сьюта под новым рантаймом: `{:d}` от
+`-9223372036854775808` печатал `--9223372036854775808`. Только IR-путь,
+только ровно это значение, только под wasm; legacy был верен.
+
+Причина — сращённое условие, и стоит запомнить именно её. `_isWeb` — это
+`bool.fromEnvironment('dart.library.js_interop')`, и он **намеренно** истинен
+на обоих веб-бэкендах: вопрос там «как строятся строки», а строятся они
+одинаково. Но `CharSink.writeMagnitude` и `writeGroupedMagnitude` под этим же
+флагом отрицали значение перед переводом, с комментарием «выше веб-безопасного
+диапазона вызывающие уходят в `BigInt`». Уходят они по `_isWebInt`, то есть по
+`identical(1, 1.0)`, а он **ложен под wasm**, где целые настоящие 64-битные.
+Значит, minInt доходил до отрицания, `-minInt` переполнялся в себя, а
+`toRadixString` дописывал свой минус к уже написанному знаку.
+
+Правка снимает вопрос о платформе целиком: `_webMagnitudeDigits` переводит,
+а потом отбрасывает ведущий минус. `digitCount` и так работал в отрицательном
+пространстве, поэтому ширины не поехали.
+
+**Заведён прогон паритета под dart2wasm** — четыре файла, 61 тест, ~10 с, в
+списке проверок и в CI. Без него дефект был невидим: дифф-тесты, которые и
+есть оракул для этого класса, гонялись на VM и dart2js, но не под wasm.
+Матрицы при этом упирались в ±2^53−1, то есть предела платформы не знали
+вовсе; добавлены `_platformMinInt`/`_platformMaxInt` через `int.parse`, потому
+что литерал `-9223372036854775808` dart2js не компилирует. Сторож проверен
+откатом правки: без неё прогон под wasm краснеет.
+
+`template_ir_compile_test.dart` в wasm-прогон не входит: по отдельности и
+парами его тесты проходят, а целым файлом падают внутри `package:test`
+(`Uri.base` через `package:path`). Проверяет он, в какой op компилируется
+спецификация, — от рантайма это не зависит, и VM с dart2js его гоняют.
 
 ## Что открыто
 

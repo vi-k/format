@@ -50,6 +50,23 @@ const _specialDoubles = <Object?>[
   1e21,
 ];
 
+/// The extreme integers of whatever platform is running, built by parsing
+/// rather than written down.
+///
+/// `-9223372036854775808` is not a literal dart2js will compile, so the
+/// matrices below used to stop at the web-safe extremes and the platforms with
+/// wider integers — the VM and dart2wasm — were never asked about their own.
+/// That gap hid a real defect: under dart2wasm the minimum int printed
+/// `--9223372036854775808`, because the web branch of `CharSink` negated
+/// before converting and the minimum has no positive counterpart.
+///
+/// Parsing sidesteps the literal on every backend. What the digits resolve to
+/// differs — dart2js rounds the maximum to 2^63 — and that does not matter
+/// here: parity asks whether the two paths agree about a value, not which
+/// value it is.
+final _platformMinInt = int.parse('-9223372036854775808');
+final _platformMaxInt = int.parse('9223372036854775807');
+
 void main() {
   setUp(debugClearTemplateCaches);
 
@@ -168,6 +185,8 @@ void main() {
       -42,
       9007199254740991,
       -9007199254740991,
+      _platformMaxInt,
+      _platformMinInt,
       BigInt.parse('-340282366920938463463374607431768211456'),
       BigInt.zero,
       'not a number',
@@ -446,6 +465,8 @@ void main() {
       -42,
       9007199254740991,
       -9007199254740991,
+      _platformMaxInt,
+      _platformMinInt,
       BigInt.parse('123456789012345678901234567890'),
       BigInt.parse('-123456789012345678901234567890'),
       'nope',
@@ -729,7 +750,7 @@ void main() {
     // than the width asked for. The legacy path finds that count by
     // bisection and the op computes it; this matrix is where the two are
     // held to the same answer.
-    const values = <Object?>[
+    final values = <Object?>[
       0,
       1,
       999,
@@ -738,6 +759,8 @@ void main() {
       -1234567,
       9007199254740991,
       -9007199254740991,
+      _platformMaxInt,
+      _platformMinInt,
     ];
     final wide = BigInt.parse('123456789012345678901234567890');
     for (final separator in [',', '_']) {
