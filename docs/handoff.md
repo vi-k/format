@@ -164,7 +164,7 @@ dart format . && dart analyze --fatal-infos lib test example tool
 dart test                                    # VM, 555 тестов
 dart test -p node                            # dart2js, 376 + 4 пропущено, ~12 с
 dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 359, ~7 с
-dart test benchmark/test tool/test           # 42 теста, ~50 с
+dart test benchmark/test tool/test           # 43 теста, ~55 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
 dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
@@ -191,6 +191,7 @@ gh workflow run ci.yaml --ref main
 gh run download <id> -n performance-gate -D /tmp/gate
 dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
   --record=$(date +%F) --output=benchmark/results/gate-baseline.json
+# Четыре рантайма по два прогона: jit, aot, js, wasm — восемь отчётов.
 # С 2026-08-10 гейт сверяет ревизию отчётов с рабочим деревом и окружение
 # с эталоном: чужие отчёты разбираются с --allow-unverified-revision, а
 # прогон на другой машине не решает ничего (comparable: false, выход 0).

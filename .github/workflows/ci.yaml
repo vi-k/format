@@ -236,16 +236,24 @@ jobs:
           for run in 1 2; do
             ./benchmark-aot --runtime=aot --run="$run" --output="aot-$run.json"
           done
+          compiler="$(dart --version 2>&1 | sed -E 's/.*version: ([^ ]+).*/\1/')"
           dart compile js -O4 \
-            "-Dformat.benchmark.dartCompilerVersion=$(dart --version 2>&1 | sed -E 's/.*version: ([^ ]+).*/\1/')" \
+            "-Dformat.benchmark.dartCompilerVersion=$compiler" \
             "$define" benchmark/runner.dart -o benchmark.js
           for run in 1 2; do
             node benchmark.js --runtime=js --run="$run" --output="js-$run.json"
           done
+          dart compile wasm -O2 \
+            "-Dformat.benchmark.dartCompilerVersion=$compiler" \
+            "$define" benchmark/runner.dart -o benchmark.wasm
+          for run in 1 2; do
+            node benchmark/wasm_host.mjs benchmark.wasm \
+              --runtime=wasm --run="$run" --output="wasm-$run.json"
+          done
       - name: Evaluate against the recorded reference
         run: >-
           dart run benchmark/gates.dart
-          --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json
+          --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json
           --baseline=benchmark/results/gate-baseline.json
           --output=gate-report.json
       - name: Upload the gate report

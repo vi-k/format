@@ -745,4 +745,72 @@ void main() {
       }
     },
   );
+
+  // The fourth runtime, and the one whose label is easiest to get wrong: it
+  // reaches node through the same `dart:js_interop` as dart2js, so a
+  // conditional import that asks about `js_interop` rather than `js` hands it
+  // the dart2js adapter and every report arrives claiming to be `js`. Nothing
+  // downstream could notice — the numbers would be plausible and compared
+  // against the wrong reference. So the label is asserted from a real
+  // compilation, not from the source.
+  test('compiled wasm runner records dart2wasm provenance', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'format-wasm-runner-',
+    );
+    final output = '${directory.path}/runner.wasm';
+    try {
+      final compile = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'wasm',
+        'benchmark/runner.dart',
+        '-Dformat.benchmark.dartCompilerVersion=3.12.2',
+        '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
+        '-O2',
+        '-o',
+        output,
+      ]);
+      expect(compile.exitCode, 0, reason: compile.stderr.toString());
+
+      final mismatch = await Process.run('node', [
+        'benchmark/wasm_host.mjs',
+        output,
+        '--runtime=js',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+      ]);
+      expect(
+        mismatch.exitCode,
+        isNonZero,
+        reason: 'a wasm run labelled js must be refused',
+      );
+
+      final run = await Process.run('node', [
+        'benchmark/wasm_host.mjs',
+        output,
+        '--runtime=wasm',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+        '--output=${directory.path}/report.json',
+      ]);
+      expect(run.exitCode, 0, reason: run.stderr.toString());
+      final report = BenchmarkReport.fromJson(
+        jsonDecode(await File('${directory.path}/report.json').readAsString())
+            as Map<String, Object?>,
+      );
+      expect(report.runtime, 'wasm');
+      expect(report.detectedRuntime, 'wasm');
+      expect(
+        report.runtimeProvenance['detector'],
+        'dart2wasm.compile-time-define',
+      );
+      expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
+      expect(report.sourceRevision, _testSourceRevision);
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
 }

@@ -62,6 +62,12 @@ const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   // Braces run under dart2js like any other dialect; leaving them out here
   // would hide the runtime where they cost the most.
   'js': {BenchmarkDialect.braces, BenchmarkDialect.printf},
+  // dart2wasm is web-shaped in how it reaches the host and unlike dart2js in
+  // what it computes with — its integers are real 64-bit ones. Treating it as
+  // a fourth runtime rather than assuming it answers like one of the other
+  // three is the point: the first time the comparison suite was started there
+  // it turned up a defect that needed exactly that combination.
+  'wasm': {BenchmarkDialect.braces, BenchmarkDialect.printf},
 };
 
 /// The machine a set of reports was measured on, reduced to the facts a
@@ -419,10 +425,17 @@ void _validateReport(BenchmarkReport report) {
       _requireProvenance(report, 'dart.vm.product', 'false');
     case 'aot':
       _requireProvenance(report, 'dart.vm.product', 'true');
-    case 'js':
+    // Both web backends reach node the same way and are checked the same way;
+    // what must not be shared is which one a report claims to be. A wasm run
+    // labelled `js` would compare against the wrong reference and look like a
+    // regression, or worse, like an improvement.
+    case 'js' || 'wasm':
+      final backend = report.runtime == 'js' ? 'dart2js' : 'dart2wasm';
       if (report.runtimeProvenance['detector'] !=
-          'dart2js.compile-time-define') {
-        throw FormatException('js run ${report.run} lacks dart2js provenance.');
+          '$backend.compile-time-define') {
+        throw FormatException(
+          '${report.runtime} run ${report.run} lacks $backend provenance.',
+        );
       }
       final compiler = report.runtimeProvenance['dartCompilerVersion'];
       if (compiler == null ||
@@ -430,7 +443,8 @@ void _validateReport(BenchmarkReport report) {
             r'^\d+\.\d+\.\d+(?:[-+][A-Za-z0-9.-]+)?$',
           ).hasMatch(compiler)) {
         throw FormatException(
-          'js run ${report.run} lacks a concrete Dart compiler version.',
+          '${report.runtime} run ${report.run} lacks a concrete Dart '
+          'compiler version.',
         );
       }
       // The version is checked for shape here and for *value* against the
@@ -441,7 +455,7 @@ void _validateReport(BenchmarkReport report) {
       final node = report.runtimeProvenance['nodeVersion'];
       if (node == null || !RegExp(r'^v\d+\.\d+\.\d+$').hasMatch(node)) {
         throw FormatException(
-          'js run ${report.run} lacks a concrete Node version.',
+          '${report.runtime} run ${report.run} lacks a concrete Node version.',
         );
       }
   }

@@ -107,7 +107,9 @@ void main() {
 
     expect(result.passed, isTrue);
     expect(result.toJson()['aotExecutableSizeBytes'], 123456);
-    expect(result.toJson()['gates'], hasLength(6));
+    // Four runtimes times two dialects: a runtime that stopped being
+    // required would shrink this silently.
+    expect(result.toJson()['gates'], hasLength(8));
   });
 
   // A report that does not say what it ran on, or two reports that disagree,
@@ -373,7 +375,9 @@ void main() {
 
     expect(result.passed, isFalse, reason: 'арифметика та же');
     expect(result.decisive, isFalse);
-    expect(result.toJson()['gates'], hasLength(6));
+    // Four runtimes times two dialects: a runtime that stopped being
+    // required would shrink this silently.
+    expect(result.toJson()['gates'], hasLength(8));
   });
 
   // The migration case. A reference recorded before environments were written
@@ -679,12 +683,16 @@ List<BenchmarkReport> _completeReports() => [
         executableSizeBytes: runtime == 'aot' ? 123456 : null,
         scenarios: benchmarkScenarios.map(_scenarioFor).toList(),
       ),
-  for (final run in [1, 2])
-    _report(
-      runtime: 'js',
-      run: run,
-      scenarios: benchmarkScenarios.map(_scenarioFor).toList(),
-    ),
+  // Both web backends, because they are two runtimes and not one: they reach
+  // node the same way and compute differently, and the gate has to keep their
+  // references apart.
+  for (final runtime in ['js', 'wasm'])
+    for (final run in [1, 2])
+      _report(
+        runtime: runtime,
+        run: run,
+        scenarios: benchmarkScenarios.map(_scenarioFor).toList(),
+      ),
 ];
 
 /// A reference recorded from the same synthetic reports the tests evaluate,
@@ -739,6 +747,11 @@ BenchmarkReport _report({
     'aot' => const {'detector': 'dart.vm.product', 'value': 'true'},
     'js' => const {
       'detector': 'dart2js.compile-time-define',
+      'dartCompilerVersion': '3.12.2',
+      'nodeVersion': 'v24.8.0',
+    },
+    'wasm' => const {
+      'detector': 'dart2wasm.compile-time-define',
       'dartCompilerVersion': '3.12.2',
       'nodeVersion': 'v24.8.0',
     },
