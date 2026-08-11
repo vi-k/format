@@ -473,8 +473,16 @@ current machine, the benchmark measures every case with it on and off:
 
 ```console
 cd benchmark/suite
-dart run bin/benchmark.dart
+dart run bin/benchmark.dart             # on the Dart VM
+dart run tool/run.dart --runtime=js     # dart2js, under node
+dart run tool/run.dart --runtime=wasm   # dart2wasm, under node
 ```
+
+`tool/run.dart` also takes `--bin=`, one of `comparison`, `template_ir`,
+`double_modes`, `list_snapshot`, and compiles into a temporary directory.
+The operations per round are calibrated to whichever clock the runtime has:
+under dart2js it advances in whole milliseconds, so a count tuned on the VM
+would print multiples of 50 ns and nothing between them.
 
 ## Format 3.0 migration
 

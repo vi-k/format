@@ -492,8 +492,16 @@ templateCacheCapacity = 0;  // выбрасывает закэшированно
 
 ```console
 cd benchmark/suite
-dart run bin/benchmark.dart
+dart run bin/benchmark.dart             # на Dart VM
+dart run tool/run.dart --runtime=js     # dart2js, под node
+dart run tool/run.dart --runtime=wasm   # dart2wasm, под node
 ```
+
+У `tool/run.dart` есть и `--bin=` — одно из `comparison`, `template_ir`,
+`double_modes`, `list_snapshot`; компилирует он во временный каталог.
+Число операций в раунде калибруется под те часы, что есть у рантайма: под
+dart2js они идут целыми миллисекундами, и счёт, подобранный на VM, печатал
+бы одни лишь кратные 50 нс.
 
 ## Миграция на Format 3.0
 

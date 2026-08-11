@@ -66,11 +66,43 @@
       ]
     },
     {
+      "name": "Benchmark: suite on a chosen runtime",
+      "request": "launch",
+      "type": "dart",
+      "program": "tool/run.dart",
+      "cwd": "${workspaceFolder}/benchmark/suite",
+      "args": [
+        "--runtime=${input:suiteRuntime}",
+        "--bin=${input:suiteBenchmark}"
+      ]
+    },
+    {
       "name": "test",
       "request": "launch",
       "type": "dart",
       "program": "test/format_test.dart",
       "args": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "suiteRuntime",
+      "type": "pickString",
+      "description": "Runtime to measure on",
+      "options": ["vm", "js", "wasm"],
+      "default": "vm"
+    },
+    {
+      "id": "suiteBenchmark",
+      "type": "pickString",
+      "description": "Benchmark to run",
+      "options": [
+        "comparison",
+        "template_ir",
+        "double_modes",
+        "list_snapshot"
+      ],
+      "default": "comparison"
     }
   ]
 }

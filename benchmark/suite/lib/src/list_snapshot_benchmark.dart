@@ -18,13 +18,14 @@
 /// machine a mean inflates by a factor the fastest round does not.
 library;
 
+import 'utils/clock.dart';
 import 'utils/output.dart';
 
 typedef _Strategy = ({String name, List<Object?> Function(List<Object?>) take});
 
 const _sizes = [0, 1, 2, 3, 5, 10, 50];
 const _rounds = 40;
-const _operationsPerRound = 20000;
+const _warmupOperations = 20000;
 
 final _strategies = <_Strategy>[
   (name: 'no copy (floor)', take: (values) => values),
@@ -48,20 +49,30 @@ final _strategies = <_Strategy>[
 /// that proves nothing.
 int _checksum = 0;
 
-int _measureNanos(
+double _measureNanos(
   List<Object?> Function(List<Object?>) take,
   List<Object?> values,
 ) {
-  var best = -1;
-  for (var round = 0; round < _rounds; round++) {
-    final watch = Stopwatch()..start();
-    for (var operation = 0; operation < _operationsPerRound; operation++) {
+  void round(int operations) {
+    for (var operation = 0; operation < operations; operation++) {
       final snapshot = take(values);
       _checksum += snapshot.length;
     }
+  }
+
+  // Calibrated rather than fixed: a copy of a short list costs a few
+  // nanoseconds, so the count that spans a comfortable stretch of the VM's
+  // clock spans a single tick of the one dart2js has, and every row printed
+  // there collapses onto multiples of 50 ns.
+  final operations = calibratedOperations(round);
+  var best = double.infinity;
+  for (var index = 0; index < _rounds; index++) {
+    final watch = Stopwatch()..start();
+    round(operations);
     watch.stop();
-    final nanos = watch.elapsedMicroseconds * 1000 ~/ _operationsPerRound;
-    if (best < 0 || nanos < best) best = nanos;
+    final nanos =
+        watch.elapsedTicks * 1000000000 / watch.frequency / operations;
+    if (nanos < best) best = nanos;
   }
 
   return best;
@@ -72,9 +83,9 @@ void runListSnapshotBenchmark() {
   print(h1('Argument-list snapshot strategies'));
   print(
     faintAccent(
-      'Minimum of $_rounds rounds x $_operationsPerRound operations, ns per '
-      'snapshot. The engine never writes to the snapshot, so a write barrier '
-      'is cost without benefit.',
+      'Minimum of $_rounds rounds, ns per snapshot; the operations per round '
+      'are calibrated to the clock this runtime has. The engine never writes '
+      'to the snapshot, so a write barrier is cost without benefit.',
     ),
   );
   print('');
@@ -91,7 +102,7 @@ void runListSnapshotBenchmark() {
     // Warm up every strategy on this length before timing any of them, so the
     // first column does not pay for the JIT the others then benefit from.
     for (final strategy in _strategies) {
-      for (var operation = 0; operation < _operationsPerRound; operation++) {
+      for (var operation = 0; operation < _warmupOperations; operation++) {
         _checksum += strategy.take(values).length;
       }
     }
@@ -105,7 +116,7 @@ void runListSnapshotBenchmark() {
 
     final row = StringBuffer(size.toString().padLeft(6));
     for (var index = 0; index < timings.length; index++) {
-      final cell = '${timings[index]} ns'.padLeft(nameWidth);
+      final cell = '${timings[index].toStringAsFixed(1)} ns'.padLeft(nameWidth);
       row.write(
         index == 0
             ? faintAccent(cell)

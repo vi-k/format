@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:format/format.dart';
 
+import 'utils/clock.dart';
 import 'utils/output.dart';
 
 typedef BenchmarkLineWriter = void Function(String line);
@@ -14,11 +15,17 @@ var _benchmarkChecksum = 0;
 void runDoubleModesBenchmark({
   BenchmarkLineWriter? writeLine,
   int warmupOperations = 1000,
-  int operations = 10000,
+  // Null means "ask the clock". A fixed ten thousand spans a comfortable
+  // stretch of the VM's clock and exactly one tick of the millisecond one
+  // dart2js has, where it turns every reading into a multiple of 0.1 µs.
+  // Callers that want a short, deterministic run still pass a count.
+  int? operations,
   int samples = 7,
   double equivalenceThresholdPercent = 5.0,
 }) {
-  if (warmupOperations < 0 || operations <= 0 || samples <= 0) {
+  if (warmupOperations < 0 ||
+      (operations != null && operations <= 0) ||
+      samples <= 0) {
     throw ArgumentError('Benchmark operation counts must be positive.');
   }
   if (!equivalenceThresholdPercent.isFinite ||
@@ -87,9 +94,14 @@ void runDoubleModesBenchmark({
   String dartResult,
   String compatibleResult,
   int warmupOperations,
-  int operations,
+  int? requestedOperations,
   int samples,
 ) {
+  final operations =
+      requestedOperations ??
+      calibratedOperations(
+        (count) => _measure(() => scenario.run(_dartFormat), dartResult, count),
+      );
   _measure(
     () => scenario.run(_dartFormat),
     dartResult,
