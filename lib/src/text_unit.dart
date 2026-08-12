@@ -8,6 +8,17 @@ enum TextUnit {
 
   /// Grapheme clusters: emoji and combined characters count as one visible
   /// character each.
+  ///
+  /// Where the boundaries fall is decided by the `characters` package, so it
+  /// follows whichever version an application resolves — this package accepts
+  /// `^1.3.0` because Flutter pins that package from its SDK and refusing the
+  /// older one refused the whole package. The two differ in one rule that
+  /// matters: conjunct clusters, added in Unicode 15.1 and carried by
+  /// `characters` 1.4.0 and later. Under it `क्षि` is one cluster, so `{:.1}`
+  /// keeps the syllable whole and a width counts it once; under 1.3.0 it is
+  /// two, and both answers change. Emoji — sequences joined by ZWJ, skin
+  /// tones, flags, keycaps — and combining marks cluster identically on
+  /// either.
   graphemeClusters,
 }
 

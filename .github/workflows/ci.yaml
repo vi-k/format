@@ -77,6 +77,26 @@ jobs:
       - name: Tests (harness, outside the published archive)
         if: matrix.sdk == 'stable'
         run: dart test benchmark/test tool/test
+      # The dependency floor, made real. `dart pub get` always resolves to the
+      # newest allowed, so a lower bound in the pubspec is a claim nothing
+      # checks — which is how `characters: ^1.4.0` stayed there while Flutter
+      # stable pinned 1.3.0 and the package could not be installed at all
+      # (issue #8). Only `characters` is downgraded: a blanket
+      # `dart pub downgrade` takes the test tooling down with it, and those
+      # floors do not compile against a current SDK.
+      #
+      # The two versions are not interchangeable — 1.3.0 carries the Unicode
+      # 15 grapheme tables and 1.4.x carries Unicode 16 — so this run also
+      # says that nothing in the package depends on which of them resolved.
+      - name: Tests on the dependency floor
+        if: matrix.sdk == 'stable'
+        run: dart pub downgrade characters && dart test
+      # Back to the committed resolution, not to the newest one: `dart pub
+      # upgrade` would leave every later step running against a graph this
+      # repository never locked.
+      - name: Restore the committed resolution
+        if: matrix.sdk == 'stable'
+        run: git checkout pubspec.lock && dart pub get
       - name: Example runs
         run: dart run example/format_example.dart
       - name: Tests (format_intl)

@@ -45,6 +45,12 @@ unpublished 2.0.0 below.
   template of three named fields at 4% faster on the VM, 16% under dart2js and
   18% under dart2wasm, where every named lookup had been going through the
   view.
+* Lowered the `characters` constraint to `^1.3.0`. Flutter pins that package
+  from its SDK, and stable releases pinning 1.3.0 could not resolve this
+  package at all (issue #8). The two versions carry different Unicode grapheme
+  tables — 15.0.0 and 16.0.0 — so `TextUnit.graphemeClusters` follows whichever
+  version resolves; nothing else in the package depends on the difference, and
+  CI now runs the whole test suite on the floor to keep that true.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Extended the configured `NumberLocale` to the printf integer conversions,
