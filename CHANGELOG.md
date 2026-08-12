@@ -45,6 +45,11 @@ unpublished 2.0.0 below.
   already spells the value. Measured under dart2js at 2^53: `{:x}` 320 ns
   becomes 120, `{:o}` 4070 becomes 150, `{:b}` 11550 becomes 380. Decimal is
   unchanged — it still needs fixed-point conversion, and `BigInt` past 1e21.
+* Grouped integer conversions on the web no longer count the digits by
+  dividing: the platform conversion that produces them already knows how many
+  it wrote. Measured under dart2js on a sixteen-digit value: `{:,d}` 272 ns
+  becomes 200 and `{:020,d}` 262 becomes 182; under dart2wasm 215 becomes 199
+  and 214 becomes 198. The VM writes its digits into a buffer and is unchanged.
 * The template cache stops consulting itself when it is being thrashed, and
   starts again after a while in case the workload has changed. What triggers it
   is misses in a row that each had to evict something — a cache filling up is

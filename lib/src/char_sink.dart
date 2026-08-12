@@ -208,21 +208,27 @@ final class CharSink {
     bool uppercase = false,
   }) {
     _materialize();
-    final significant = digitCount(value, radix);
-    final count = significant + leadingZeros;
-    final total = groupedLength(count, groupSize);
     if (_isWeb) {
+      // The conversion already knows how many digits it wrote, so counting
+      // them again by dividing is a loop per digit for an answer in hand.
       final magnitude = _webMagnitudeDigits(value, radix);
+      final webCount = magnitude.length + leadingZeros;
       _text!.write(
         _groupAscii(
-          (uppercase ? magnitude.toUpperCase() : magnitude).padLeft(count, '0'),
+          (uppercase ? magnitude.toUpperCase() : magnitude).padLeft(
+            webCount,
+            '0',
+          ),
           separator,
           groupSize,
         ),
       );
-      _length += total;
+      _length += groupedLength(webCount, groupSize);
       return;
     }
+    final significant = digitCount(value, radix);
+    final count = significant + leadingZeros;
+    final total = groupedLength(count, groupSize);
     _ensure(total);
     final digits = uppercase ? _upperDigits : _lowerDigits;
     var negative = value <= 0 ? value : -value;
