@@ -45,6 +45,18 @@ unpublished 2.0.0 below.
   already spells the value. Measured under dart2js at 2^53: `{:x}` 320 ns
   becomes 120, `{:o}` 4070 becomes 150, `{:b}` 11550 becomes 380. Decimal is
   unchanged — it still needs fixed-point conversion, and `BigInt` past 1e21.
+* The `g`, `e` and bare-precision floating presentations take their digits
+  from the platform's own exponential conversion instead of decomposing the
+  double and rounding in `BigInt`. The exact path stays for what the platform
+  cannot answer: past twenty-one significant digits, and on the values that
+  round to an exact half, where the SDK and ECMAScript round away from zero
+  while this package rounds to even. Output is unchanged everywhere — checked
+  against exact rounding on 313 200 comparisons per runtime, where the only
+  disagreements were those ties. Measured under dart2js: `{:g}` 1437 ns
+  becomes 132, `{:e}` 1113 becomes 323, `%g` 1473 becomes 132, `{:.6}` 1462
+  becomes 147. On the VM `{:g}` 448 becomes 266, under dart2wasm 457 becomes
+  205. A value that does land on a tie pays for the attempt before falling
+  back and costs about a third more than before, 1.7 times under dart2wasm.
 * `formatWith` snapshots its named arguments as a plain copy instead of an
   unmodifiable view of one. The snapshot still guarantees that a `toString`
   reached during the call cannot change what that call reads. Measured on a

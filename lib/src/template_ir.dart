@@ -719,21 +719,16 @@ final class _BraceDoubleOp extends _BraceOp {
       final effective = precision ?? 6;
       formatted = switch (type) {
         'f' || 'F' => _formatFixed(converted, effective, alternate),
-        'e' || 'E' => _formatScientific(
-          Binary64.fromDouble(converted),
-          effective,
-          alternate,
-          type!,
-        ),
+        'e' || 'E' => _formatScientific(converted, effective, alternate, type!),
         'g' || 'G' => _formatGeneral(
-          Binary64.fromDouble(converted),
+          converted,
           effective == 0 ? 1 : effective,
           alternate,
           type == 'G' ? 'E' : 'e',
         ),
         '%' => _formatFixed(formattingValue, effective, alternate),
         null => _formatGeneral(
-          Binary64.fromDouble(converted),
+          converted,
           effective == 0 ? 1 : effective,
           alternate,
           'e',
@@ -1583,14 +1578,9 @@ final class _PrintfDoubleOp extends _PrintfOptionsOp {
       final effective = precision ?? 6;
       formatted = switch (type) {
         'f' || 'F' => _formatFixed(argument, effective, alternate),
-        'e' || 'E' => _formatScientific(
-          Binary64.fromDouble(argument),
-          effective,
-          alternate,
-          type,
-        ),
+        'e' || 'E' => _formatScientific(argument, effective, alternate, type),
         'g' || 'G' => _formatGeneral(
-          Binary64.fromDouble(argument),
+          argument,
           effective == 0 ? 1 : effective,
           alternate,
           type == 'G' ? 'E' : 'e',

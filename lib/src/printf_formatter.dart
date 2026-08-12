@@ -209,14 +209,9 @@ String _formatPrintfDouble(
     final alternate = _hasPrintfFlag(conversion.flags, _PrintfFlags.alternate);
     formatted = switch (type) {
       'f' || 'F' => _formatFixed(value, precision, alternate),
-      'e' || 'E' => _formatScientific(
-        Binary64.fromDouble(value),
-        precision,
-        alternate,
-        type,
-      ),
+      'e' || 'E' => _formatScientific(value, precision, alternate, type),
       'g' || 'G' => _formatGeneral(
-        Binary64.fromDouble(value),
+        value,
         precision == 0 ? 1 : precision,
         alternate,
         type == 'G' ? 'E' : 'e',
