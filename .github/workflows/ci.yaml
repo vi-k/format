@@ -34,10 +34,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.7.2 is the minimum the pubspec claims; stable is what the
+        # 3.7.2 is the minimum the pubspec claims; the second entry is what the
         # repository is formatted and analyzed against. Steps that depend on
-        # the current formatter or linter run on stable only.
-        sdk: ['3.7.2', 'stable']
+        # the formatter or the linter run on that one only.
+        #
+        # Pinned to 3.12.2 rather than tracking `stable`, and the reason is not
+        # caution about formatting. Dart 3.13.0 changed the dart2wasm loader —
+        # `instantiate` is now a method on what `compile` returns, not an
+        # export beside it — and the bootstrap `package:test` generates still
+        # calls the old one, so `dart test -c dart2wasm` fails to load on every
+        # file. 1.31.2 is the newest `test` published, so there is nothing to
+        # upgrade to yet.
+        #
+        # Losing that run is not an option worth taking: it is the only place
+        # the whole test tree meets real 64-bit integers on a web-shaped
+        # target, and it is what caught `--9223372036854775808` when the other
+        # two backends could not. Unpin as soon as `package:test` speaks the
+        # new loader — the check is a one-line `dart test -c dart2wasm` on a
+        # 3.13 SDK.
+        sdk: ['3.7.2', '3.12.2']
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
@@ -46,12 +61,12 @@ jobs:
       - name: Resolve dependencies
         run: dart pub get
       - name: Formatting
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         # The format16 baseline is not materialized in this job, so the
         # whole checkout must be format-clean.
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze (zero-info baseline)
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         # The full-repository pass lives in the benchmark-suite job:
         # here the suite and the format16 baseline are not resolved yet.
         run: dart analyze --fatal-infos lib test example tool
@@ -69,13 +84,13 @@ jobs:
       # number model, and the `no-dart2wasm` tag on the one file that crashes
       # inside `package:test` rather than in this package.
       - name: Tests (node platform, dart2js)
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: dart test -p node
       - name: Tests (node platform, dart2wasm)
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: dart test -p node -c dart2wasm -x no-dart2wasm
       - name: Tests (harness, outside the published archive)
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: dart test benchmark/test tool/test
       # The dependency floor, made real. `dart pub get` always resolves to the
       # newest allowed, so a lower bound in the pubspec is a claim nothing
@@ -89,13 +104,13 @@ jobs:
       # 15 grapheme tables and 1.4.x carries Unicode 16 — so this run also
       # says that nothing in the package depends on which of them resolved.
       - name: Tests on the dependency floor
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: dart pub downgrade characters && dart test
       # Back to the committed resolution, not to the newest one: `dart pub
       # upgrade` would leave every later step running against a graph this
       # repository never locked.
       - name: Restore the committed resolution
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: git checkout pubspec.lock && dart pub get
       - name: Example runs
         run: dart run example/format_example.dart
@@ -103,12 +118,12 @@ jobs:
         run: dart test
         working-directory: packages/format_intl
       - name: Published archive stands on its own
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         # Reconstructs what pub would ship and analyzes and tests it there:
         # a local pass cannot see a .pubignore that drops a referenced path.
         run: dart run tool/verify_package_archive.dart
       - name: Publish dry-run
-        if: matrix.sdk == 'stable'
+        if: matrix.sdk == '3.12.2'
         run: dart pub publish --dry-run
 
   generated-artifacts:
@@ -122,7 +137,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: stable
+          sdk: '3.12.2'
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           # The generators require CPython 3.14: the fixtures record what that
@@ -149,7 +164,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: stable
+          sdk: '3.12.2'
       - name: Resolve dependencies
         run: dart pub get
       - name: Report self-test
@@ -184,7 +199,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: stable
+          sdk: '3.12.2'
       - name: Resolve root dependencies
         run: dart pub get
       - name: Materialize the format 1.6.0 baseline from pub
@@ -231,7 +246,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: stable
+          sdk: '3.12.2'
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           # Pinned because JavaScript performance moves between Node releases,

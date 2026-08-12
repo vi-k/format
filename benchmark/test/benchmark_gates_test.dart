@@ -294,9 +294,10 @@ void main() {
     ]) {
       final reports = [
         for (final report in _completeReports())
-          report.runtime == 'js'
-              ? report
-              : _copyReport(report, versions: change.$2),
+          if (report.runtime == 'js')
+            report
+          else
+            _copyReport(report, versions: change.$2),
       ];
       final result = evaluateGateReports(reports, baseline);
 
@@ -309,16 +310,17 @@ void main() {
     // travels a different path into the comparison and is checked separately.
     final otherNode = [
       for (final report in _completeReports())
-        report.runtime == 'js'
-            ? _copyReport(
-              report,
-              runtimeProvenance: const {
-                'detector': 'dart2js.compile-time-define',
-                'dartCompilerVersion': '3.12.2',
-                'nodeVersion': 'v24.9.0',
-              },
-            )
-            : report,
+        if (report.runtime == 'js')
+          _copyReport(
+            report,
+            runtimeProvenance: const {
+              'detector': 'dart2js.compile-time-define',
+              'dartCompilerVersion': '3.12.2',
+              'nodeVersion': 'v24.9.0',
+            },
+          )
+        else
+          report,
     ];
     final node = evaluateGateReports(otherNode, baseline);
     expect(node.comparable, isFalse);
@@ -332,16 +334,17 @@ void main() {
   test('a different operating system string is still comparable', () {
     final reports = [
       for (final report in _completeReports())
-        report.runtime == 'js'
-            ? report
-            : _copyReport(
-              report,
-              versions: const {
-                'dartVersion': 'test',
-                'os': 'other kernel build',
-                'cpu': 'test',
-              },
-            ),
+        if (report.runtime == 'js')
+          report
+        else
+          _copyReport(
+            report,
+            versions: const {
+              'dartVersion': 'test',
+              'os': 'other kernel build',
+              'cpu': 'test',
+            },
+          ),
     ];
 
     expect(evaluateGateReports(reports, _baseline()).comparable, isTrue);
@@ -360,16 +363,17 @@ void main() {
 
     final elsewhere = [
       for (final report in regressed)
-        report.runtime == 'js'
-            ? report
-            : _copyReport(
-              report,
-              versions: const {
-                'dartVersion': 'test',
-                'os': 'test',
-                'cpu': 'other',
-              },
-            ),
+        if (report.runtime == 'js')
+          report
+        else
+          _copyReport(
+            report,
+            versions: const {
+              'dartVersion': 'test',
+              'os': 'test',
+              'cpu': 'other',
+            },
+          ),
     ];
     final result = evaluateGateReports(elsewhere, baseline);
 
@@ -578,16 +582,17 @@ void main() {
       regressed[1] = _withPerformanceRatio(regressed[1], id, 1.6);
       final elsewhere = [
         for (final report in regressed)
-          report.runtime == 'js'
-              ? report
-              : _copyReport(
-                report,
-                versions: const {
-                  'dartVersion': 'test',
-                  'os': 'test',
-                  'cpu': 'a processor the reference never saw',
-                },
-              ),
+          if (report.runtime == 'js')
+            report
+          else
+            _copyReport(
+              report,
+              versions: const {
+                'dartVersion': 'test',
+                'os': 'test',
+                'cpu': 'a processor the reference never saw',
+              },
+            ),
       ];
 
       final baseline = File('${directory.path}/baseline.json');
