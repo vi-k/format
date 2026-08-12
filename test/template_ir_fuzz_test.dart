@@ -73,10 +73,16 @@ const _seed = 20260805;
 /// | printf, blind values | 1311 | not counted |
 /// | brace, matched values | 1859 | 1257 |
 /// | printf, matched values | 1288 | 1303 |
+/// | brace, multi-field | 1987 | 339 |
+/// | printf, multi-conversion | 1930 | 733 |
 ///
-/// The guards below are fractions of this constant and every measured number
-/// clears its floor with room to spare. They are one-sided, like the coverage
-/// floor and the gate baseline: a corpus that got richer never trips them.
+/// The guards below are fractions of this constant, each set under the number
+/// measured for its own test rather than shared across them: the two
+/// multi-placeholder passes render a third and a sixth as often as their
+/// single-placeholder counterparts, because a template renders only if every
+/// one of its placeholders does. All the floors are one-sided, like the
+/// coverage floor and the gate baseline: a corpus that got richer never trips
+/// them, and only one that degenerated does.
 const _casesPerDialect = 2000;
 
 /// Every engine flavour the diff test pins by hand, plus two the diff test has
@@ -449,6 +455,29 @@ String _multiFieldTemplate(
   return buffer.toString();
 }
 
+/// Builds a printf template of one to four conversions.
+///
+/// The analogue of automatic-index accounting here is the order the varargs
+/// are drained: every `*` takes a value before the conversion it belongs to,
+/// and a program of several ops has to keep that order across op boundaries —
+/// each op knowing only its own position in the list.
+String _multiPrintfTemplate(Random random, List<Object?> values) {
+  final count = 1 + random.nextInt(4);
+  final buffer = StringBuffer('x=');
+  for (var conversion = 0; conversion < count; conversion++) {
+    final spec = _printfTemplate(random);
+    final stars = '*'.allMatches(spec).length;
+    for (var star = 0; star < stars; star++) {
+      values.add(random.nextInt(30) - 10);
+    }
+    values.add(_matchedValue(random, spec));
+    buffer
+      ..write(spec)
+      ..write('|');
+  }
+  return buffer.toString();
+}
+
 /// Classifies one case as rendered (true) or rejected (false).
 ///
 /// The parity helpers own the IR-vs-legacy comparison and deliberately do not
@@ -709,6 +738,30 @@ void main() {
     // rejection as loudly as in a render: MissingFormatArgumentException
     // carries the index it could not find, and the parity helper compares that
     // payload and the offset, not just the exception type.
+    expect(rendered, greaterThan(_casesPerDialect ~/ 8));
+  });
+
+  // The printf counterpart of the pass above. Separate rather than shared:
+  // the dialects have separate parsers, separate processors and separate
+  // legacy paths, so one generic test would only hide which of them diverged.
+  test('multi-conversion printf fuzz: IR matches the legacy oracle', () {
+    final random = Random(_seed + 5);
+    final templates = <String>{};
+    var rendered = 0;
+    for (var index = 0; index < _casesPerDialect; index++) {
+      final values = <Object?>[];
+      final template = _multiPrintfTemplate(random, values);
+      final engine = _engines[random.nextInt(_engines.length)];
+      templates.add(template);
+      expectPrintfParity(
+        template,
+        values,
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} v=$values',
+      );
+      if (_renders(() => engine.vsprintf(template, values))) rendered++;
+    }
+    expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
     expect(rendered, greaterThan(_casesPerDialect ~/ 8));
   });
 }
