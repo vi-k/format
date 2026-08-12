@@ -54,7 +54,7 @@ String _formatBraceInteger(
     List<int>? grouping;
     String? separator;
     if (groupingEnabled) {
-      grouping = List<int>.of(
+      grouping = List.of(
         _readLocale(context, locale, () => locale.grouping),
         growable: false,
       );
@@ -620,7 +620,7 @@ String _displayFloatBody(
   if (locale != null && localeGrouping) {
     final enabled = _readLocale(context, locale, () => locale.groupingEnabled);
     if (enabled) {
-      final grouping = List<int>.of(
+      final grouping = List.of(
         _readLocale(context, locale, () => locale.grouping),
         growable: false,
       );

@@ -163,7 +163,7 @@ final class Format {
   }) => _formatWith(
     template,
     _snapshot(positional),
-    named.isEmpty ? named : Map<String, Object?>.of(named),
+    named.isEmpty ? named : Map.of(named),
   );
 
   // The two entry points below take collections this class built itself, from
@@ -185,7 +185,7 @@ final class Format {
       ).format();
 
   static List<Object?> _snapshot(List<Object?> values) =>
-      values.isEmpty ? values : List<Object?>.of(values, growable: false);
+      values.isEmpty ? values : List.of(values, growable: false);
 
   List<String> _validateConfiguration() {
     final names = <String>{};
