@@ -256,9 +256,11 @@ final class _BraceIntOp extends _BraceOp {
     if (value is int && _isIntegerValue(value)) {
       final signChar = value.isNegative ? 0x2d : requestedSign;
       if (_isWebInt && _exceedsWebSafeInt(value)) {
-        // Same reasoning as _BraceDynamicValueOp: digit-by-digit extraction
-        // is inexact above 2^53-1 on the web, so mirror the BigInt branch
-        // below and write pre-materialized, exact digits instead.
+        // Same reasoning as _BraceDynamicValueOp: dividing a JS double down
+        // digit by digit is inexact above 2^53-1 whatever the radix, so the
+        // digits are materialized first. What materializes them depends on
+        // the radix — fixed-point for decimal, the native conversion for the
+        // powers of two, BigInt only for decimal past 1e21.
         final digitsText = _formatIntMagnitude(
           value,
           radix,

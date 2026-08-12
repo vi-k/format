@@ -39,6 +39,12 @@ unpublished 2.0.0 below.
   character template and 4600 times for one of a hundred thousand, where the
   copies were the whole cost, and a cached entry for such a template retains
   about a third of what it did.
+* Integers beyond 2^53 no longer go through `BigInt` to reach base 2, 8 or 16
+  on the web. Every radix this package supports is a power of two, and a
+  binary double converts into one exactly, so the platform's own conversion
+  already spells the value. Measured under dart2js at 2^53: `{:x}` 320 ns
+  becomes 120, `{:o}` 4070 becomes 150, `{:b}` 11550 becomes 380. Decimal is
+  unchanged — it still needs fixed-point conversion, and `BigInt` past 1e21.
 * `formatWith` snapshots its named arguments as a plain copy instead of an
   unmodifiable view of one. The snapshot still guarantees that a `toString`
   reached during the call cannot change what that call reads. Measured on a

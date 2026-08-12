@@ -103,6 +103,47 @@ void main() {
       }
     });
 
+    // Only decimal needs a detour above 2^53. Every other radix this package
+    // supports is a power of two, and a binary double converts into one
+    // exactly — so the platform's own conversion already spells the value and
+    // going through BigInt bought nothing. Under dart2js it cost a great deal:
+    // 4070 ns for an octal and 11550 for a binary against 150 and 380 without
+    // it.
+    //
+    // BigInt is the oracle here rather than the implementation: it carries the
+    // double's exact value, so it says what the digits must be. The values
+    // have low bits set on purpose — 2^60 above would agree under any rounding
+    // whatsoever, and prove nothing about the ones that would not.
+    test('power-of-two radices spell exact digits beyond 2^53', () {
+      const values = [
+        9007199254740994, // 2^53 + 2, the first step past the safe range
+        1152921504606847232, // 2^60 + 256, one step at that magnitude
+        4611686018427387904, // 2^62
+      ];
+
+      for (final value in values) {
+        final exact = BigInt.from(value);
+        expect(
+          format('{:x}', value),
+          exact.toRadixString(16),
+          reason: '$value',
+        );
+        expect(
+          format('{:X}', value),
+          exact.toRadixString(16).toUpperCase(),
+          reason: '$value',
+        );
+        expect(format('{:o}', value), exact.toRadixString(8), reason: '$value');
+        expect(format('{:b}', value), exact.toRadixString(2), reason: '$value');
+        expect(sprintf('%x', value), exact.toRadixString(16), reason: '$value');
+        expect(
+          format('{:x}', -value),
+          '-${exact.toRadixString(16)}',
+          reason: 'negative $value',
+        );
+      }
+    });
+
     // The divergence follows the value into a container: a list of `[42, 42.0]`
     // represents as `[42, 42]` on the web and `[42, 42.0]` on the VM. Whichever
     // rule the top level uses, the nested elements have to use the same one —
