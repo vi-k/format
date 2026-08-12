@@ -39,6 +39,12 @@ unpublished 2.0.0 below.
   character template and 4600 times for one of a hundred thousand, where the
   copies were the whole cost, and a cached entry for such a template retains
   about a third of what it did.
+* `formatWith` snapshots its named arguments as a plain copy instead of an
+  unmodifiable view of one. The snapshot still guarantees that a `toString`
+  reached during the call cannot change what that call reads. Measured on a
+  template of three named fields at 4% faster on the VM, 16% under dart2js and
+  18% under dart2wasm, where every named lookup had been going through the
+  view.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Extended the configured `NumberLocale` to the printf integer conversions,
