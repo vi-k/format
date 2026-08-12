@@ -38,24 +38,6 @@ const double _meanTolerance = 1.25;
 const double _scenarioTolerance = 1.60;
 const double _keyScenarioTolerance = 1.35;
 
-/// The one environment fact a reference recorded before environments were
-/// written down still implies: the Node pin that used to be checked in this
-/// file. The processor and the Dart version of that recording are written
-/// down nowhere, so nothing else can be said about it.
-///
-/// Remove together with [_legacyEnvironmentDifferences] once the committed
-/// reference carries its own environment.
-const _legacyNodePin = 'v24.8.0';
-
-List<String> _legacyEnvironmentDifferences(GateEnvironment measured) {
-  if (measured.nodeVersion == _legacyNodePin) return const [];
-  final difference =
-      'node: reference predates recorded environments and assumed '
-      '$_legacyNodePin, measured on ${measured.nodeVersion}';
-
-  return [difference];
-}
-
 const Map<String, Set<BenchmarkDialect>> _requiredRuntimeDialects = {
   'jit': {BenchmarkDialect.braces, BenchmarkDialect.printf},
   'aot': {BenchmarkDialect.braces, BenchmarkDialect.printf},
@@ -267,11 +249,10 @@ final class GateReport {
 
   /// Whether the reference and these reports describe the same machine.
   ///
-  /// Null when the reference predates recorded environments and there is
-  /// nothing to compare it with. Separate from [passed] on purpose: the
-  /// arithmetic still ran and is still worth reading, but a verdict drawn from
-  /// it would be a verdict about two different computers.
-  final bool? comparable;
+  /// Separate from [passed] on purpose: the arithmetic still ran and is still
+  /// worth reading, but a verdict drawn from it would be a verdict about two
+  /// different computers.
+  final bool comparable;
   final List<String> environmentDifferences;
   final String sourceRevision;
   final int aotExecutableSizeBytes;
@@ -290,7 +271,7 @@ final class GateReport {
 
   /// Whether this run may decide anything. A comparison across machines is
   /// not a failure, it is an absence of evidence.
-  bool get decisive => comparable ?? true;
+  bool get decisive => comparable;
 
   Map<String, Object?> toJson() => {
     'schemaVersion': 1,
@@ -341,24 +322,27 @@ GateReport evaluateGateReports(
       );
     }
   }
-  final recorded = baseline.environment;
+  // A reference that does not say where it was recorded cannot be held to
+  // anything: the processor it ran on decides these numbers, and a reference
+  // silently treated as comparable would let the gate pass verdicts on two
+  // different computers. Refused rather than downgraded to "not comparable",
+  // for the same reason an unknown scenario id is refused — a gate that
+  // quietly decides nothing, run after run, is indistinguishable from one
+  // that works.
+  final recorded =
+      baseline.environment ??
+      (throw const FormatException(
+        'The reference carries no environment, so nothing can be compared '
+        'with it. Re-record it from a run of this revision: '
+        'dart run benchmark/gates.dart --reports=... --record=<date> '
+        '--output=benchmark/results/gate-baseline.json',
+      ));
   final measured = GateEnvironment.of(reports);
-  final differences =
-      recorded == null
-          // The bridge for references recorded before environments were: the
-          // Node pin that used to live in this file, and nothing else, since
-          // the processor and the Dart version of that recording are not
-          // written down anywhere. Delete once the committed reference carries
-          // its environment.
-          ? _legacyEnvironmentDifferences(measured)
-          : measured.differencesFrom(recorded);
+  final differences = measured.differencesFrom(recorded);
 
   return GateReport(
     passed: gates.every((gate) => gate.passed),
-    comparable:
-        recorded == null
-            ? (differences.isEmpty ? null : false)
-            : differences.isEmpty,
+    comparable: differences.isEmpty,
     environmentDifferences: List.unmodifiable(differences),
     sourceRevision: sourceRevision,
     aotExecutableSizeBytes: aotSize!,

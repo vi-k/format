@@ -380,34 +380,30 @@ void main() {
     expect(result.toJson()['gates'], hasLength(8));
   });
 
-  // The migration case. A reference recorded before environments were written
-  // down cannot say which processor it ran on, so nothing is claimed about
-  // one — but the Node pin that used to live in the gate is still implied by
-  // it, and is the one thing such a reference can still be held to.
-  test('a reference without an environment claims only its Node', () {
-    final legacy = _baselineWithoutEnvironment();
-
-    final matching = evaluateGateReports(_completeReports(), legacy);
-    expect(matching.comparable, isNull, reason: 'сравнивать не с чем');
-    expect(matching.decisive, isTrue);
-
-    final otherNode = [
-      for (final report in _completeReports())
-        report.runtime == 'js'
-            ? _copyReport(
-              report,
-              runtimeProvenance: const {
-                'detector': 'dart2js.compile-time-define',
-                'dartCompilerVersion': '3.12.2',
-                'nodeVersion': 'v25.0.0',
-              },
-            )
-            : report,
-    ];
-    final result = evaluateGateReports(otherNode, legacy);
-    expect(result.comparable, isFalse);
-    expect(result.decisive, isFalse);
-    expect(result.environmentDifferences.single, contains('v24.8.0'));
+  // A reference recorded before environments were written down cannot say
+  // which processor produced it, and the processor is what decides these
+  // numbers. Until 2026-08-12 such a reference was bridged: the gate held it
+  // to the Node pin that used to live in its source and treated everything
+  // else as comparable, which meant deciding across two unknown machines.
+  //
+  // Refused now, rather than downgraded to "not comparable", because the
+  // quiet option is the worse failure: a gate that decides nothing, run after
+  // run, reads exactly like one that keeps passing. The same reasoning as for
+  // an unknown scenario id, which this file pins two tests below.
+  test('a reference without an environment is refused, not assumed', () {
+    expect(
+      () => evaluateGateReports(
+        _completeReports(),
+        _baselineWithoutEnvironment(),
+      ),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains('no environment'), contains('--record')),
+        ),
+      ),
+    );
   });
 
   // The four ways a report can be well-formed and still inadmissible: it was a
