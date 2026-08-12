@@ -149,6 +149,13 @@ final class Format {
   ///
   /// Both collections are snapshotted first, for the reason given on
   /// [vsprintf]: a `toString` reached during formatting can mutate them.
+  ///
+  /// A copy, not an unmodifiable view of one. What the snapshot owes the
+  /// caller is that the call reads what it was handed, and a copy already
+  /// gives that; the view on top only guards the copy from this package's own
+  /// code, which never writes to it, and the copy is never handed out. The
+  /// guard is not free either — every named lookup during the call goes
+  /// through the view.
   String formatWith(
     String template, {
     List<Object?> positional = const [],
@@ -156,7 +163,7 @@ final class Format {
   }) => _formatWith(
     template,
     _snapshot(positional),
-    named.isEmpty ? named : Map<String, Object?>.unmodifiable(named),
+    named.isEmpty ? named : Map<String, Object?>.of(named),
   );
 
   // The two entry points below take collections this class built itself, from
