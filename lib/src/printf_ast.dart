@@ -28,6 +28,9 @@ final class _PrintfTemplate implements _PricedTemplate {
   @override
   late final int retainedBytes = _printfRetainedBytes(nodes);
 
+  @override
+  int? chargedBytes;
+
   // Lazily memoized IR programs, one slot per TextUnit. Shared through the
   // template cache; compilation is total and never throws, so a slot is
   // written at most once per unit.
@@ -36,10 +39,23 @@ final class _PrintfTemplate implements _PricedTemplate {
 
   _PrintfProgram programFor(TextUnit textUnit) => switch (textUnit) {
     TextUnit.unicodeScalars =>
-      _scalarProgram ??= _compilePrintfProgram(this, textUnit),
+      _scalarProgram ??= _compiled(textUnit, other: _graphemeProgram),
     TextUnit.graphemeClusters =>
-      _graphemeProgram ??= _compilePrintfProgram(this, textUnit),
+      _graphemeProgram ??= _compiled(textUnit, other: _scalarProgram),
   };
+
+  /// The printf counterpart of [_BraceTemplate._compiled], including why the
+  /// growth is reported from here and not from [programFor].
+  _PrintfProgram _compiled(
+    TextUnit textUnit, {
+    required _PrintfProgram? other,
+  }) {
+    final program = _compilePrintfProgram(this, textUnit);
+    if (other != null) {
+      _printfTemplateCache.grew(this, _secondTextUnitBytes(retainedBytes));
+    }
+    return program;
+  }
 }
 
 final class _PrintfLiteralNode extends _PrintfNode {

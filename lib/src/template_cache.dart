@@ -143,6 +143,14 @@ abstract interface class _PricedTemplate {
   ///
   /// See [templateCacheMemoryLimit] for the model and what it is fitted to.
   int get retainedBytes;
+
+  /// What the cache last charged for this template, or null while it is not
+  /// resident.
+  ///
+  /// Stored rather than recomputed on eviction because the price can grow
+  /// after the entry is stored: compiling a program for a second text unit
+  /// adds to it. Recomputing would subtract a number that was never added.
+  int? chargedBytes;
 }
 
 // The fitted constants. Each stands for one node's worth of objects — the node
@@ -158,6 +166,38 @@ const _printfConversionNodeBytes = 280;
 /// What a literal's own text costs beyond the key it was sliced from: its
 /// string on both platforms, and on the VM the code units prepared next to it.
 const _literalTextBytesPerCharacter = _isWeb ? 1 : 3;
+
+/// What a second [TextUnit] adds to an entry already priced, as a percentage
+/// of that first price.
+///
+/// A parsed template is shared by every engine, but a compiled program is not:
+/// there is a slot per text unit, and each field memoizes its parsed
+/// specification per unit as well. An entry first reached by a scalar engine
+/// and later by a grapheme one therefore holds two programs and two specs per
+/// field while the constants above priced one of each — the price is fixed
+/// when the entry is stored, and the second unit arrives afterwards.
+///
+/// Measured as the difference between filling a cache under one unit and under
+/// both, RSS per entry, minimum of three runs at 60 000 to 300 000 entries:
+///
+/// | shape | one unit | both | second unit, of priced |
+/// |---|---|---|---|
+/// | 3 literals, 2 fields, no specifications | 1083 | 1308 | 26% |
+/// | 5 literals, 5 fields, no specifications | 1601 | 2252 | 43% |
+/// | the same with short specifications | 3104 | 4973 | 59% |
+/// | the same with longer specifications | 3281 | 5095 | 56% |
+/// | 10 fields, 8 specifications, nested width | 4385 | 6696 | 38% |
+///
+/// One share rather than a constant per node: an additive fit taken from the
+/// five-field shapes predicted 3254 for the dense one against 2311 measured,
+/// so the per-node form is not supported by what can be measured here. The
+/// share is set at the top of the range instead of its middle because a budget
+/// that undercounts is the defect this exists to remove — the same reasoning
+/// that prices `%%` as a conversion below.
+const _secondTextUnitPercent = 60;
+
+int _secondTextUnitBytes(int firstUnitBytes) =>
+    firstUnitBytes * _secondTextUnitPercent ~/ 100;
 
 int _braceRetainedBytes(List<_BraceNode> nodes) {
   // The one shape that slices nothing: a template that is a single literal is
@@ -263,8 +303,23 @@ final class _TemplateCache<T extends _PricedTemplate> {
     }
     _keys.add(template);
     _memory += price;
+    parsed.chargedBytes = price;
 
     return _entries[template] = parsed;
+  }
+
+  /// Charges [delta] more for [parsed], which has grown since it was stored.
+  ///
+  /// A no-op for a template the cache does not hold: one evicted while a call
+  /// still had it in hand, or one never stored because the caches are off.
+  /// Trimming afterwards is what keeps the bound meaningful — the growth can
+  /// push the total past the limit, and nothing else would notice.
+  void grew(T parsed, int delta) {
+    final charged = parsed.chargedBytes;
+    if (charged == null || delta == 0) return;
+    parsed.chargedBytes = charged + delta;
+    _memory += delta;
+    trim();
   }
 
   /// Drops entries until the cache fits bounds that have just shrunk.
@@ -280,12 +335,21 @@ final class _TemplateCache<T extends _PricedTemplate> {
     final victim = _victims.nextInt(_keys.length);
     final key = _keys[victim];
     final parsed = _entries.remove(key);
-    if (parsed != null) _memory -= _price(key, parsed);
+    if (parsed != null) {
+      _memory -= parsed.chargedBytes ?? _price(key, parsed);
+      parsed.chargedBytes = null;
+    }
     _keys[victim] = _keys.last;
     _keys.removeLast();
   }
 
   void clear() {
+    // The entries outlive the cache whenever a call still holds one, and a
+    // template that remembers a charge would take the next growth out of a
+    // total it is no longer part of.
+    for (final parsed in _entries.values) {
+      parsed.chargedBytes = null;
+    }
     _entries.clear();
     _keys.clear();
     _memory = 0;

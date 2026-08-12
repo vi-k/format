@@ -202,6 +202,56 @@ void main() {
     expect(engine.templateCacheMemory, lessThanOrEqualTo(400));
   });
 
+  // A parsed template is shared by every engine, but a compiled program is
+  // not: there is a slot per text unit, and each field memoizes its parsed
+  // specification per unit too. The entry was priced for one unit when it was
+  // stored, so an engine of the other unit reaching it later makes the entry
+  // outgrow its price — measured at 26% to 59% of it, depending on shape.
+  //
+  // Left uncharged, the budget stopped bounding what it names: a process
+  // formatting the same templates through engines of both units held about
+  // half again what the limit allowed, and nothing reported it.
+  test('a second text unit is charged to the entry that grew', () {
+    final graphemes = engine.Format(textUnit: TextUnit.graphemeClusters);
+    const template = 'grew {0:>8,d} {1:^6s} {2:#x}';
+    const values = <Object?>[1, 'x', 255];
+
+    engine.formatWith(template, positional: values);
+    final oneUnit = engine.templateCacheMemory;
+    expect(engine.templateCacheSize, 1);
+
+    graphemes.formatWith(template, positional: values);
+    expect(engine.templateCacheSize, 1, reason: 'still one entry');
+    expect(engine.templateCacheMemory, greaterThan(oneUnit));
+
+    // Third and later calls compile nothing, so they must charge nothing.
+    final bothUnits = engine.templateCacheMemory;
+    graphemes.formatWith(template, positional: values);
+    engine.formatWith(template, positional: values);
+    expect(engine.templateCacheMemory, bothUnits);
+  });
+
+  // The growth is added to what the entry was charged, and eviction has to
+  // subtract that same number rather than recompute the original price —
+  // otherwise the total drifts by the difference on every evicted entry, in
+  // the direction that eventually reports a cache holding less than nothing.
+  test('growth survives eviction without drifting the total', () {
+    final graphemes = engine.Format(textUnit: TextUnit.graphemeClusters);
+    for (var index = 0; index < 12; index++) {
+      final template = 'drift $index {0:>8,d} {1:^6s}';
+      engine.formatWith(template, positional: const [1, 'x']);
+      graphemes.formatWith(template, positional: const [1, 'x']);
+    }
+    expect(engine.templateCacheSize, 12);
+
+    engine.templateCacheCapacity = 3;
+    expect(engine.templateCacheSize, 3);
+    expect(engine.templateCacheMemory, greaterThan(0));
+
+    engine.templateCacheCapacity = 0;
+    expect(engine.templateCacheMemory, 0, reason: 'no residue, no negative');
+  });
+
   // Same contract as the capacity: a lowered bound takes effect at once, not
   // at the next insertion. A program reducing its budget to free memory would
   // otherwise keep everything until it happened to format something else.

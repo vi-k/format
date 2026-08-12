@@ -29,7 +29,10 @@ unpublished 2.0.0 below.
   the constants fitted to measured retention. Bytes rather than characters
   because the same amount of text costs from 1 to 154 bytes per character
   depending on how densely it is fielded, which is what a character count
-  cannot see.
+  cannot see. An entry is repriced when an engine of the other Unicode text
+  unit reaches it: the parse is shared, but the compiled program and the
+  specifications memoized under it are held per unit, and that second copy
+  measures between a quarter and three fifths of the first price.
 * A template with no fields — or a printf template with no conversion — is now
   formatted without copying it: it compiles to a single op that hands the text
   back by reference. Measured on the VM at 2.6 times faster for a sixteen

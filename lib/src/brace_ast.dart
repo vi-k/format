@@ -14,6 +14,9 @@ final class _BraceTemplate implements _PricedTemplate {
   @override
   late final int retainedBytes = _braceRetainedBytes(nodes);
 
+  @override
+  int? chargedBytes;
+
   // Lazily memoized IR programs, one slot per TextUnit. Shared through the
   // template cache; compilation is total and never throws, so a slot is
   // written at most once per unit.
@@ -22,10 +25,28 @@ final class _BraceTemplate implements _PricedTemplate {
 
   _BraceProgram programFor(TextUnit textUnit) => switch (textUnit) {
     TextUnit.unicodeScalars =>
-      _scalarProgram ??= _compileBraceProgram(this, textUnit),
+      _scalarProgram ??= _compiled(textUnit, other: _graphemeProgram),
     TextUnit.graphemeClusters =>
-      _graphemeProgram ??= _compileBraceProgram(this, textUnit),
+      _graphemeProgram ??= _compiled(textUnit, other: _scalarProgram),
   };
+
+  /// Compiles the program for [textUnit], reporting the growth when the slot
+  /// for the [other] unit is already filled.
+  ///
+  /// Filling the second slot is the moment the entry outgrows its price: a
+  /// program and the specifications memoized under it are held per unit, while
+  /// the cache charged for one unit when it stored this template.
+  ///
+  /// Deliberately a separate method so that [programFor] stays the `??=` it
+  /// was: every formatting call goes through it, and the growth concerns the
+  /// one call in a template's life that compiles.
+  _BraceProgram _compiled(TextUnit textUnit, {required _BraceProgram? other}) {
+    final program = _compileBraceProgram(this, textUnit);
+    if (other != null) {
+      _braceTemplateCache.grew(this, _secondTextUnitBytes(retainedBytes));
+    }
+    return program;
+  }
 }
 
 /// Returns [list] as-is in production; under asserts it is replaced with an
