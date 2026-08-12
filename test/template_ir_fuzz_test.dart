@@ -157,6 +157,16 @@ const _unicodeStrings = <String>[
   'é\u{1F600}x',
 ];
 
+/// Attribute names the multi-field generator draws.
+///
+/// `x` and `y` resolve on [IrTestPoint] under the extension engines and on a
+/// map under any of them; `boom` explodes inside the lookup; `nope` resolves
+/// to nothing. Under the six engines without extensions all four fail alike,
+/// which is a rejection case rather than a wasted draw.
+const _attributeNames = ['x', 'y', 'boom', 'nope'];
+const _itemKeys = ['a', 'b'];
+const _representationConversions = ['r', 's', 'a'];
+
 /// Doubles that reach the non-finite and signed-zero branches.
 const _edgeDoubles = <double>[
   // ignore: prefer_int_literals
@@ -253,6 +263,190 @@ Object? _matchedValue(Random random, String spec) {
     // pipeline's general form, so a double is the matching value there too.
     _ => random.nextDouble() * pow(10.0, random.nextInt(20) - 10),
   };
+}
+
+/// Draws one field of a multi-field template, appending the values it
+/// consumes to [positional] and [named].
+///
+/// Values are appended in *resolution* order — the root first, then the nested
+/// fields of the specification left to right — because that is the order the
+/// legacy resolver walks and the order the IR has to reproduce from
+/// `_automaticFieldCount` and its `automaticBase` reset. A generator that
+/// modelled the order wrongly could not raise a false failure; it would only
+/// lower the rendered share, since values would stop suiting their
+/// conversions.
+///
+/// [automaticNumbering] is drawn once per template and obeyed by every field.
+/// The parser rejects a template mixing `{}` with `{0}` — including a `{}`
+/// nested inside a `{0:...}` — so a generator that mixed them freely would
+/// spend most of its corpus re-testing that one rejection.
+String _braceField(
+  Random random,
+  List<Object?> positional,
+  Map<String, Object?> named, {
+  required bool automaticNumbering,
+  required int fieldIndex,
+}) {
+  final buffer = StringBuffer('{');
+  // One field in four takes a named root; the rest follow the template's
+  // numbering mode. One named draw in eight names a key nobody defined, and
+  // one explicit index in eight points past the end: both are the
+  // MissingFormatArgumentException case, which the IR and legacy have to
+  // report at the same offset.
+  final namedRoot = random.nextInt(4) == 0;
+  final rootKey = 'k$fieldIndex';
+  if (namedRoot) {
+    buffer.write(random.nextInt(8) == 0 ? 'absent$fieldIndex' : rootKey);
+  } else if (!automaticNumbering) {
+    buffer.write(
+      random.nextInt(8) == 0 ? positional.length + 5 : positional.length,
+    );
+  }
+
+  final access = random.nextInt(6);
+  final attribute = _attributeNames[random.nextInt(_attributeNames.length)];
+  final itemKey = _itemKeys[random.nextInt(_itemKeys.length)];
+  switch (access) {
+    case 0:
+      buffer.write('[0]');
+    case 1:
+      buffer.write('[$itemKey]');
+    case 2:
+      buffer.write('.$attribute');
+    default:
+      break;
+  }
+
+  if (random.nextInt(3) == 0) {
+    buffer
+      ..write('!')
+      ..write(
+        _representationConversions[random.nextInt(
+          _representationConversions.length,
+        )],
+      );
+  }
+
+  // Nested values are collected apart and appended after the root, so the
+  // slots line up with resolution order. Their explicit indices are computed
+  // from where they will land, not from where they are drawn.
+  final nested = <Object?>[];
+  final spec =
+      random.nextInt(3) == 0
+          ? _nestedBraceSpec(
+            random,
+            nested,
+            automaticNumbering: automaticNumbering,
+            firstSlot: positional.length + (namedRoot ? 0 : 1),
+          )
+          : _braceSpec(random);
+  if (spec.isNotEmpty) {
+    buffer
+      ..write(':')
+      ..write(spec);
+  }
+  buffer.write('}');
+
+  final leaf = _matchedValue(random, spec);
+  final rootValue = switch (access) {
+    0 => <Object?>[leaf, 'second'],
+    1 => <Object?, Object?>{'a': leaf, 'b': leaf},
+    2 =>
+      random.nextBool()
+          ? <Object?, Object?>{attribute: leaf}
+          : IrTestPoint(random.nextInt(100), random.nextInt(100)),
+    _ => leaf,
+  };
+  if (namedRoot) {
+    named[rootKey] = rootValue;
+  } else {
+    positional.add(rootValue);
+  }
+  positional.addAll(nested);
+  return buffer.toString();
+}
+
+/// A specification whose width or precision is itself a field.
+///
+/// This is the shape that stays outside the IR: the specification is not known
+/// when the program is compiled, so the field falls back — and the nested
+/// field consumes an automatic index of its own, between the outer field's and
+/// the next one's. That interleaving is the accounting this whole pass exists
+/// to compare.
+String _nestedBraceSpec(
+  Random random,
+  List<Object?> nested, {
+  required bool automaticNumbering,
+  required int firstSlot,
+}) {
+  final buffer = StringBuffer();
+  if (random.nextBool()) {
+    buffer.write(
+      _nestedField(
+        random,
+        nested,
+        automaticNumbering: automaticNumbering,
+        firstSlot: firstSlot,
+      ),
+    );
+  } else {
+    buffer
+      ..write('.')
+      ..write(
+        _nestedField(
+          random,
+          nested,
+          automaticNumbering: automaticNumbering,
+          firstSlot: firstSlot,
+        ),
+      );
+  }
+  buffer.write(_braceConversions[random.nextInt(_braceConversions.length)]);
+  return buffer.toString();
+}
+
+String _nestedField(
+  Random random,
+  List<Object?> nested, {
+  required bool automaticNumbering,
+  required int firstSlot,
+}) {
+  // One nested field in three reads its number from a named argument, which
+  // is legal under both numbering modes and consumes no positional slot.
+  if (random.nextInt(3) == 0) return '{w}';
+  final slot = firstSlot + nested.length;
+  nested.add(random.nextInt(12));
+  return automaticNumbering ? '{}' : '{$slot}';
+}
+
+/// Builds a template of one to four fields with literals between them.
+///
+/// The literals are not decoration: a program of several ops has to interleave
+/// them correctly, and the single-record literal optimization only applies
+/// when the whole program is one literal, so a template that was all fields
+/// would never reach the other branch.
+String _multiFieldTemplate(
+  Random random,
+  List<Object?> positional,
+  Map<String, Object?> named,
+) {
+  final automaticNumbering = random.nextBool();
+  final count = 1 + random.nextInt(4);
+  final buffer = StringBuffer('a');
+  for (var field = 0; field < count; field++) {
+    buffer
+      ..write(
+        _braceField(
+          random,
+          positional,
+          named,
+          automaticNumbering: automaticNumbering,
+          fieldIndex: field,
+        ),
+      )
+      ..write('|');
+  }
+  return buffer.toString();
 }
 
 /// Classifies one case as rendered (true) or rejected (false).
@@ -460,5 +654,61 @@ void main() {
     }
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
     expect(rendered, greaterThan(_casesPerDialect ~/ 2));
+  });
+
+  // What every pass above is structurally unable to reach.
+  //
+  // Three of the axes this file draws — representations, lookups and nested
+  // specifications — all compile to the same fallback op, and that op calls
+  // the very function the legacy path calls. On a one-field template the
+  // comparison is therefore close to tautological. What is not tautological
+  // is the accounting of automatic indices: `_automaticFieldCount` and the
+  // `automaticBase` reset exist only in the IR, legacy counts as it walks,
+  // and a nested field consumes an index *between* two outer ones. Those two
+  // counts can only disagree when a template holds more than one field.
+  //
+  // Values are matched per field on purpose. In a multi-field template the
+  // first field that throws ends the call, so every field to its right stops
+  // being exercised at all — a corpus of mostly-rejected templates would
+  // quietly test one field per case no matter how many it wrote.
+  test('multi-field brace fuzz: IR matches the legacy oracle', () {
+    final random = Random(_seed + 4);
+    final templates = <String>{};
+    var rendered = 0;
+    for (var index = 0; index < _casesPerDialect; index++) {
+      final positional = <Object?>[];
+      final named = <String, Object?>{'w': 7};
+      final template = _multiFieldTemplate(random, positional, named);
+      final engine = _engines[random.nextInt(_engines.length)];
+      templates.add(template);
+      expectBraceParity(
+        template,
+        positional: positional,
+        named: named,
+        engine: engine,
+        label: '#$index e${_engines.indexOf(engine)} p=$positional n=$named',
+      );
+      if (_renders(
+        () => engine.formatWith(template, positional: positional, named: named),
+      )) {
+        rendered++;
+      }
+    }
+    expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
+    // A quarter of the single-field floor, and measured rather than chosen:
+    // 339 of 2000 templates render whole. That is not a weak corpus, it is
+    // what multiplying honest odds looks like — a field renders 38.7% of the
+    // time here (lookups, `!` conversions and the deliberate missing-argument
+    // draws all cost), and a template renders only if every one of its one to
+    // four fields does. The measured shares track the model to within a point:
+    // 211/545 at one field, 85/477 at two against 15.0% predicted, 32/503 at
+    // three against 5.8%, 11/475 at four against 2.2%.
+    //
+    // Rejected cases are not lost coverage for the property this test exists
+    // to check. A divergence in the automatic-index accounting shows up in a
+    // rejection as loudly as in a render: MissingFormatArgumentException
+    // carries the index it could not find, and the parity helper compares that
+    // payload and the offset, not just the exception type.
+    expect(rendered, greaterThan(_casesPerDialect ~/ 8));
   });
 }
