@@ -55,7 +55,29 @@ import 'parity_harness.dart';
 /// seed is unchanged. The distinctness and rendering guards below were
 /// re-verified against the refreshed corpus on the VM and on node.
 const _seed = 20260805;
-const _casesPerDialect = 400;
+
+/// Cases drawn per test.
+///
+/// Counting is nearly free beside compiling the file: ten times this corpus
+/// costs 0.29 s more both on the VM and on node, against 1.1 s and 3.6 s of
+/// compilation. The size is therefore set by how much of the combination
+/// space a fixed corpus should sample, not by the clock.
+///
+/// Measured shape at this size — identical on the VM, on node and under
+/// wasm, outcomes included, which is a stronger agreement than the seed
+/// comment above claims and worth re-checking whenever the generators move:
+///
+/// | test | distinct | rendered |
+/// |---|---|---|
+/// | brace, blind values | 1858 | not counted |
+/// | printf, blind values | 1285 | not counted |
+/// | brace, matched values | 1854 | 1274 |
+/// | printf, matched values | 1312 | 1292 |
+///
+/// The guards below are fractions of this constant and every measured number
+/// clears its floor with room to spare. They are one-sided, like the coverage
+/// floor and the gate baseline: a corpus that got richer never trips them.
+const _casesPerDialect = 2000;
 
 /// Every engine flavour the diff test pins by hand. The fuzzer picks one per
 /// case so a single run walks the hot ops, the grapheme fallbacks, the
@@ -85,6 +107,9 @@ const _braceConversions = [
   '%',
   'd',
   'x',
+  'X',
+  'o',
+  'b',
   's',
   'n',
   'c',
@@ -101,6 +126,9 @@ const _printfConversions = [
   'i',
   'u',
   'x',
+  'X',
+  'o',
+  'c',
   's',
 ];
 
