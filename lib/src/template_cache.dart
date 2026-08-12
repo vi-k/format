@@ -31,8 +31,13 @@ final _printfTemplateCache = _TemplateCache<_PrintfTemplate>();
 ///
 /// Raise it when the working set is larger than the default and templates
 /// repeat; a set that cycles past the capacity keeps roughly
-/// `capacity / size` of itself resident. Set it to zero when templates are
-/// generated and never repeat: caching them only pays to evict them.
+/// `capacity / size` of itself resident.
+///
+/// A workload whose templates never repeat needs no setting: after enough
+/// misses in a row that each had to evict something, the cache stops being
+/// consulted and starts being consulted again once the workload gives it a
+/// reason. What it already holds is kept, not discarded. Setting this to zero
+/// still says the same thing outright, and says it from the first call.
 ///
 /// This is a bound on entries, not on memory: see
 /// [templateCacheMemoryLimit], which bounds the other one. Both apply.
@@ -47,8 +52,14 @@ set templateCacheCapacity(int value) {
     throw ArgumentError.value(value, 'templateCacheCapacity', 'Must be >= 0.');
   }
   _templateCacheCapacity = value;
-  _braceTemplateCache.trim();
-  _printfTemplateCache.trim();
+  // New bounds, new answer to "does the working set fit": what the policy
+  // concluded under the old ones no longer applies.
+  _braceTemplateCache
+    ..resume()
+    ..trim();
+  _printfTemplateCache
+    ..resume()
+    ..trim();
 }
 
 /// How much memory the parsed templates of each mini-language may hold, eight
@@ -106,8 +117,12 @@ set templateCacheMemoryLimit(int value) {
     );
   }
   _templateCacheMemoryLimit = value;
-  _braceTemplateCache.trim();
-  _printfTemplateCache.trim();
+  _braceTemplateCache
+    ..resume()
+    ..trim();
+  _printfTemplateCache
+    ..resume()
+    ..trim();
 }
 
 /// How many parsed templates are resident, across both mini-languages.
@@ -275,6 +290,66 @@ final class _TemplateCache<T extends _PricedTemplate> {
   /// linear.
   int _memory = 0;
 
+  /// Misses in a row that had to evict something to make room.
+  ///
+  /// Only evicting misses are counted, and that is the whole subtlety: an
+  /// empty cache filling up is all misses too, and it is not thrashing. A
+  /// working set one template larger than the capacity misses once per lap
+  /// and hits the rest, so it never comes near the threshold. A set that does
+  /// not fit at all misses every single time, and nothing else does.
+  int _evictingMisses = 0;
+
+  /// Calls served without consulting the cache, or -1 while it is consulted.
+  int _bypassedCalls = -1;
+
+  /// How many evicting misses in a row mean the set does not fit.
+  ///
+  /// Tied to the capacity because that is the size of what could have fitted;
+  /// floored so that a deliberately tiny cache is not written off after two
+  /// misses.
+  static int get _bypassAfter =>
+      _templateCacheCapacity < 64 ? 64 : _templateCacheCapacity;
+
+  /// How many calls are skipped before the policy asks again.
+  ///
+  /// The cost of being wrong in one direction is bounded by this number: a
+  /// workload that turns repetitive waits at most this many calls to be
+  /// cached again. The cost in the other direction is the reverse — the
+  /// [_bypassAfter] calls it takes to notice the set does not fit are paid
+  /// once per probe, which at these numbers is under a fifteenth of them.
+  static const _probeAfter = 8192;
+
+  /// Whether this call should consult the cache at all.
+  ///
+  /// A cache that has missed and evicted [_bypassAfter] times in a row has
+  /// been measured, by this package and written down in the README, to cost
+  /// between a third and eight times what it saves: the entry is gone before
+  /// the workload returns to it. Consulting it then is not merely useless but
+  /// the dominant cost of the call — under dart2js a miss on a freshly built
+  /// key costs about as much as parsing the template.
+  ///
+  /// So the cache stops being consulted, and what it already holds is kept
+  /// rather than discarded: those entries cost nothing while they are not
+  /// being looked at, and a probe is what decides whether to use them again.
+  bool consult() {
+    if (_bypassedCalls < 0) return true;
+    if (++_bypassedCalls < _probeAfter) return false;
+    resume();
+    return true;
+  }
+
+  /// Returns to consulting the cache, from a probe or from a caller that has
+  /// changed the bounds or emptied it.
+  void resume() {
+    _bypassedCalls = -1;
+    _evictingMisses = 0;
+  }
+
+  /// Records that the cache answered, which is the evidence that it fits.
+  void hit() {
+    _evictingMisses = 0;
+  }
+
   int get length => _entries.length;
 
   int get memory => _memory;
@@ -297,9 +372,17 @@ final class _TemplateCache<T extends _PricedTemplate> {
     // other template its parse and gains nothing.
     if (price > _templateCacheMemoryLimit) return parsed;
 
+    var evicted = false;
     while (_entries.length >= _templateCacheCapacity ||
         _memory + price > _templateCacheMemoryLimit) {
       _evict();
+      evicted = true;
+    }
+    // Counted here rather than at the lookup because a miss that fits says
+    // nothing: it is what filling the cache looks like.
+    if (evicted && ++_evictingMisses >= _bypassAfter) {
+      _evictingMisses = 0;
+      _bypassedCalls = 0;
     }
     _keys.add(template);
     _memory += price;
@@ -344,6 +427,9 @@ final class _TemplateCache<T extends _PricedTemplate> {
   }
 
   void clear() {
+    // Emptying the cache is a caller saying the workload has changed, so what
+    // the policy learned about the old one goes with the entries.
+    resume();
     // The entries outlive the cache whenever a call still holds one, and a
     // template that remembers a charge would take the next growth out of a
     // total it is no longer part of.
@@ -357,18 +443,30 @@ final class _TemplateCache<T extends _PricedTemplate> {
 }
 
 _BraceTemplate _cachedBraceTemplate(String template) {
-  final cached = _braceTemplateCache[template];
-  if (cached != null) return cached;
+  final cache = _braceTemplateCache;
+  if (!cache.consult()) return _parseBraceTemplate(template);
+
+  final cached = cache[template];
+  if (cached != null) {
+    cache.hit();
+    return cached;
+  }
 
   // A failed parse below never reaches the store, so it evicts nothing.
-  return _braceTemplateCache.store(template, _parseBraceTemplate(template));
+  return cache.store(template, _parseBraceTemplate(template));
 }
 
 _PrintfTemplate _cachedPrintfTemplate(String template) {
-  final cached = _printfTemplateCache[template];
-  if (cached != null) return cached;
+  final cache = _printfTemplateCache;
+  if (!cache.consult()) return _parsePrintfTemplate(template);
 
-  return _printfTemplateCache.store(template, _parsePrintfTemplate(template));
+  final cached = cache[template];
+  if (cached != null) {
+    cache.hit();
+    return cached;
+  }
+
+  return cache.store(template, _parsePrintfTemplate(template));
 }
 
 /// Test seams for the template cache. They are deliberately not exported by

@@ -45,6 +45,17 @@ unpublished 2.0.0 below.
   already spells the value. Measured under dart2js at 2^53: `{:x}` 320 ns
   becomes 120, `{:o}` 4070 becomes 150, `{:b}` 11550 becomes 380. Decimal is
   unchanged — it still needs fixed-point conversion, and `BigInt` past 1e21.
+* The template cache stops consulting itself when it is being thrashed, and
+  starts again after a while in case the workload has changed. What triggers it
+  is misses in a row that each had to evict something — a cache filling up is
+  all misses too, and that is not the same thing — and what it holds is kept
+  rather than discarded. This is the regime the README already documented as
+  the one where caching never pays at any repetition rate. Measured on a first
+  call under dart2js: a literal template 600 ns becomes 250, one of ten fields
+  4230 becomes 2240; on the VM 469 becomes 311 and 2337 becomes 2043; under
+  dart2wasm 379 becomes 237 and 2424 becomes 1900. A workload that does repeat
+  is unaffected — its hits are what tells the two apart — and `templateCacheSize`
+  still reports what is held.
 * The `g`, `e` and bare-precision floating presentations take their digits
   from the platform's own exponential conversion instead of decomposing the
   double and rounding in `BigInt`. The exact path stays for what the platform

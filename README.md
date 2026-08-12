@@ -461,6 +461,16 @@ caching would only pay to evict:
 templateCacheCapacity = 0;  // discards what is cached, and keeps nothing
 ```
 
+You do not have to: a cache that misses and evicts many times in a row stops
+being consulted by itself, and is consulted again after a while in case the
+workload has changed. What it holds is kept rather than discarded, so nothing
+is lost when it comes back. Measured on the cold path under dart2js, a call
+formatting a template it has never seen went from 600 ns to 250 for a literal
+template and from 4230 to 2240 for one of ten fields; on the VM 469 to 311 and
+2337 to 2043; under dart2wasm 379 to 237 and 2424 to 1900. Setting the bound to
+zero is still the sharper instrument — it says so from the first call rather
+than after the misses that establish it, and it frees what is cached.
+
 ### When to turn it off
 
 What decides is not how often a template repeats but whether the working set
@@ -483,6 +493,12 @@ template that is nothing but literal text takes until about the seventh —
 there is nothing to parse there, while the cache still charges two table
 operations. The rows past the bounds are flat, which is the point: repetition
 buys nothing once the set no longer fits.
+
+Those three flat rows are what the cache now steps out of on its own — they
+are measured with it consulted throughout, which is what it used to do and
+what it still does until the misses add up. Turning it off outright is the
+difference between paying that for the first few hundred calls and not paying
+it at all.
 
 Before turning the cache off, weigh raising both bounds so that the set does
 fit — and size that with `templateCacheMemory` rather than by eye, because

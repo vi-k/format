@@ -103,6 +103,110 @@ void main() {
     expect(hits, greaterThan(lookups ~/ 2));
   });
 
+  // A set that does not fit is the one case where the cache cannot win: the
+  // entry is gone before the workload returns to it, so every call pays a
+  // miss, a parse, a store and an eviction, and receives nothing back. The
+  // policy is to notice that and stop paying — measured on the cold path at
+  // 600 ns per call down to 250 under dart2js.
+  //
+  // Observed through identity rather than through the size: while the cache
+  // is not consulted, the same template parsed twice gives two objects, and
+  // that is exactly what "not cached" means from the outside.
+  test('a workload that never repeats stops being cached', () {
+    engine.templateCacheCapacity = 64;
+    for (var index = 0; index < 200; index++) {
+      engine.debugCachedBraceTemplate('never repeated $index {}');
+    }
+
+    expect(
+      identical(
+        engine.debugCachedBraceTemplate('probe {}'),
+        engine.debugCachedBraceTemplate('probe {}'),
+      ),
+      isFalse,
+    );
+    // What was already parsed stays: nothing is discarded, it is only left
+    // alone, so the memory the caller allowed is still accounted for.
+    expect(engine.debugBraceTemplateCacheSize(), 64);
+  });
+
+  // The trap this pins: an empty cache filling up is all misses too. Counting
+  // misses alone would write off every large working set on its first lap,
+  // including the cyclic one two tests above, which does hit and does profit.
+  // Only a miss that had to evict is evidence, and a fill evicts nothing.
+  test('filling the cache is not mistaken for a set that does not fit', () {
+    engine.templateCacheCapacity = 64;
+    for (var index = 0; index < 64; index++) {
+      engine.debugCachedBraceTemplate('fills $index {}');
+    }
+
+    expect(
+      identical(
+        engine.debugCachedBraceTemplate('after the fill {}'),
+        engine.debugCachedBraceTemplate('after the fill {}'),
+      ),
+      isTrue,
+    );
+  });
+
+  // Stopping has to be revocable, or a burst of one-off templates would cost
+  // a program its cache for the rest of the process. The interval is not
+  // asserted, only that there is one: the loop runs until the cache answers
+  // again, and fails by timing out at a bound far above it.
+  test('a workload that turns repetitive is cached again', () {
+    engine.templateCacheCapacity = 64;
+    for (var index = 0; index < 200; index++) {
+      engine.debugCachedBraceTemplate('never repeated $index {}');
+    }
+
+    var previous = engine.debugCachedBraceTemplate('now repeating {}');
+    var cachedAgain = false;
+    for (var index = 0; index < 40000 && !cachedAgain; index++) {
+      final current = engine.debugCachedBraceTemplate('now repeating {}');
+      cachedAgain = identical(current, previous);
+      previous = current;
+    }
+
+    expect(cachedAgain, isTrue);
+  });
+
+  // Emptying the cache is a caller saying the workload has changed, and the
+  // policy has to take that at face value rather than make them wait out the
+  // interval.
+  test('emptying the cache makes the policy ask again at once', () {
+    engine.templateCacheCapacity = 64;
+    for (var index = 0; index < 200; index++) {
+      engine.debugCachedBraceTemplate('never repeated $index {}');
+    }
+    engine.clearTemplateCache();
+
+    expect(
+      identical(
+        engine.debugCachedBraceTemplate('after clearing {}'),
+        engine.debugCachedBraceTemplate('after clearing {}'),
+      ),
+      isTrue,
+    );
+  });
+
+  // The two mini-languages have their own caches and decide separately: a
+  // program generating brace templates from data while formatting printf ones
+  // from literals must not lose the cache it is profiting from.
+  test('each mini-language decides for itself', () {
+    engine.templateCacheCapacity = 64;
+    for (var index = 0; index < 200; index++) {
+      engine.debugCachedBraceTemplate('never repeated $index {}');
+    }
+
+    expect(
+      identical(
+        engine.debugCachedPrintfTemplate('printf stays cached %d'),
+        engine.debugCachedPrintfTemplate('printf stays cached %d'),
+      ),
+      isTrue,
+    );
+  });
+
   // The capacity is a knob an application can turn, so lowering it has to take
   // effect immediately rather than at the next eviction — otherwise a program
   // reducing it to bound its memory would keep the old entries indefinitely on
