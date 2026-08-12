@@ -14,19 +14,37 @@
 /// them makes the fuzzer a test of the *error* contract as much as of the
 /// output.
 ///
-/// The corpus is seeded so a failure is reproducible and identical on the VM
-/// and on node — the two runtimes must draw the same values, or a divergence
-/// found in one could not be investigated in the other. The seed comment below
-/// records what that cost.
+/// Six passes, in two shapes. Four draw a single placeholder — brace and
+/// printf, each with a value drawn blindly and with a value matched to the
+/// conversion — and two draw templates of one to four placeholders.
 ///
-/// Three guards keep the fuzzer from silently degenerating. Distinctness
-/// catches a generator that collapsed to a handful of templates; the rendered
-/// count catches the subtler failure where the corpus stays varied but every
-/// case turns into an error, so the layout paths stop being exercised while
-/// everything still passes. Neither notices a corpus that was merely *swapped*
-/// for a different one of the same quality, which is what an SDK changing
-/// `Random`'s stream would do — so the stream itself is pinned, first test in
-/// the file.
+/// The multi-placeholder pair exists for one property the others structurally
+/// cannot reach. Representations, lookups and nested specifications all
+/// compile to the same fallback op, and that op calls the very function the
+/// legacy path calls, so on a single placeholder those axes compare a path to
+/// itself. What does not compare to itself is the accounting of automatic
+/// indices: the IR precomputes it (`_automaticFieldCount` and an
+/// `automaticBase` reset per op) while legacy counts as it walks, and a nested
+/// field consumes an index *between* two outer ones. Two counts can only
+/// disagree when a template holds more than one placeholder.
+///
+/// The corpus is seeded so a failure is reproducible and identical everywhere.
+/// Measurement says more than reproducibility: the VM, node and wasm agree on
+/// every drawn template *and* on every outcome, counted at 2000 cases per
+/// pass. The seed comment below records what that cost.
+///
+/// Two guards keep the fuzzer from silently degenerating. Distinctness catches
+/// a generator that collapsed to a handful of templates; the rendered count
+/// catches the subtler failure where the corpus stays varied but every case
+/// turns into an error, so the layout paths stop being exercised while
+/// everything still passes. Both floors are measured, not chosen — see the
+/// table on [_casesPerDialect] — and both are one-sided.
+///
+/// Neither notices a corpus that was merely *swapped* for a different one of
+/// the same quality, which is what an SDK changing `Random`'s stream would do
+/// — so the stream itself is pinned, first test in the file. And neither
+/// notices an outcome that stopped being produced at all, which is why the
+/// two extension payloads have a test of their own right after it.
 library;
 
 import 'dart:math';
