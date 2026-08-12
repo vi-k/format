@@ -101,13 +101,22 @@ final class _BraceFallbackOp extends _BraceOp {
   final _FieldNode field;
   final int automaticBase;
 
-  const _BraceFallbackOp(this.field, this.automaticBase);
+  /// Holds the last specification this op resolved and what it parsed to.
+  ///
+  /// It sits on the op rather than on the node because a program is compiled
+  /// per [TextUnit], so an op belongs to exactly one of them and the memo
+  /// needs no key for it. Putting it on the node would also have grown every
+  /// field node, including the many that never resolve a specification, and
+  /// with them the cache's memory model.
+  final _DynamicSpecMemo _memo = _DynamicSpecMemo();
+
+  _BraceFallbackOp(this.field, this.automaticBase);
 
   @override
   void write(CharSink sink, _BraceProcessor frame) {
     final resolver = frame.resolver.._automaticIndex = automaticBase;
     final value = resolver.resolveField(field);
-    sink.writeString(frame._formatField(resolver, field, value));
+    sink.writeString(frame._formatField(resolver, field, value, memo: _memo));
   }
 
   @override

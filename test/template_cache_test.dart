@@ -461,6 +461,20 @@ void main() {
   test('resolves dynamic specifications on every call', () {
     expect(engine.format('{:{}d}', 42, 6), '    42');
     expect(engine.format('{:{}d}', 42, 8), '      42');
+    // Back to the first width. What is remembered between calls is the last
+    // resolved specification and its parse, so this is the direction that
+    // catches a memo which answers from the wrong entry rather than one that
+    // never answers at all.
+    expect(engine.format('{:{}d}', 42, 6), '    42');
+    // A resolution that does not parse has to throw every time it is
+    // resolved, and must not displace what the memo holds: the call after it
+    // is the one that would silently format at the wrong width.
+    expect(
+      () => engine.format('{:{}d}', 42, 'wide'),
+      throwsA(isA<FormattingException>()),
+    );
+    expect(engine.format('{:{}d}', 42, 6), '    42');
+    expect(engine.format('{:{}d}', 42, 8), '      42');
   });
 
   // The printf side of the same question. Everything in `%+08.2f` is static and

@@ -77,8 +77,9 @@ final class _BraceProcessor {
   String _formatField(
     _FieldResolver resolver,
     _FieldNode field,
-    Object? value,
-  ) {
+    Object? value, {
+    _DynamicSpecMemo? memo,
+  }) {
     final converted =
         field.conversion == null
             ? value
@@ -100,6 +101,24 @@ final class _BraceProcessor {
     }
     final specification = _resolveSpecification(resolver, field);
     final context = _context(field, specification);
+    // A specification with a nested field is unknown until the call that
+    // resolves it, so it cannot be memoized on the node the way a static one
+    // is. It can be memoized on the op, which is where [memo] comes from:
+    // the resolved text is almost always the same text again — `{:{width}}`
+    // is written to be given one width — and parsing it is what the whole
+    // call costs.
+    if (memo != null) {
+      if (memo.text == specification) {
+        return _formatParsedValue(converted, memo.spec!, engine, context);
+      }
+      final spec = _parseFormatSpec(specification, engine.textUnit, context);
+      // Assigned after the parse, so a specification that throws leaves the
+      // memo holding the last one that did not.
+      memo
+        ..text = specification
+        ..spec = spec;
+      return _formatParsedValue(converted, spec, engine, context);
+    }
     return formatValue(converted, specification, engine, context);
   }
 
@@ -125,4 +144,15 @@ final class _BraceProcessor {
         specifier: specification,
         conversion: field.conversion,
       );
+}
+
+/// One resolved specification and the parse it produced.
+///
+/// A single entry rather than a map: a template asks the same question with
+/// the same answer call after call, and a map would charge a hash of the text
+/// to find out. A miss costs one string comparison and the parse that was
+/// going to happen anyway.
+final class _DynamicSpecMemo {
+  String? text;
+  _FormatSpec? spec;
 }

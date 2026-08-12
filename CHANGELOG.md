@@ -45,6 +45,12 @@ unpublished 2.0.0 below.
   already spells the value. Measured under dart2js at 2^53: `{:x}` 320 ns
   becomes 120, `{:o}` 4070 becomes 150, `{:b}` 11550 becomes 380. Decimal is
   unchanged — it still needs fixed-point conversion, and `BigInt` past 1e21.
+* A specification with a nested field — `{value:{width}.{precision}f}` — is
+  parsed once per resolved text rather than once per call. The resolution
+  itself still happens every call, because it is part of the values and not of
+  the template, and a resolution that changes is parsed again. Measured under
+  dart2js: `{0:>{1}.2f}` 366 ns becomes 257 and `{0:{1}d}` 191 becomes 175;
+  under dart2wasm 497 becomes 341, on the VM 558 becomes 490.
 * Grouped integer conversions on the web no longer count the digits by
   dividing: the platform conversion that produces them already knows how many
   it wrote. Measured under dart2js on a sixteen-digit value: `{:,d}` 272 ns
