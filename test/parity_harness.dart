@@ -70,6 +70,72 @@ final class IrTestNumberLocale implements NumberLocale {
       .replaceAll('9', '٩');
 }
 
+/// A value type the engine knows nothing about.
+///
+/// Built-in handling takes priority over extensions, so an extension is only
+/// ever consulted for a type the package has no branch of its own for: a
+/// [Representation] registered for `String` or `int` would never be called,
+/// and a fuzzer built on those types would exercise nothing.
+final class IrTestPoint {
+  final int x;
+  final int y;
+
+  const IrTestPoint(this.x, this.y);
+
+  @override
+  String toString() => 'IrTestPoint($x, $y)';
+}
+
+/// Resolves `{value.x}` on an [IrTestPoint], and explodes on `.boom`.
+///
+/// The explosion is deliberate: a lookup that throws anything other than a
+/// [FormattingException] has it wrapped as [FormatExtensionException] with the
+/// template location attached, and that is the only route by which the corpus
+/// reaches that payload at all.
+final class IrTestPointLookup extends AttributeLookup<IrTestPoint> {
+  const IrTestPointLookup();
+
+  @override
+  bool canLookup(Object? value) => value is IrTestPoint;
+
+  @override
+  Object? lookup(IrTestPoint value, String attribute) => switch (attribute) {
+    'x' => value.x,
+    'y' => value.y,
+    'boom' => throw StateError('lookup exploded on purpose'),
+    // An absent attribute is the lookup's own decision to report. Returning
+    // null keeps it a formatting case instead of a second error class, so the
+    // corpus still draws values through the ordinary paths behind it.
+    _ => null,
+  };
+}
+
+/// A second lookup accepting the same type as [IrTestPointLookup].
+///
+/// An engine holding both has no way to choose between them, which is
+/// [AmbiguousFormatterException] — the other payload no engine could produce.
+final class IrTestPointMirrorLookup extends AttributeLookup<IrTestPoint> {
+  const IrTestPointMirrorLookup();
+
+  @override
+  bool canLookup(Object? value) => value is IrTestPoint;
+
+  @override
+  Object? lookup(IrTestPoint value, String attribute) => 'mirror:$attribute';
+}
+
+/// Gives [IrTestPoint] its own `!r`/`!a` form, so representation conversions
+/// reach extension code instead of falling back to `toString()`.
+final class IrTestPointRepresentation extends Representation<IrTestPoint> {
+  const IrTestPointRepresentation();
+
+  @override
+  bool canRepresent(Object? value) => value is IrTestPoint;
+
+  @override
+  String represent(IrTestPoint value) => '<${value.x};${value.y}>';
+}
+
 final graphemeFormat = Format(textUnit: TextUnit.graphemeClusters);
 final compatibleFormat = Format(doubleFormatMode: DoubleFormatMode.compatible);
 final compatibleGraphemes = Format(
@@ -79,6 +145,13 @@ final compatibleGraphemes = Format(
 final localeFormat = Format(numberLocale: const IrTestNumberLocale());
 final shortSpellingFormat = Format(
   doubleSpecialValueSpelling: DoubleSpecialValueSpelling.short,
+);
+final extensionFormat = Format(
+  lookups: const [IrTestPointLookup()],
+  representations: const [IrTestPointRepresentation()],
+);
+final ambiguousFormat = Format(
+  lookups: const [IrTestPointLookup(), IrTestPointMirrorLookup()],
 );
 
 /// Runs one brace template through both paths and requires they agree.

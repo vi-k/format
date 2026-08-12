@@ -57,6 +57,13 @@ export 'errors.dart'
         UnsupportedConversionException,
         UnsupportedFormatValueException;
 
+// AttributeLookup and Representation are part of the same seam surface: two
+// payloads the parity helpers switch over — FormatExtensionException and
+// AmbiguousFormatterException — cannot be produced by any engine without
+// extensions registered, so the differential tests build one that has them
+// (both are also separately exported by the public `format.dart` library).
+export 'extensions.dart' show AttributeLookup, Representation;
+
 // NumberLocale is part of the same seam surface: the template-IR
 // differential tests build an engine on a deliberately non-default locale to
 // prove the hot double ops hand such engines back to the legacy tail. The

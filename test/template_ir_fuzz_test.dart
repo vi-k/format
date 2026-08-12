@@ -71,17 +71,24 @@ const _seed = 20260805;
 /// |---|---|---|
 /// | brace, blind values | 1833 | not counted |
 /// | printf, blind values | 1311 | not counted |
-/// | brace, matched values | 1859 | 1265 |
-/// | printf, matched values | 1288 | 1314 |
+/// | brace, matched values | 1859 | 1257 |
+/// | printf, matched values | 1288 | 1303 |
 ///
 /// The guards below are fractions of this constant and every measured number
 /// clears its floor with room to spare. They are one-sided, like the coverage
 /// floor and the gate baseline: a corpus that got richer never trips them.
 const _casesPerDialect = 2000;
 
-/// Every engine flavour the diff test pins by hand. The fuzzer picks one per
-/// case so a single run walks the hot ops, the grapheme fallbacks, the
-/// compatible double mode, the localized tail, and the short spellings.
+/// Every engine flavour the diff test pins by hand, plus two the diff test has
+/// no use for. The fuzzer picks one per case so a single run walks the hot ops,
+/// the grapheme fallbacks, the compatible double mode, the localized tail, the
+/// short spellings, and — through the last two — extension code.
+///
+/// The extension pair is what makes [FormatExtensionException] and
+/// [AmbiguousFormatterException] producible at all: every other engine leaves
+/// `.attribute` on a non-Map to fail as a plain lookup and `!r` to take a
+/// built-in branch, so those two payloads sat in the parity switch unreachable
+/// by any case. The test right after the stream pinning holds them there.
 final _engines = <Format>[
   defaultFormat,
   graphemeFormat,
@@ -89,6 +96,8 @@ final _engines = <Format>[
   compatibleGraphemes,
   localeFormat,
   shortSpellingFormat,
+  extensionFormat,
+  ambiguousFormat,
 ];
 
 /// Fill characters: ASCII, a precomposed code point, a combining sequence
@@ -313,6 +322,32 @@ void main() {
       [for (var i = 0; i < 6; i++) bounded.nextBool()],
       [false, true, true, false, true, false],
     );
+  });
+
+  // Two payloads of describeErrorPayload were unreachable for the whole
+  // corpus, and nothing said so: no engine registered an extension, so
+  // `.attribute` on a non-Map always ended in FormatLookupException and
+  // `!r` always took a built-in branch. These two engines are what makes
+  // them reachable, and this test is what keeps them reachable — an engine
+  // list that quietly dropped them would otherwise stay green, since the
+  // fuzzer cannot tell a payload it never produces from one that cannot
+  // happen.
+  test('the extension engines reach the two payloads the corpus cannot', () {
+    const point = IrTestPoint(1, 2);
+    expect(
+      () => extensionFormat.formatWith('{0.boom}', positional: [point]),
+      throwsA(isA<FormatExtensionException>()),
+    );
+    expect(
+      () => ambiguousFormat.formatWith('{0.x}', positional: [point]),
+      throwsA(isA<AmbiguousFormatterException>()),
+    );
+    // A representation registered for a type the engine has no branch of its
+    // own for: without it `!r` on this value would fall back to toString().
+    expect(extensionFormat.formatWith('{0!r}', positional: [point]), '<1;2>');
+    expectBraceParity('{0.boom}', positional: [point], engine: extensionFormat);
+    expectBraceParity('{0.x}', positional: [point], engine: ambiguousFormat);
+    expectBraceParity('{0!r}', positional: [point], engine: extensionFormat);
   });
 
   // Random specification, random value, random engine — the two drawn
