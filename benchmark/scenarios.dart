@@ -163,6 +163,25 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     key: true,
     candidateFormat: _compatibleFormat,
   ),
+  // The two ways a fixed-point conversion leaves the range where the scaled
+  // value is still an exact double, which is where the fast path used to give
+  // up and spell the value in BigInt: the precision pushes it out, or the
+  // magnitude does. `fixed_large` above stays inside that range and so says
+  // nothing about either.
+  _braceComparable(
+    'brace.double.fixed_wide.compatible',
+    template: '{:.6f}',
+    values: const [12345678901234.568],
+    expected: '12345678901234.568359',
+    candidateFormat: _compatibleFormat,
+  ),
+  _braceComparable(
+    'brace.double.fixed_huge.compatible',
+    template: '{:.2f}',
+    values: const [1.2345678901234568e19],
+    expected: '12345678901234567168.00',
+    candidateFormat: _compatibleFormat,
+  ),
   _braceInformation(
     'brace.double.half_tie.dart',
     template: '{:.0f}',

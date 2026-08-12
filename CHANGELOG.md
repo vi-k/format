@@ -57,6 +57,14 @@ unpublished 2.0.0 below.
   becomes 147. On the VM `{:g}` 448 becomes 266, under dart2wasm 457 becomes
   205. A value that does land on a tie pays for the attempt before falling
   back and costs about a third more than before, 1.7 times under dart2wasm.
+* Fixed-point conversion keeps the platform's own spelling past the range
+  where the scaled value is still an exact double, where it used to fall back
+  to `BigInt`. Rounding ties are decided from the bits of the value there,
+  which is exact at that range and needs no scaled product. Measured under
+  dart2js: `{:.6f}` of 12345678901234.568 goes from 1849 ns to 86, and
+  `{:.2f}` of 1.23e19 from 2070 to 87; on the VM 694 to 158 and under
+  dart2wasm 606 to 94. Values inside the old range are untouched, and their
+  cheaper arithmetic test is still what decides them.
 * `formatWith` snapshots its named arguments as a plain copy instead of an
   unmodifiable view of one. The snapshot still guarantees that a `toString`
   reached during the call cannot change what that call reads. Measured on a

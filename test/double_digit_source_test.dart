@@ -125,6 +125,69 @@ void main() {
       expect(compatible.sprintf('%.3g', 0.0625), '0.0625');
     });
 
+    // Fixed-point conversion answers the same question at a fixed decimal
+    // place rather than a significant-digit count, and it decides ties two
+    // ways: while the scaled value is an exact double the tie is visible in
+    // the value, and past that only the bits say. Both are exercised here —
+    // the second family below leaves that range on purpose.
+    test('fixed-point digits match exact half-to-even rounding', () {
+      final values = _corpus();
+      var ties = 0;
+      var pastExactScale = 0;
+
+      for (final value in values) {
+        if (value >= 1e21) continue;
+        for (final precision in const [0, 2, 6, 15, 20]) {
+          final exact = _exactFixed(value, precision);
+          expect(
+            compatible.format('{:.${precision}f}', value),
+            exact.body,
+            reason: 'value $value at .$precision',
+          );
+          if (exact.tie) ties++;
+          if (value * math.pow(10.0, precision) >= 4503599627370496.0) {
+            pastExactScale++;
+          }
+        }
+      }
+
+      expect(ties, greaterThan(80), reason: 'corpus must contain ties');
+      expect(
+        pastExactScale,
+        greaterThan(400),
+        reason: 'corpus must leave the exact-scale range',
+      );
+    });
+
+    // Ties that only the bit-level test can catch: the scaled value is past
+    // the exact-double range, so the arithmetic one has nothing to look at.
+    // Each answer is CPython's, and each moves by one in the last digit if
+    // the platform conversion is trusted there.
+    test('ties past the exact-scale range still round to even', () {
+      expect(
+        compatible.format('{:.6f}', 4503599627.3828125),
+        '4503599627.382812',
+      );
+      expect(
+        compatible.format('{:.2f}', 45035996273705.125),
+        '45035996273705.12',
+      );
+      expect(
+        compatible.format('{:.10f}', 450359.96337890625),
+        '450359.9633789062',
+      );
+      // The same values one place further, where nothing is being decided and
+      // the platform answer is simply the exact one.
+      expect(
+        compatible.format('{:.7f}', 4503599627.3828125),
+        '4503599627.3828125',
+      );
+      expect(
+        compatible.format('{:.3f}', 45035996273705.125),
+        '45035996273705.125',
+      );
+    });
+
     // The platform conversion spells at most twenty-one significant digits.
     // Past that the exact path answers alone, and it has to keep spelling the
     // value rather than the shortest form that round-trips to it: `0.1` is not
@@ -190,6 +253,35 @@ List<double> _corpus() {
   return values;
 }
 
+/// A double taken apart into `significand * 2^exponent2`, exactly.
+({BigInt significand, int exponent2}) _decompose(double magnitude) {
+  final bytes = ByteData(8)..setFloat64(0, magnitude);
+  final high = bytes.getUint32(0);
+  final low = bytes.getUint32(4);
+  final exponentBits = (high >> 20) & 0x7ff;
+  final fraction = (BigInt.from(high & 0x000fffff) << 32) | BigInt.from(low);
+  return (
+    significand: exponentBits == 0 ? fraction : fraction | (BigInt.one << 52),
+    exponent2: exponentBits == 0 ? -1074 : exponentBits - 1075,
+  );
+}
+
+/// The exact fixed-point spelling of [magnitude] at [precision] places.
+({String body, bool tie}) _exactFixed(double magnitude, int precision) {
+  final (:significand, :exponent2) = _decompose(magnitude);
+  final rounded = _roundScaled(significand, exponent2, precision);
+  var digits = rounded.toString();
+  if (precision == 0) {
+    return (body: digits, tie: _isTie(significand, exponent2, precision));
+  }
+  digits = digits.padLeft(precision + 1, '0');
+  final split = digits.length - precision;
+  return (
+    body: '${digits.substring(0, split)}.${digits.substring(split)}',
+    tie: _isTie(significand, exponent2, precision),
+  );
+}
+
 /// The exact answer, spelled out rather than converted.
 ///
 /// [BigInt] stands here as the oracle, not as an implementation: the value is
@@ -200,14 +292,7 @@ List<double> _corpus() {
   double magnitude,
   int significantDigits,
 ) {
-  final bytes = ByteData(8)..setFloat64(0, magnitude);
-  final high = bytes.getUint32(0);
-  final low = bytes.getUint32(4);
-  final exponentBits = (high >> 20) & 0x7ff;
-  final fraction = (BigInt.from(high & 0x000fffff) << 32) | BigInt.from(low);
-  final significand =
-      exponentBits == 0 ? fraction : fraction | (BigInt.one << 52);
-  final exponent2 = exponentBits == 0 ? -1074 : exponentBits - 1075;
+  final (:significand, :exponent2) = _decompose(magnitude);
 
   var exponent = _decimalExponent(significand, exponent2);
   var scale = significantDigits - 1 - exponent;
