@@ -69,10 +69,10 @@ const _seed = 20260805;
 ///
 /// | test | distinct | rendered |
 /// |---|---|---|
-/// | brace, blind values | 1858 | not counted |
-/// | printf, blind values | 1285 | not counted |
-/// | brace, matched values | 1854 | 1274 |
-/// | printf, matched values | 1312 | 1292 |
+/// | brace, blind values | 1833 | not counted |
+/// | printf, blind values | 1311 | not counted |
+/// | brace, matched values | 1859 | 1265 |
+/// | printf, matched values | 1288 | 1314 |
 ///
 /// The guards below are fractions of this constant and every measured number
 /// clears its floor with room to spare. They are one-sided, like the coverage
@@ -130,6 +130,22 @@ const _printfConversions = [
   'o',
   'c',
   's',
+];
+
+/// Strings whose code-unit, scalar and grapheme lengths all differ, so a
+/// precision that truncates and a width that pads disagree between the two
+/// [TextUnit] modes — and disagree differently on the web, where lengths are
+/// counted in code units.
+///
+/// The corpus held only `str###` before, where all three lengths coincide:
+/// every string case rendered the same under [graphemeFormat] as under
+/// [defaultFormat], and the two modes could not be told apart by a failure.
+const _unicodeStrings = <String>[
+  '',
+  'école',
+  '\u{1F469}‍\u{1F4BB}',
+  'אבג',
+  'é\u{1F600}x',
 ];
 
 /// Doubles that reach the non-finite and signed-zero branches.
@@ -191,7 +207,7 @@ String _printfTemplate(Random random) {
   return buffer.toString();
 }
 
-Object? _value(Random random) => switch (random.nextInt(8)) {
+Object? _value(Random random) => switch (random.nextInt(9)) {
   0 => random.nextDouble() * pow(10.0, random.nextInt(40) - 20),
   1 => -random.nextDouble() * pow(10.0, random.nextInt(40) - 20),
   2 => random.nextInt(1 << 30) - (1 << 29),
@@ -199,6 +215,7 @@ Object? _value(Random random) => switch (random.nextInt(8)) {
   4 => 'str${random.nextInt(1000)}',
   5 => BigInt.from(random.nextInt(1 << 30)).pow(1 + random.nextInt(4)),
   6 => null,
+  7 => _unicodeStrings[random.nextInt(_unicodeStrings.length)],
   _ => random.nextBool(),
 };
 
@@ -218,7 +235,10 @@ Object? _matchedValue(Random random, String spec) {
     'X' ||
     'o' ||
     'b' => random.nextInt(1 << 30) - (1 << 29),
-    's' => 'str${random.nextInt(1000)}',
+    's' =>
+      random.nextInt(3) == 0
+          ? _unicodeStrings[random.nextInt(_unicodeStrings.length)]
+          : 'str${random.nextInt(1000)}',
     'c' => 33 + random.nextInt(90),
     // Trailing digit means "no conversion": the empty spec is the double
     // pipeline's general form, so a double is the matching value there too.
