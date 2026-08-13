@@ -343,6 +343,13 @@ value. When two formatters accept the same value and the placeholder names
 neither, the engine throws `AmbiguousFormatterException` rather than picking
 one.
 
+Automatic selection needs the specification to be *empty*, not merely
+nameless: `{:>12}` on a custom value carries options and names nothing, so it
+never reaches the registry and is rejected as a specification. Name the
+formatter — `{:>12money}` — or leave the specification empty. Options alone do
+not select one, because then registering an extension would change what an
+unrelated `{:>12}` elsewhere in the program means.
+
 Width, fill, and alignment are applied by the engine after a custom formatter
 returns, while `FormatOptions` provides sign, alternate form, zero, grouping,
 precision, and the optional additional template. That template is the text
@@ -394,6 +401,16 @@ accepts maps is never called for one.
 formatWith('{value.name}', named: {
   'value': {'name': 'Ada'},
 });  // Ada
+```
+
+An `[item]` key is literal text, as in Python: whatever stands between the
+brackets is the key, quotes included. A key that *begins* with a quote is
+refused instead, because that is Python's dict syntax written by mistake and
+the error says so rather than reporting a key that was never there:
+
+```dart
+formatWith("{0[it's]}", positional: [{"it's": 'fine'}]);  // fine
+formatWith("{0['key']}", positional: [{"'key'": 1}]);     // throws
 ```
 
 ### Custom representations

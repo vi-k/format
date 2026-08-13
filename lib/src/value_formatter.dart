@@ -57,6 +57,22 @@ String _formatParsedValue(
     return _fallbackToString(value, context);
   }
 
+  // A formatter is reached by name, or by the specification being empty. A
+  // specification that carries options but names nothing therefore never asks
+  // the registry — and reporting that as "the formatter does not accept this
+  // value" points at the one thing that is not the problem, since
+  // `{:>12money}` formats the very same value. Only on the failure path, so
+  // the extra pass over the registry costs nothing that matters.
+  for (final formatter in engine.formatters) {
+    if (_canFormat(formatter, value, context)) {
+      throw InvalidSpecifierException(
+        context,
+        'A custom formatter is chosen by name, as in "{:>12name}", or by an '
+        'empty specification. This one carries options but no name.',
+      );
+    }
+  }
+
   throw UnsupportedFormatValueException(context, value);
 }
 

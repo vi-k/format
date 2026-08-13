@@ -1702,6 +1702,45 @@ final class _PrintfDoubleOp extends _PrintfOptionsOp {
   }
 }
 
+/// The width and precision a conversion carries, resolved once for whichever
+/// op it compiles into.
+///
+/// Null means the conversion does not compile at all: a static option outside
+/// the safe bound keeps the per-call error it already raises, rather than
+/// being decided here where there is no call to report against.
+///
+/// This is the classifier's half of what [_PrintfOptionsOp] does for the ops
+/// themselves. It was three verbatim copies of nineteen lines, one per op
+/// kind, and the ops' own copies had already been merged for the same reason:
+/// a rule about negative widths or oversized precisions has three places to be
+/// changed in and no way to notice the two that were not.
+({bool left, int staticWidth, bool hasPrecision, int staticPrecision})?
+_classifyPrintfOptions(_PrintfConversionNode node) {
+  var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
+  var staticWidth = 0;
+  if (node.width case _LiteralPrintfOption(:final value)) {
+    if (value < -_maximumSafeFormatOption || value > _maximumSafeFormatOption) {
+      return null;
+    }
+    staticWidth = value < 0 ? -value : value;
+    if (value < 0) left = true;
+  }
+  var staticPrecision = 0;
+  var hasPrecision = node.precision != null;
+  if (node.precision case _LiteralPrintfOption(:final value)) {
+    if (value > _maximumSafeFormatOption) return null;
+    if (value < 0) hasPrecision = false;
+    staticPrecision = value < 0 ? 0 : value;
+  }
+
+  return (
+    left: left,
+    staticWidth: staticWidth,
+    hasPrecision: hasPrecision,
+    staticPrecision: staticPrecision,
+  );
+}
+
 _PrintfOp? _classifyPrintfConversion(
   _PrintfConversionNode node,
   int widthArgIndex,
@@ -1709,26 +1748,11 @@ _PrintfOp? _classifyPrintfConversion(
   int valueArgIndex,
   TextUnit textUnit,
 ) {
+  final width = node.width;
+  final options = _classifyPrintfOptions(node);
+  if (options == null) return null;
+  final (:left, :staticWidth, :hasPrecision, :staticPrecision) = options;
   if (node.type == 's') {
-    final width = node.width;
-    final precision = node.precision;
-    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
-    var staticWidth = 0;
-    if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafeFormatOption ||
-          value > _maximumSafeFormatOption) {
-        return null; // Unsafe static width keeps today's per-call error.
-      }
-      staticWidth = value < 0 ? -value : value;
-      if (value < 0) left = true;
-    }
-    var staticPrecision = 0;
-    var hasPrecision = precision != null;
-    if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafeFormatOption) return null;
-      if (value < 0) hasPrecision = false;
-      staticPrecision = value < 0 ? 0 : value;
-    }
     return _PrintfStringOp(
       node: node,
       valueArgIndex: valueArgIndex,
@@ -1743,25 +1767,6 @@ _PrintfOp? _classifyPrintfConversion(
     );
   }
   if (const {'d', 'i', 'u', 'o', 'x', 'X'}.contains(node.type)) {
-    final width = node.width;
-    final precision = node.precision;
-    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
-    var staticWidth = 0;
-    if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafeFormatOption ||
-          value > _maximumSafeFormatOption) {
-        return null; // Unsafe static width keeps today's per-call error.
-      }
-      staticWidth = value < 0 ? -value : value;
-      if (value < 0) left = true;
-    }
-    var staticPrecision = 0;
-    var hasPrecision = precision != null;
-    if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafeFormatOption) return null;
-      if (value < 0) hasPrecision = false;
-      staticPrecision = value < 0 ? 0 : value;
-    }
     final type = node.type;
     return _PrintfIntOp(
       node: node,
@@ -1789,25 +1794,6 @@ _PrintfOp? _classifyPrintfConversion(
   }
   // 'a'/'A' are deliberately absent: they keep the legacy hex tail.
   if (const {'f', 'F', 'e', 'E', 'g', 'G'}.contains(node.type)) {
-    final width = node.width;
-    final precision = node.precision;
-    var left = _hasPrintfFlag(node.flags, _PrintfFlags.left);
-    var staticWidth = 0;
-    if (width case _LiteralPrintfOption(:final value)) {
-      if (value < -_maximumSafeFormatOption ||
-          value > _maximumSafeFormatOption) {
-        return null; // Unsafe static width keeps today's per-call error.
-      }
-      staticWidth = value < 0 ? -value : value;
-      if (value < 0) left = true;
-    }
-    var staticPrecision = 0;
-    var hasPrecision = precision != null;
-    if (precision case _LiteralPrintfOption(:final value)) {
-      if (value > _maximumSafeFormatOption) return null;
-      if (value < 0) hasPrecision = false;
-      staticPrecision = value < 0 ? 0 : value;
-    }
     return _PrintfDoubleOp(
       node: node,
       valueArgIndex: valueArgIndex,

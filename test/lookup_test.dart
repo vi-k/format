@@ -121,6 +121,38 @@ void main() {
     );
   });
 
+  // An item key is literal text between the brackets, so a quote inside one is
+  // part of the key — `it's` is a perfectly ordinary map key, and Python reads
+  // `{0[it's]}` that way too. Only a key that *opens* with a quote is someone
+  // writing Python's dict syntax by mistake, and only that is worth a
+  // dedicated error: rejecting every quote made the diagnostic cost real keys.
+  test('an item key may contain a quote but may not open with one', () {
+    expect(
+      formatWith(
+        "{0[it's]} {0[a\"b]}",
+        positional: const [
+          {"it's": 'apostrophe', 'a"b': 'double'},
+        ],
+      ),
+      'apostrophe double',
+    );
+    expect(
+      () => formatWith(
+        "{0['key']}",
+        positional: const [
+          {"'key'": 'quoted'},
+        ],
+      ),
+      throwsA(
+        isA<InvalidFormatException>().having(
+          (error) => error.reason,
+          'reason',
+          contains('quote syntax'),
+        ),
+      ),
+    );
+  });
+
   // The extension point working at all: a type the engine knows nothing about,
   // reached through `.name` because the caller registered a lookup for it.
   // This is the baseline the ambiguity and failure cases below deviate from.

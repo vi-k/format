@@ -216,6 +216,34 @@ void main() {
     expect(engine.format('{:custom}', 42), 'custom:42');
   });
 
+  // The gap between the two ways in: a specification that carries options but
+  // names nothing never consults the registry, so `{:>12}` fails on a value
+  // `{:>12name}` formats happily. The rule is deliberate — options alone must
+  // not turn an unknown value into a formatter call — but the failure used to
+  // read "the formatter does not accept this value", which blames the one part
+  // that is working. What it says now is what to write instead.
+  test('a nameless specification with options says what to write', () {
+    final engine = Format(formatters: [_AutomaticFormatter()]);
+
+    expect(engine.format('{:>12auto}', const _Value('ok')), '     auto:ok');
+    expect(
+      () => engine.format('{:>12}', const _Value('ok')),
+      throwsA(
+        isA<InvalidSpecifierException>().having(
+          (error) => error.reason,
+          'reason',
+          allOf(contains('chosen by name'), contains('no name')),
+        ),
+      ),
+    );
+    // A value no formatter claims still fails as a value: the registry was
+    // asked and said no, which is what that message means.
+    expect(
+      () => engine.format('{:>12}', Object()),
+      throwsA(isA<UnsupportedFormatValueException>()),
+    );
+  });
+
   // With nothing registered, `{}` on an unknown type is `toString` — the same
   // answer Dart interpolation gives. Unlike `!r`, which promises a
   // representation and refuses to guess, `{}` promises only "print this".

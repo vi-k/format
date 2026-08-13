@@ -79,7 +79,16 @@ _FormatSpec _parseFormatSpec(
 /// reimplementing what it means to be a grapheme cluster.
 List<String> _specificationUnits(String source, TextUnit textUnit) {
   for (var index = 0; index < source.length; index++) {
-    if (source.codeUnitAt(index) >= 0x80) return textUnit.split(source);
+    final unit = source.codeUnitAt(index);
+    // A carriage return is the one exception to "ASCII means one unit per code
+    // unit": CRLF is a single grapheme cluster, and the only fully ASCII
+    // sequence that is. Cutting it in two made `{:\r\n<5}` a specification
+    // error under `graphemeClusters` while `TextUnitOperations.length` counted
+    // the same fill as one. Sent to the public split rather than special-cased
+    // here, and for both text units alike: under scalars the answer is the same
+    // two units, and a carriage return in a specification is rare enough that
+    // the slower route costs nothing worth measuring.
+    if (unit >= 0x80 || unit == 0x0d) return textUnit.split(source);
   }
 
   return List<String>.generate(

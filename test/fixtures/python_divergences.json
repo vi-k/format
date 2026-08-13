@@ -89,6 +89,14 @@
       "reason": "Нулевое заполнение — числовая опция; для символьной конверсии c она отвергается, как и для строк (см. dart-strict-text-zero-padding)."
     },
     {
+      "dart": {"error": "InvalidFormatException"},
+      "id": "dart-strict-item-key-quotes",
+      "input": {"template": "{0['key']}", "value": "map with the key 'key'"},
+      "python": {"result": "значение по ключу \"'key'\" вместе с кавычками"},
+      "readme_anchor": "#attribute-lookup",
+      "reason": "Ключ, начинающийся с кавычки, — это синтаксис словаря Python, написанный по ошибке; отвергается ради диагностики. Кавычка внутри ключа при этом обычный символ, и {0[it's]} работает как в Python."
+    },
+    {
       "dart": {"error": "InvalidSpecifierException"},
       "id": "dart-strict-text-zero-padding",
       "input": {"template": "{:05s}", "value": "x"},

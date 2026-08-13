@@ -62,7 +62,7 @@
       "input": {"template": "%a", "value": 5e-324},
       "cpp": {"result": "an implementation-chosen normalization such as 0x1p-1074"},
       "dart": {"result": "0x0.0000000000001p-1022"},
-      "reason": "C23 permits any hexadecimal normalization; Format keeps the fixed p-1022 exponent for subnormals (glibc style), while e.g. Apple libc renormalizes the leading digit.",
+      "reason": "C23 permits any hexadecimal normalization; Format keeps the fixed p-1022 exponent for subnormals (glibc style, and the one Python's float.hex() prints), while e.g. Apple libc renormalizes the leading digit. The consequence to know about is that a subnormal's significant digits sit far to the right of the point under this spelling, so an explicit low precision rounds them away entirely: '%.2a' of 5e-324 is 0x0.00p-1022, which reads back as zero. Every implementation keeping the fixed exponent does the same; a renormalizing one keeps the value. Print a subnormal without a precision when the text has to round-trip.",
       "readme_anchor": "#sprintf"
     },
     {

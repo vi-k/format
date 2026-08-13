@@ -124,6 +124,26 @@ void main() {
     }
   });
 
+  // The specification splitter has its own ASCII shortcut — one code unit per
+  // unit — and CRLF is the single ASCII sequence that breaks it: two code
+  // units, one grapheme cluster. Split by code unit, a CRLF fill stopped
+  // looking like a fill at all, so a specification the grapheme mode measures
+  // as one character wide was a specification error. `length` is asserted
+  // beside it, because these two disagreeing is the whole defect.
+  test('a CRLF fill is one unit under grapheme clusters', () {
+    final graphemes = Format(textUnit: TextUnit.graphemeClusters);
+
+    expect(TextUnit.graphemeClusters.length('\r\n'), 1);
+    expect(graphemes.format('{:\r\n<5s}', 'ab'), 'ab\r\n\r\n\r\n');
+    // Under scalars the same fill really is two units, so it is not a fill and
+    // the specification stays an error. The modes differ here because the text
+    // model differs, which is the one reason they are allowed to.
+    expect(
+      () => format('{:\r\n<5s}', 'ab'),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
   // The end of the chain: the same specifications through the public `format`,
   // to pin the output and not only the parse. Both signs are present for every
   // padding mode, since zero padding puts the sign before the zeros while space

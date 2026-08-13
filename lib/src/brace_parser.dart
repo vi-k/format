@@ -333,14 +333,20 @@ final class _BraceParser {
     final openOffset = _index;
     _index++;
     final start = _index;
+    // Only a key that opens with a quote is quote syntax. A quote inside one
+    // is an ordinary character of an ordinary key — `{0[it's]}` names the key
+    // `it's`, exactly as Python reads it — and rejecting those was a wider net
+    // than the diagnostic needs. Compared by code unit rather than by
+    // `template[_index]`, which allocated a one-character string per character
+    // of every key.
+    if (_index < template.length && (_atCodeUnit(0x22) || _atCodeUnit(0x27))) {
+      throw _invalid(
+        start,
+        _index + 1,
+        'Item keys use literal text, not quote syntax.',
+      );
+    }
     while (_index < template.length && !_atCodeUnit(0x5d)) {
-      if (template[_index] == '"' || template[_index] == "'") {
-        throw _invalid(
-          start,
-          _index + 1,
-          'Item keys use literal text, not quote syntax.',
-        );
-      }
       _index++;
     }
     if (_index >= template.length) {

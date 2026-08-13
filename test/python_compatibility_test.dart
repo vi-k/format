@@ -301,6 +301,16 @@ final _executableDivergences = <String, void Function()>{
         () => format('{:05c}', 65),
         throwsA(isA<InvalidSpecifierException>()),
       ),
+  'dart-strict-item-key-quotes':
+      () => expect(
+        () => formatWith(
+          "{0['key']}",
+          positional: const [
+            {"'key'": 'quoted'},
+          ],
+        ),
+        throwsA(isA<InvalidFormatException>()),
+      ),
   'dart-strict-text-zero-padding':
       () => expect(
         () => format('{:05s}', 'x'),
