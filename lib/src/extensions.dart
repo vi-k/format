@@ -31,8 +31,14 @@ abstract base class Formatter<T> {
 
   /// The name that selects this formatter in a format specification.
   ///
-  /// Read while resolving a placeholder, so a getter that throws fails the
-  /// formatting call rather than the construction of the `Format` instance.
+  /// Read once, while the `Format` instance is being constructed: the names
+  /// are validated and indexed there, so a getter that throws fails that
+  /// construction rather than a later formatting call.
+  ///
+  /// It is therefore not a place to compute anything per call — the value is
+  /// taken once and the getter is never consulted again. For the same reason
+  /// the wrapped failure below carries no template location: there is no
+  /// template yet when this is read.
   ///
   /// {@macro format.extension_failure}
   String get specifier;

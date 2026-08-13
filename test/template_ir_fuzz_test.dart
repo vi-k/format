@@ -782,4 +782,39 @@ void main() {
     expect(templates.length, greaterThan(_casesPerDialect ~/ 4));
     expect(rendered, greaterThan(_casesPerDialect ~/ 8));
   });
+
+  // The one boundary every pass above shares, and therefore cannot see. Both
+  // sides of `expectBraceParity` — the IR and the legacy path — take their
+  // specification from the same `_parseFormatSpec`, so the scanner that
+  // short-circuits it is *under* the oracle rather than beside it. A mutation
+  // that made the fast path drop `z` in the presence of a fill changed what
+  // `{:*<zf}` prints of `-0.0` and left all of `dart test` green.
+  //
+  // The parser the fast path stands in for is a separate function, so it can
+  // serve as the oracle directly. Only drafts the fast path claims are
+  // compared: the ones it declines already go to the parser and have nothing
+  // to disagree with.
+  test('fast-path fuzz: the specification scanner matches the parser', () {
+    final random = Random(_seed + 6);
+    final drafts = <String>{};
+    var claimed = 0;
+    for (var index = 0; index < _casesPerDialect * 4; index++) {
+      final spec = _braceSpec(random);
+      drafts.add(spec);
+      if (!debugUsesSimpleBuiltinFormatSpec(spec)) continue;
+      claimed++;
+      expect(
+        debugSimpleBuiltinFormatSpecMatchesGeneralParser(spec),
+        isTrue,
+        reason: 'fast path disagrees with the parser on "$spec" (#$index)',
+      );
+    }
+    // Without this the pass would be vacuous the day the generator stops
+    // producing plain ASCII specifications: everything would be declined, and
+    // a green run would mean nothing was compared. The fast path claimed 2057
+    // of the 8000 drafts when this was written — a quarter — so the floor sits
+    // at half of that, one-sided like every other floor here.
+    expect(claimed, greaterThan(_casesPerDialect ~/ 2));
+    expect(drafts.length, greaterThan(_casesPerDialect));
+  });
 }
