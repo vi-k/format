@@ -306,6 +306,49 @@ void main() {
     expect(engine.templateCacheMemory, lessThanOrEqualTo(400));
   });
 
+  // The budget exists for templates that come from data. This is the other
+  // half of that case, and it was open until 2026-08-13: data arriving in the
+  // *values*. A specification with a nested field is resolved per call and
+  // remembered on the op, which lives as long as the cache entry — while the
+  // price model counts the template's own nodes and nothing else. An
+  // unbounded memo therefore let a call retain what the entry was never
+  // charged for, measured at 154 MiB held against 190 KiB accounted.
+  //
+  // Observed through a seam rather than through output: a remembered parse
+  // and a fresh one produce the same string, so nothing else distinguishes
+  // them.
+  test('a long resolved specification is not retained by the cache', () {
+    const template = '{0:{1}}';
+    final graphemes = engine.Format(textUnit: TextUnit.graphemeClusters);
+    // One grapheme cluster of five thousand code units, so the specification
+    // is enormous and still valid — the only kind that reaches the memo at
+    // all, which is filled only after a parse that did not throw.
+    final huge = 'a${'́' * 5000}<8';
+
+    graphemes.formatWith(template, positional: ['x', '>8']);
+    expect(
+      engine.debugMemoizedSpecificationUnits(
+        template,
+        TextUnit.graphemeClusters,
+      ),
+      2,
+      reason: 'the short specification is worth remembering',
+    );
+
+    expect(
+      graphemes.formatWith(template, positional: ['x', huge]).length,
+      35008,
+    );
+    expect(
+      engine.debugMemoizedSpecificationUnits(
+        template,
+        TextUnit.graphemeClusters,
+      ),
+      2,
+      reason: 'the huge one was parsed, used and dropped',
+    );
+  });
+
   // A parsed template is shared by every engine, but a compiled program is
   // not: there is a slot per text unit, and each field memoizes its parsed
   // specification per unit too. The entry was priced for one unit when it was

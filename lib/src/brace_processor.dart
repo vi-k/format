@@ -113,10 +113,13 @@ final class _BraceProcessor {
       }
       final spec = _parseFormatSpec(specification, engine.textUnit, context);
       // Assigned after the parse, so a specification that throws leaves the
-      // memo holding the last one that did not.
-      memo
-        ..text = specification
-        ..spec = spec;
+      // memo holding the last one that did not — and only while it is short
+      // enough to be worth holding at all, see _memoizedSpecificationLimit.
+      if (specification.length <= _memoizedSpecificationLimit) {
+        memo
+          ..text = specification
+          ..spec = spec;
+      }
       return _formatParsedValue(converted, spec, engine, context);
     }
     return formatValue(converted, specification, engine, context);
@@ -145,6 +148,22 @@ final class _BraceProcessor {
         conversion: field.conversion,
       );
 }
+
+/// The longest resolved specification an op will remember.
+///
+/// The memo lives as long as the compiled program, which lives as long as the
+/// cache entry — but the text it holds comes from the call's *values*, not from
+/// the template, so [templateCacheMemoryLimit] and the model behind it never
+/// see it. Unbounded, the memo turns that budget into a promise the cache
+/// cannot keep: a template given a two-hundred-thousand-character nested
+/// specification retained about 154 MiB against 190 KiB accounted, under an
+/// announced bound of 8 MiB.
+///
+/// A limit rather than an accounting: a resolved specification is `>8`,
+/// `08.3f`, `,d`, and anything near this length is not a specification anyone
+/// writes twice. Past it the parse simply happens again, which is what happened
+/// before the memo existed.
+const _memoizedSpecificationLimit = 64;
 
 /// One resolved specification and the parse it produced.
 ///

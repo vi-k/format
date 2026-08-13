@@ -177,9 +177,9 @@ CPython 3.14 и компилятор C++23; на машине без них за
 
 ```sh
 dart format . && dart analyze --fatal-infos lib test example tool
-dart test                                    # VM, 574 теста
-dart test -p node                            # dart2js, 395 + 4 пропущено
-dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 378
+dart test                                    # VM, 579 тестов
+dart test -p node                            # dart2js, 400 + 4 пропущено
+dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 383
 dart test benchmark/test tool/test           # 43 теста, ~55 с
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
@@ -187,7 +187,7 @@ dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
   && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
-# покрытие 95.61%, пол 94%
+# покрытие 95.66%, пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run tool/run.dart --runtime=vm)   # матрица, ~60 с
 (cd benchmark/suite && dart run tool/run.dart --runtime=js)   # ~70 с
@@ -1344,6 +1344,38 @@ sink'а параметром конструктора.
 попадание в кэш, — на нём «байпас» и «попадание» неразличимы по времени.
 Разделяет их только дорогой шаблон, где разбор в двенадцать раз дороже
 попадания.
+
+## Что сделано 2026-08-13 (третье ревью, H3)
+
+Проведены два независимых ревью одним заданием: агентом Opus с
+субагентами по областям (`docs/records/2026-08-13[1]-project-review.md`,
+0 Critical, 4 High, 17 Medium, 22 Low) и через Codex
+(`[2]-...-codex.md`, 0 Critical, 0 High, 1 Medium, 1 Low). Оба — живые
+реестры вердиктов, как отчёт от 2026-08-05. Пересечений почти нет, и это
+довод держать оба: `L1` Codex (Dartdoc `Formatter.specifier` обещает
+чтение при разрешении плейсхолдера, а `format.dart:196` читает геттер в
+конструкторе, что пинит тест) в отчёте Opus отсутствует вовсе.
+
+**H3 закрыт.** Мемо вложенной спецификации (`b5239d6`, вчерашнее
+ускорение) удерживал текст, собранный из **значений вызова**, на op'е
+внутри закэшированной программы — то есть мимо модели цены, которая
+считает узлы шаблона. Замер ревьюера: 154 МиБ удержано против 190 КиБ
+учтённых при объявленном бюджете в 8 МиБ. Взят порог на длину:
+`_memoizedSpecificationLimit` = 64 кодовых единицы, длиннее —
+разбирается заново, как было до мемо. Учёт через `_TemplateCache.grew`
+отклонён: op не знает своего кэша, и заряд пришлось бы снимать при каждой
+замене мемо.
+
+Мемо ненаблюдаем снаружи — запомненный разбор даёт ту же строку, что и
+свежий, — поэтому заведён шов `debugMemoizedSpecificationUnits`. Тест
+проверен поломкой: без порога удерживается 5003 единицы вместо 2.
+Ускорение сохранено: VM `{0:>{1}.2f}` 497/505 против 497/502, dart2js
+260/262 против 264/266.
+
+Открытыми из High остаются **H1** (потолок ширины считает единицы текста,
+а под графемами единица неограниченна) и **H2** (беститповая
+спецификация с точностью на целом `double` падает только под dart2js);
+**H4** — утверждение о покрытии быстрого пути разбора, не о дефекте.
 
 ## Ловушки и знания
 

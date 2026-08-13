@@ -1930,6 +1930,24 @@ int _resolveIrPrintfOption(
 }
 
 /// Test seams. Deliberately not exported by `format.dart`.
+
+/// How many code units the ops compiled from [template] for [textUnit] are
+/// holding in their dynamic-specification memos.
+///
+/// The memo cannot be observed through the output — a remembered parse and a
+/// fresh one produce the same string — so what it retains is only reachable
+/// from here. What the number is for is `_memoizedSpecificationLimit`: the
+/// memo outlives the call that filled it, and the text came from that call's
+/// values.
+int debugMemoizedSpecificationUnits(String template, TextUnit textUnit) {
+  var units = 0;
+  for (final op in _cachedBraceTemplate(template).programFor(textUnit).ops) {
+    if (op is _BraceFallbackOp) units += op._memo.text?.length ?? 0;
+  }
+
+  return units;
+}
+
 List<String> debugCompiledProgramDescription(
   String template, {
   required bool printf,
