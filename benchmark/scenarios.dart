@@ -79,6 +79,19 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: 'abc',
     graphemes: true,
   ),
+  // The padded layouts, one scenario per site that writes one — here, in
+  // `brace.double.padded`, `printf.text.padded` and `printf.double.padded`.
+  // Until they were added the matrix measured no padded field at all: every
+  // double scenario asks for a precision and no width, and every text one for
+  // a precision that truncates. The layout is a third of such a call, so a
+  // change to it moved nothing here while moving the calls themselves by a
+  // fifth to two fifths.
+  _braceComparable(
+    'brace.text.padded',
+    template: '{:>10s}',
+    values: const ['abc'],
+    expected: '       abc',
+  ),
   _braceComparable(
     'brace.int.default',
     template: '{}',
@@ -181,6 +194,12 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const [1.2345678901234568e19],
     expected: '12345678901234567168.00',
     candidateFormat: _compatibleFormat,
+  ),
+  _braceComparable(
+    'brace.double.padded',
+    template: '{:>12.2f}',
+    values: const [12.5],
+    expected: '       12.50',
   ),
   _braceInformation(
     'brace.double.half_tie.dart',
@@ -399,6 +418,12 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     values: const ['abcde'],
     expected: 'abc',
   ),
+  _printfComparable(
+    'printf.text.padded',
+    template: '%10s',
+    values: const ['abc'],
+    expected: '       abc',
+  ),
   _printfInformation(
     'printf.character',
     template: '%c',
@@ -432,6 +457,12 @@ final List<BenchmarkScenario> benchmarkScenarios = List.unmodifiable([
     expected: '12.50',
     key: true,
     candidateFormat: _compatibleFormat,
+  ),
+  _printfComparable(
+    'printf.double.padded',
+    template: '%12.2f',
+    values: const [12.5],
+    expected: '       12.50',
   ),
   _printfComparable(
     'printf.flags',
