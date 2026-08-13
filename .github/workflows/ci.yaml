@@ -121,12 +121,13 @@ jobs:
       - name: Tests on the dependency floor
         if: matrix.primary
         run: dart pub downgrade characters && dart test
-      # Back to the committed resolution, not to the newest one: `dart pub
-      # upgrade` would leave every later step running against a graph this
-      # repository never locked.
-      - name: Restore the committed resolution
+      # Back to what the ranges allow, which is what every other step in this
+      # job runs against. There is no committed lock to return to — this is a
+      # library, and the lock is deliberately local — so the downgraded one is
+      # discarded and the graph resolved again.
+      - name: Restore the resolution the ranges allow
         if: matrix.primary
-        run: git checkout pubspec.lock && dart pub get
+        run: rm -f pubspec.lock && dart pub get
       - name: Example runs
         run: dart run example/format_example.dart
       - name: Tests (format_intl)
