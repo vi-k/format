@@ -304,9 +304,28 @@ final class _TemplateCache<T extends _PricedTemplate> {
 
   /// How many evicting misses in a row mean the set does not fit.
   ///
-  /// Tied to the capacity because that is the size of what could have fitted;
-  /// floored so that a deliberately tiny cache is not written off after two
-  /// misses.
+  /// Tied to the capacity, and that is the exact threshold rather than a
+  /// plausible one. A cyclic set of `size` templates overflows a cache of
+  /// `capacity` with exactly `size - capacity` evicting misses in a row on the
+  /// lap that fills it past the end, and afterwards hits far too often to build
+  /// such a run again. Set at the capacity, the threshold therefore writes off
+  /// a set only once it is at least twice the capacity — which is where the
+  /// cache stops paying for itself.
+  ///
+  /// Both edges are measured, on ten-field templates at capacity 512, cyclic
+  /// sets, nanoseconds per call:
+  ///
+  /// | threshold | 576 | 1024 | 2048 |
+  /// |---|---|---|---|
+  /// | 64 | 924 | 951 | 981 |
+  /// | the capacity, 512 | 265 | 951 | 995 |
+  /// | 2048 | 257 | 963 | 1291 |
+  ///
+  /// Below the capacity it writes off the 576 set, which the cache serves three
+  /// and a half times faster than parsing does; above it, it stops writing off
+  /// the 2048 set, which then costs a third more. The floor of 64 is for a
+  /// deliberately tiny cache, where the capacity itself would write the cache
+  /// off after two misses.
   static int get _bypassAfter =>
       _templateCacheCapacity < 64 ? 64 : _templateCacheCapacity;
 
@@ -317,6 +336,12 @@ final class _TemplateCache<T extends _PricedTemplate> {
   /// cached again. The cost in the other direction is the reverse — the
   /// [_bypassAfter] calls it takes to notice the set does not fit are paid
   /// once per probe, which at these numbers is under a fifteenth of them.
+  ///
+  /// The value sits where the first cost stops falling. A workload that never
+  /// repeats pays 157 ns per call at 2048, 131 at 8192 and 129 at 32768; one
+  /// that turns repetitive waits 1024 calls and 72 µs, 7168 and 530 µs, 31744
+  /// and 2429 µs. Quadrupling the interval past 8192 buys two nanoseconds a
+  /// call and costs four times the wait.
   static const _probeAfter = 8192;
 
   /// Whether this call should consult the cache at all.
