@@ -10,8 +10,13 @@ build/
 # tool/verify_generated_artifacts.dart into a temporary directory instead.
 /tool/build/
 
-# The benchmark suite remains an independent package and keeps its
-# library lock local.
+# Locks stay local. This is a library, not an application: the versions that
+# matter are the ranges in `pubspec.yaml`, and a committed lock would mean CI
+# resolves what was resolved once rather than what the ranges allow today —
+# which is exactly what the CI comment and the Dependabot comment both assume
+# it does not do. The root lock was tracked by accident, swept in with the
+# initial import, and untracked on 2026-08-13.
+/pubspec.lock
 /benchmark/suite/pubspec.lock
 # Directory created by dartdoc
 doc/api/

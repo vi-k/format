@@ -79,7 +79,16 @@ List<String> _readExclusions(File pubignore) {
 /// exclude — which is why the check below is about the files that are *not*
 /// hidden.
 bool _isHidden(String path) =>
-    path.split('/').any((segment) => segment.startsWith('.'));
+    path.split('/').any((segment) => segment.startsWith('.')) ||
+    _pubDropsByName.contains(path);
+
+/// What pub leaves out by name rather than by dot.
+///
+/// Measured the same way: `pubspec.lock` was tracked and still did not appear
+/// in the archive tree, so pub drops it for a package whatever the checkout
+/// says. Listed here so untracking it does not make this check report it as
+/// something that would ship.
+const _pubDropsByName = {'pubspec.lock'};
 
 /// Fails on any working-tree file that `.pubignore` lets through and git does
 /// not track.

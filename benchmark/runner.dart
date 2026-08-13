@@ -306,8 +306,28 @@ int _calibrate(
       final probed = round.elapsedNanoseconds;
       if (probe == 0 || probed < elapsed) elapsed = probed;
     }
-    if (elapsed >= target || operations >= _maximumOperations) {
-      return operations;
+    if (elapsed >= target) return operations;
+    if (operations >= _maximumOperations) {
+      // Calibration walked all the way to the ceiling without the round ever
+      // becoming long enough to time, which for work that really runs a
+      // hundred million times cannot happen. What can produce it is the
+      // loop-invariant hoist the checksum cannot see: a hot scenario formats
+      // the same template with the same values every iteration, so a compiler
+      // is entitled to run it once and reuse the answer. Full elision is
+      // caught by the checksum — it would come out zero — but a hoist keeps
+      // the checksum exactly right while the loop stops doing the work.
+      //
+      // Detected rather than prevented. Preventing it means giving each
+      // iteration a different value, which changes what every scenario in the
+      // matrix measures and invalidates the recorded reference — a large price
+      // for a hole no runtime is using today. This costs nothing and turns the
+      // day one starts into a failure instead of a suspiciously good number.
+      throw StateError(
+        '${scenario.id}: calibration reached $_maximumOperations operations '
+        'without a round long enough to time. Work that runs is not that '
+        'cheap; the loop was most likely hoisted out. Re-check on another '
+        'runtime before trusting any number from this scenario.',
+      );
     }
     // A clock too coarse to see this round says nothing about how much
     // longer it needs, so grow by the maximum step instead of dividing by

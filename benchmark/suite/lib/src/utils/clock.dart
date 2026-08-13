@@ -63,10 +63,24 @@ int calibratedOperations(void Function(int operations) round) {
   final target = targetRoundNanoseconds();
   var operations = _minimumOperations;
   while (operations < _maximumOperations) {
-    final stopwatch = Stopwatch()..start();
-    round(operations);
-    stopwatch.stop();
-    final elapsed = stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency;
+    // Each trial is timed twice and the shorter reading kept, which corrects
+    // two errors that push the same way. Noise only ever adds time, so of two
+    // readings of the same work the smaller is the honest one; and the second
+    // runs on a warmer JIT than the first, which is the state every recorded
+    // round will be in. Both make a single first reading an overestimate, and
+    // an overestimated trial ends calibration early — leaving every recorded
+    // round too short for the clock to resolve. The failure is quiet: the
+    // numbers still look like numbers, only noisier. `benchmark/runner.dart`
+    // hit exactly that and was corrected; this copy kept the defect, and it is
+    // the one local A/B measurements are made with.
+    var elapsed = 0;
+    for (var probe = 0; probe < 2; probe++) {
+      final stopwatch = Stopwatch()..start();
+      round(operations);
+      stopwatch.stop();
+      final probed = stopwatch.elapsedTicks * 1000000000 ~/ stopwatch.frequency;
+      if (probe == 0 || probed < elapsed) elapsed = probed;
+    }
     if (elapsed >= target) return operations;
     // A clock too coarse to see this round says nothing about how much longer
     // it needs, so grow by the maximum step instead of dividing by zero.

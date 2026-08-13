@@ -94,6 +94,8 @@ void main(List<String> arguments) {
     '(${report.covered}/${report.lines} lines), floor $minimum%',
   );
 
+  _requireEveryLibraryMeasured(report);
+
   if (report.percent < minimum) {
     stderr.writeln(
       'line coverage ${report.percent.toStringAsFixed(2)}% is below the '
@@ -177,6 +179,60 @@ CoverageReport parseLcov(String text) {
 
   return CoverageReport(files, lines, covered);
 }
+
+/// Fails when a file under `lib/` produced no `SF:` record at all.
+///
+/// `format_coverage` emits a record per library the run *loaded*, so a library
+/// nothing imports is not measured — it is absent, and an absent file moves
+/// neither the numerator nor the denominator. The floor would stay exactly
+/// where it was while a whole file went untested, which is the one failure a
+/// coverage floor exists to prevent. Checked against `lib/` on disk rather
+/// than against a recorded list, so a new file is covered by this the moment
+/// it is added.
+///
+/// Files with no executable lines are the reason this is a separate check
+/// rather than a floor on the record count: three of them are legitimately
+/// absent today (pure declarations), and they are reported as such instead of
+/// being treated as gaps.
+void _requireEveryLibraryMeasured(CoverageReport report) {
+  final measured =
+      report.files.keys.map((path) => path.split('/').last).toSet();
+  final missing = <String>[];
+  for (final entity in Directory('lib').listSync(recursive: true)) {
+    if (entity is! File || !entity.path.endsWith('.dart')) continue;
+    final name = entity.path.split('/').last;
+    if (measured.contains(name)) continue;
+    // A library with nothing executable in it never gets a record, and that is
+    // correct rather than a gap; `part` files are measured under the library
+    // that owns them, so they are not expected either.
+    final text = entity.readAsStringSync();
+    if (text.contains(RegExp('^part of ', multiLine: true))) continue;
+    if (_nothingExecutable.contains(entity.path)) continue;
+    missing.add(entity.path);
+  }
+  if (missing.isEmpty) return;
+  missing.sort();
+  stderr.writeln(
+    'these files under lib/ produced no coverage record at all, so no test '
+    'loaded them and their lines are absent from the total:\n'
+    '  ${missing.join('\n  ')}\n'
+    'Add a test that loads them, or list them in _nothingExecutable with the '
+    'reason they cannot have one.',
+  );
+  exitCode = 1;
+}
+
+/// Libraries that legitimately produce no record because they contain nothing
+/// executable — only declarations and directives.
+///
+/// Listed rather than detected: telling "nothing to run" from "nothing ran"
+/// needs a parser, and the list is short, stable and cheap to justify. Both
+/// entries are containers — one holds the mode enums, the other is the library
+/// every `part` attaches to.
+const _nothingExecutable = {
+  'lib/src/double_format.dart',
+  'lib/src/engine.dart',
+};
 
 /// Checks the parser and the verdict without needing a coverage run.
 void _runSelfTest() {
