@@ -540,10 +540,14 @@ insertion.
 
 `templateCacheSize` tells "the cache is too small for this workload" apart
 from "this workload never repeats a template", which otherwise look alike from
-the outside. Read with `templateCacheMemory`, it also tells a cache full of
-small templates from one held by a handful of large or field-dense ones — the
-two need opposite adjustments. To see the difference the cache makes on the
-current machine, the benchmark measures every case with it on and off:
+the outside. Both it and `templateCacheMemory` are sums across the two
+mini-languages, while the two bounds apply to each separately: a program using
+braces and printf alike can read 1024 resident templates with the capacity at
+512 and nothing be wrong. Read with `templateCacheMemory`, it also tells a
+cache full of small templates from one held by a handful of large or
+field-dense ones — the two need opposite adjustments. To see the difference
+the cache makes on the current machine, the benchmark measures every case with
+it on and off:
 
 ```console
 cd benchmark/suite

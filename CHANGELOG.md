@@ -110,6 +110,14 @@ unpublished 2.0.0 below.
   tables — 15.0.0 and 16.0.0 — so `TextUnit.graphemeClusters` follows whichever
   version resolves; nothing else in the package depends on the difference, and
   CI now runs the whole test suite on the floor to keep that true.
+* **Breaking, from the published 1.6.0:** `n` no longer follows `intl`. 1.6.0
+  depended on `intl` and read `Intl.defaultLocale`, so `'{:n}'` localized
+  itself and `'{:,n}'` was accepted. 3.0.0 drops that dependency: `n` follows
+  the configured `NumberLocale`, which is the C locale unless one is set, and
+  `'{:,n}'` is rejected — a locale decides its own grouping, so asking for a
+  separator and for the locale's separator at once has no answer. An
+  application localized on 1.6.0 keeps compiling only if it sets a locale, and
+  gets the companion package below for the `intl` data it used to inherit.
 * Added the companion `format_intl` package for opt-in locale symbols,
   grouping rules, and localized digits without coupling `format` to `intl`.
 * Extended the configured `NumberLocale` to the printf integer conversions,

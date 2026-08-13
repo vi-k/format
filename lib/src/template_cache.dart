@@ -130,6 +130,11 @@ set templateCacheMemoryLimit(int value) {
 /// Useful for telling "the cache is too small for this workload" from "this
 /// workload never repeats a template", which otherwise look alike from the
 /// outside.
+///
+/// A sum, while [templateCacheCapacity] is a bound *per* mini-language: a
+/// program using both dialects can read 1024 here with the capacity at 512 and
+/// nothing wrong. Compare against twice the capacity when both are in use, or
+/// against it once when only one is.
 int get templateCacheSize =>
     _braceTemplateCache.length + _printfTemplateCache.length;
 
@@ -140,6 +145,9 @@ int get templateCacheSize =>
 /// small templates from one held by a handful of large or field-dense ones —
 /// the two need opposite adjustments, and the entry count alone cannot tell
 /// them apart.
+///
+/// A sum too, against a limit that is per mini-language: see
+/// [templateCacheSize].
 int get templateCacheMemory =>
     _braceTemplateCache.memory + _printfTemplateCache.memory;
 
@@ -370,6 +378,17 @@ final class _TemplateCache<T extends _PricedTemplate> {
     _evictingMisses = 0;
   }
 
+  /// Records a miss that proves the working set does not fit — one that had to
+  /// evict to make room, or one whose entry could not be made room for at all.
+  ///
+  /// Not every miss: an empty cache filling up misses too, and that is the
+  /// cache working rather than failing.
+  void _countMissThatCannotFit() {
+    if (++_evictingMisses < _bypassAfter) return;
+    _evictingMisses = 0;
+    _bypassedCalls = 0;
+  }
+
   /// Records that the cache answered, which is the evidence that it fits.
   void hit() {
     _evictingMisses = 0;
@@ -395,7 +414,17 @@ final class _TemplateCache<T extends _PricedTemplate> {
     // An entry that cannot fit even in an empty cache is not cached at all:
     // emptying the cache for one that still exceeds the budget costs every
     // other template its parse and gains nothing.
-    if (price > _templateCacheMemoryLimit) return parsed;
+    //
+    // It counts towards the policy all the same. This is the workload the
+    // memory bound was introduced for — a few very large generated templates —
+    // and it is the one shape that misses every single call while never
+    // evicting anything, so counting only evictions left it consulting the
+    // cache forever. A miss on a freshly built key costs a hash of its whole
+    // length, and these keys are the longest there are.
+    if (price > _templateCacheMemoryLimit) {
+      _countMissThatCannotFit();
+      return parsed;
+    }
 
     var evicted = false;
     while (_entries.length >= _templateCacheCapacity ||
@@ -405,10 +434,7 @@ final class _TemplateCache<T extends _PricedTemplate> {
     }
     // Counted here rather than at the lookup because a miss that fits says
     // nothing: it is what filling the cache looks like.
-    if (evicted && ++_evictingMisses >= _bypassAfter) {
-      _evictingMisses = 0;
-      _bypassedCalls = 0;
-    }
+    if (evicted) _countMissThatCannotFit();
     _keys.add(template);
     _memory += price;
     parsed.chargedBytes = price;

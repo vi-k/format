@@ -130,6 +130,36 @@ void main() {
     expect(engine.debugBraceTemplateCacheSize(), 64);
   });
 
+  // The shape the memory bound exists for, and the one the policy could not
+  // see until 2026-08-13: a few templates each too large to cache at all. Such
+  // a call misses, declines to store, and evicts nothing — so a policy counting
+  // only evictions never reached its threshold, and kept consulting a cache
+  // that could not possibly answer. The miss is not free: it hashes the whole
+  // freshly built key, and these keys are the longest there are.
+  test('templates too large to cache at all stop being looked up', () {
+    engine.templateCacheCapacity = 64;
+    engine.templateCacheMemoryLimit = 200;
+    for (var index = 0; index < 200; index++) {
+      engine.debugCachedBraceTemplate(
+        '${'far past the budget ' * 20}$index {}',
+      );
+    }
+
+    // Nothing was ever stored, and the cache has stopped being asked. The
+    // probe is a template with no fields on purpose: it is priced at its key
+    // alone, so it fits the budget the oversized ones blew, and its identity
+    // therefore says whether the cache is being consulted rather than whether
+    // it can afford the answer.
+    expect(engine.debugBraceTemplateCacheSize(), 0);
+    expect(
+      identical(
+        engine.debugCachedBraceTemplate('probe'),
+        engine.debugCachedBraceTemplate('probe'),
+      ),
+      isFalse,
+    );
+  });
+
   // The trap this pins: an empty cache filling up is all misses too. Counting
   // misses alone would write off every large working set on its first lap,
   // including the cyclic one two tests above, which does hit and does profit.
