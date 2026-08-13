@@ -45,6 +45,12 @@ final _printfTemplateCache = _TemplateCache<_PrintfTemplate>();
 /// Lowering it discards entries immediately. The caches are per isolate, and
 /// shared by every [Format] instance, which is safe because a parsed template
 /// does not depend on the engine that parsed it.
+///
+/// Throws `ArgumentError` when set below zero. That is a plain Dart argument
+/// error rather than a member of the [FormattingException] hierarchy on
+/// purpose: nothing is being formatted here. The typed hierarchy describes
+/// failures of a formatting call, and a caller catching it around one should
+/// not also be catching a mistake in its own configuration.
 int get templateCacheCapacity => _templateCacheCapacity;
 
 set templateCacheCapacity(int value) {
@@ -105,7 +111,8 @@ set templateCacheCapacity(int value) {
 /// than reparsing it. Set the limit to zero to cache nothing, as with
 /// [templateCacheCapacity].
 ///
-/// Lowering it discards entries immediately.
+/// Lowering it discards entries immediately. Setting it below zero throws
+/// `ArgumentError`, for the reason given at [templateCacheCapacity].
 int get templateCacheMemoryLimit => _templateCacheMemoryLimit;
 
 set templateCacheMemoryLimit(int value) {

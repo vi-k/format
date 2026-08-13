@@ -198,6 +198,63 @@ void main() {
     );
   });
 
+  // The package is called `format` and its context type is called
+  // `FormatExceptionContext`, so `on FormatException` is the first thing a
+  // reader is likely to write — and it would let every failure here through.
+  // The dartdoc says so; this pins it, since the two hierarchies are one
+  // `implements` away from silently merging.
+  test('formatting failures are not dart:core FormatException', () {
+    const error = InvalidFormatException(context, 'unmatched brace');
+
+    expect(error, isA<FormattingException>());
+    expect(error, isNot(isA<FormatException>()));
+    expect(() => format('{', 1), throwsA(isNot(isA<FormatException>())));
+  });
+
+  // A diagnostic line has to stay a line. Both of these grow with the input:
+  // the template is whatever was passed in, and the specification is whatever
+  // stood after `:` — a generated template of half a megabyte used to be
+  // reprinted whole into every message, so the exception was longer than the
+  // template that caused it. The cap applies to the printing only; the fields
+  // still carry everything, which is what `offset` is measured against.
+  test('toString caps the template and the specifier it prints', () {
+    final long = 'x' * 500;
+    final error = InvalidSpecifierException(
+      FormatExceptionContext(template: long, specifier: long, offset: 3),
+      'unknown specifier',
+    );
+    final text = error.toString();
+
+    expect(error.context.template, hasLength(500));
+    expect(error.context.specifier, hasLength(500));
+    expect(text, isNot(contains('x' * 100)));
+    expect(text, contains('template: "${'x' * 79}…"'));
+    expect(text, contains('specifier: "${'x' * 79}…"'));
+    expect(text, contains('offset: 3'));
+  });
+
+  // The same for the payload, where the risk is not only length: the value is
+  // the caller's own object, and a failed lookup prints the map it looked in.
+  // Capping is not confidentiality — the head of the value is still printed —
+  // but it bounds what one unhandled exception copies into a log.
+  test('toString caps the payload it describes', () {
+    final long = 'y' * 500;
+    final wide = <String, String>{for (var i = 0; i < 100; i++) 'k$i': long};
+
+    expect(
+      FormatLookupException(context, 'field', wide).toString(),
+      allOf(isNot(contains('y' * 100)), contains('…')),
+    );
+    expect(
+      UnsupportedFormatValueException(context, long).toString(),
+      allOf(contains('"${'y' * 79}…"'), isNot(contains('y' * 100))),
+    );
+    expect(
+      UnsupportedFormatValueException(context, wide).toString().length,
+      lessThan(300),
+    );
+  });
+
   // The payload is the caller's value, and rendering it means calling its
   // `toString` — which can itself throw. If that escaped, the failure a user
   // sees would be the reporting of the error rather than the error, with the

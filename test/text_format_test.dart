@@ -181,6 +181,12 @@ void main() {
     BigInt.from(-1),
     BigInt.from(0x110000),
     const <int>[65],
+    // A string is the wrong type a caller is most likely to pass, and the one
+    // place where `c` visibly departs from "brace decides from the value's
+    // type": every other specification would answer `InvalidSpecifierException`
+    // here. `c` asks for a code point instead, so it answers about the value —
+    // the same class `sprintf('%c', 'a')` raises.
+    'a',
   ]) {
     test('rejects unsupported c value $value with a typed error', () {
       expect(

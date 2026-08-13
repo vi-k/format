@@ -38,35 +38,42 @@ final class FormatExceptionContext {
   /// template can run to hundreds of kilobytes, and slicing an equally long
   /// fragment out of one held all of it twice for text nobody could read.
   /// Use [offset] with [template] when the exact span matters.
-  String? get fragment => _truncateFragment(_fragment);
+  String? get fragment {
+    final fragment = _fragment;
+
+    return fragment == null ? null : _truncate(fragment);
+  }
 }
 
-/// The longest [FormatExceptionContext.fragment] reported, counting the `…`
-/// that marks a cut. Internal: the public documentation states the number, so
-/// that a reader of the generated docs is not sent to a symbol they cannot
+/// The longest run of caller-supplied text any diagnostic prints, counting the
+/// `…` that marks a cut. Internal: the public documentation states the number,
+/// so that a reader of the generated docs is not sent to a symbol they cannot
 /// import.
-const int _fragmentLengthLimit = 80;
+const int _diagnosticLengthLimit = 80;
 
-String? _truncateFragment(String? fragment) {
-  if (fragment == null || fragment.length <= _fragmentLengthLimit) {
-    return fragment;
-  }
-  var end = _fragmentLengthLimit - 1;
-  // Never cut between a high surrogate and its low one: a fragment carrying
-  // half a character cannot be printed, which defeats the point of having it.
-  final last = fragment.codeUnitAt(end - 1);
+String _truncate(String text) {
+  if (text.length <= _diagnosticLengthLimit) return text;
+  var end = _diagnosticLengthLimit - 1;
+  // Never cut between a high surrogate and its low one: text carrying half a
+  // character cannot be printed, which defeats the point of having it.
+  final last = text.codeUnitAt(end - 1);
   if (last >= 0xd800 && last <= 0xdbff) end--;
 
-  return '${fragment.substring(0, end)}…';
+  return '${text.substring(0, end)}…';
 }
 
 /// Renders [value] for diagnostics without trusting its `toString()`:
-/// strings come back quoted and escaped, and a throwing `toString()` falls
-/// back to the safe default description.
+/// strings come back quoted and escaped, a description longer than the cap is
+/// cut, and a throwing `toString()` falls back to the safe default description.
+///
+/// The cut is applied to the description, not to the payload: the field itself
+/// still holds the whole value, so a caller that wants all of it reads the
+/// field. What a line in a log must not do is grow with the size of the data
+/// that failed to format.
 String _describeGuarded(Object? value) {
-  if (value is String) return Error.safeToString(value);
+  if (value is String) return Error.safeToString(_truncate(value));
   try {
-    return value.toString();
+    return _truncate(value.toString());
   } on Object {
     return Error.safeToString(value);
   }
@@ -74,9 +81,19 @@ String _describeGuarded(Object? value) {
 
 /// The base of every failure thrown by the formatting engine.
 ///
+/// This is **not** `dart:core`'s `FormatException`, and does not extend it:
+/// that one reports text that could not be parsed *into* a value, this one
+/// reports a value that could not be rendered *from* a template. `on
+/// FormatException` therefore catches nothing thrown here — catch this type
+/// instead. The names are close enough to be worth saying outright, the more
+/// so as [FormatExceptionContext] lives next door.
+///
 /// The hierarchy is sealed: a `switch` over it can be exhaustive.
 /// [toString] reports the type, [message], the subclass payload, and the
-/// full [context].
+/// [context]. Every piece of it that comes from the caller — the template, the
+/// specification, a payload value — is cut to 80 characters there, so the line
+/// stays a line; the fields themselves keep the whole text for a caller that
+/// needs it.
 sealed class FormattingException implements Exception {
   /// A short, fixed description of the failure class.
   final String message;
@@ -120,18 +137,23 @@ sealed class FormattingException implements Exception {
       ) =>
         ['extension: $extensionName', 'error: ${_describeGuarded(error)}'],
     };
+    // Both of these are as long as the caller wrote them: a specification is
+    // whatever stood after `:`, and a template can run to hundreds of
+    // kilobytes. `fragment` caps itself.
+    final specifier = context.specifier;
+    final template = context.template;
     final parts = [
       ...details,
-      if (context.specifier != null)
-        'specifier: ${Error.safeToString(context.specifier)}',
+      if (specifier != null)
+        'specifier: ${Error.safeToString(_truncate(specifier))}',
       if (context.conversion != null) 'conversion: ${context.conversion}',
       if (context.argumentIndex != null)
         'argument index: ${context.argumentIndex}',
       if (context.fragment != null)
         'fragment: ${Error.safeToString(context.fragment)}',
       if (context.offset != null) 'offset: ${context.offset}',
-      if (context.template != null)
-        'template: ${Error.safeToString(context.template)}',
+      if (template != null)
+        'template: ${Error.safeToString(_truncate(template))}',
     ];
     final buffer =
         StringBuffer()
@@ -170,6 +192,12 @@ final class InvalidFormatException extends FormattingException {
 /// `format('{:d}', 'text')` and `format('{:d}', 1.5)` both raise this,
 /// not [UnsupportedFormatValueException]. Printf works the other way
 /// round; see [UnsupportedFormatValueException].
+///
+/// The `c` type is the one exception, and deliberately: it does not take its
+/// meaning from the value, it demands a code point. `format('{:c}', 'a')` is
+/// therefore a complaint about the value — [UnsupportedFormatValueException],
+/// the same class `sprintf('%c', 'a')` raises — while `format('{:05c}', 65)`,
+/// which is a specification `c` does not accept, still lands here.
 final class InvalidSpecifierException extends FormattingException {
   /// Why the specification was rejected.
   final String reason;
@@ -233,6 +261,11 @@ final class UnsupportedConversionException extends FormattingException {
 /// from the value's type instead, so its counterpart is
 /// [InvalidSpecifierException]; this exception stays for values that no
 /// dispatch path accepts at all, such as `format('{:d}', true)`.
+///
+/// Brace `c` is the other case that reaches here, for both a scalar out of
+/// range and a value that is not a code point at all (`format('{:c}', 'a')`):
+/// `c` asks for a code point rather than reading the value's type, so the two
+/// dialects answer alike. See [InvalidSpecifierException].
 final class UnsupportedFormatValueException extends FormattingException {
   /// The rejected value.
   final Object? value;

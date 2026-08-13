@@ -580,9 +580,12 @@ formatWith(
 );
 ```
 
-Formatting failures use the typed `FormattingException` hierarchy. Configure
-custom formatters, lookups, representations, locales, and text units by
-constructing a `Format` instance instead of mutating global registries.
+Formatting failures use the typed `FormattingException` hierarchy. It is
+separate from `dart:core`'s `FormatException` and does not extend it, so
+`on FormatException` catches nothing this package throws — catch
+`FormattingException`. Configure custom formatters, lookups, representations,
+locales, and text units by constructing a `Format` instance instead of mutating
+global registries.
 
 Version 3.0 uses Dart SDK decimal `double` conversion by default. Applications
 that depend on Python/C++ rounding, exponent layout, precision beyond the Dart
