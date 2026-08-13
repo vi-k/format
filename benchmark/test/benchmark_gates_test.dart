@@ -410,6 +410,53 @@ void main() {
     );
   });
 
+  // Which order the reports arrive in is the caller's business and must not
+  // reach the verdict. It did: the environment took its Dart version from the
+  // first report that was not `js`, and dart2wasm is compiled like the web —
+  // it carries a bare compiler version where the VM carries an SDK banner. A
+  // caller listing wasm first therefore compared one string against the other
+  // and called a matching machine a different one.
+  test('the order of the reports does not decide the environment', () {
+    final reports = _reportsWithWebVersions();
+    final baseline = recordGateBaseline(reports, '2026-01-01');
+
+    expect(evaluateGateReports(reports, baseline).comparable, isTrue);
+
+    final reordered = reports.reversed.toList(growable: false);
+    final result = evaluateGateReports(reordered, baseline);
+
+    expect(result.environmentDifferences, isEmpty);
+    expect(result.comparable, isTrue);
+  });
+
+  // A report that omits a scenario of the current matrix is already refused.
+  // The direction that was not is the one that happens in practice: the matrix
+  // itself shrinks in `scenarios.dart`, so the reports are complete for the
+  // code that produced them, and only the reference still remembers the
+  // scenario. Adding one is a hard error — there is no recorded ratio to
+  // compare against — while removing one used to narrow the gate in silence
+  // and leave every remaining check passing.
+  test('a reference that outlives its scenario is refused, not skipped', () {
+    final json = _baseline().toJson();
+    final ratios = json['scenarioRatios']! as Map<String, Map<String, double>>;
+    ratios['jit/braces'] = {
+      ...ratios['jit/braces']!,
+      'brace.since.removed.hot': 1.0,
+    };
+
+    expect(
+      () =>
+          evaluateGateReports(_completeReports(), GateBaseline.fromJson(json)),
+      throwsA(
+        isA<FormatException>().having(
+          (error) => error.message,
+          'message',
+          allOf(contains('brace.since.removed.hot'), contains('Re-record')),
+        ),
+      ),
+    );
+  });
+
   // The four ways a report can be well-formed and still inadmissible: it was a
   // smoke run, it declared itself non-gateable, it was cut short, or it does
   // not match its partner. Each is silently plausible — the numbers look like
@@ -694,6 +741,25 @@ List<BenchmarkReport> _completeReports() => [
         run: run,
         scenarios: benchmarkScenarios.map(_scenarioFor).toList(),
       ),
+];
+
+/// The same reports, with the two web runtimes describing themselves the way
+/// they actually do: node reports the compiler version rather than the SDK
+/// banner the VM prints, and its own view of the processor. Which is what
+/// makes taking the environment from the wrong report visible at all.
+List<BenchmarkReport> _reportsWithWebVersions() => [
+  for (final report in _completeReports())
+    if (report.runtime == 'js' || report.runtime == 'wasm')
+      _copyReport(
+        report,
+        versions: const {
+          'dartVersion': 'Dart 3.12.2',
+          'os': 'linux 6.8 (x64); Node v24.8.0',
+          'cpu': 'AMD EPYC 7763 as node sees it',
+        },
+      )
+    else
+      report,
 ];
 
 /// A reference recorded from the same synthetic reports the tests evaluate,

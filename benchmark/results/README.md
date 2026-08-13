@@ -46,52 +46,65 @@ ratios. Reports deliberately have no gate result; `benchmark/gates.dart` owns
 gating. A smoke report has `smoke: true` and `gateable: false`, may omit a
 source revision, and is rejected by gates.
 
-Run the six full reports (two JIT, two AOT, and two printf-only JavaScript)
-before merging them. The `--runtime` value is checked against runtime-detected
-provenance: JIT and AOT use `dart.vm.product`; JavaScript records both a
-dart2js compile-time Dart-version define and the Node runtime version.
+Run the eight full reports — two each on JIT, AOT, dart2js and dart2wasm —
+before merging them. Both dialects are required on every runtime. The
+`--runtime` value is checked against runtime-detected provenance: JIT and AOT
+use `dart.vm.product`; the two web runtimes record a compile-time Dart-version
+define and the Node runtime version, and are told apart by what the target
+actually computes with, not by the label the command passed.
 
-Gateable JavaScript reports require `node --version` to print exactly
-`v24.8.0`. Pin that version on `PATH` (for example with CI's Node setup) and
-verify it before running the JavaScript commands:
-
-```sh
-node --version
-```
-
-```sh
-dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=1 --output=/private/tmp/format3-jit-1.json
-dart run -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart --runtime=jit --run=2 --output=/private/tmp/format3-jit-2.json
-
-dart compile exe -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark-aot
-/private/tmp/format3-benchmark-aot --runtime=aot --run=1 --output=/private/tmp/format3-aot-1.json
-/private/tmp/format3-benchmark-aot --runtime=aot --run=2 --output=/private/tmp/format3-aot-2.json
-
-dart compile js -O4 -Dformat.benchmark.dartCompilerVersion=3.12.2 -Dformat.benchmark.sourceRevision=<40hex> benchmark/runner.dart -o /private/tmp/format3-benchmark.js
-node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
-node /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=2 --output=/private/tmp/format3-js-2.json
-```
-
-On macOS only, if the system `node` is not pinned, the Darwin ARM64 package can
-be used as a local workaround after verifying its version; do not substitute
-this package for the cross-platform commands above:
+The Node version is not a fixed number any more. The gate compares the Node a
+run used with the Node its reference was recorded on: a mismatch makes the run
+undecidable rather than failed, which is also why upgrading Node without
+re-recording is visible instead of silent.
 
 ```sh
-npx -y node-bin-darwin-arm64@24.8.0 --version
-npx -y node-bin-darwin-arm64@24.8.0 /private/tmp/format3-benchmark.js --runtime=js --dialect=printf --run=1 --output=/private/tmp/format3-js-1.json
+revision="$(git rev-parse HEAD)"
+define="-Dformat.benchmark.sourceRevision=$revision"
+compiler="$(dart --version 2>&1 | sed -E 's/.*version: ([^ ]+).*/\1/')"
+
+for run in 1 2; do
+  dart run "$define" benchmark/runner.dart --runtime=jit --run="$run" --output="jit-$run.json"
+done
+
+dart compile exe "$define" benchmark/runner.dart -o benchmark-aot
+for run in 1 2; do
+  ./benchmark-aot --runtime=aot --run="$run" --output="aot-$run.json"
+done
+
+dart compile js -O4 "-Dformat.benchmark.dartCompilerVersion=$compiler" "$define" benchmark/runner.dart -o benchmark.js
+for run in 1 2; do
+  node benchmark.js --runtime=js --run="$run" --output="js-$run.json"
+done
+
+dart compile wasm -O2 "-Dformat.benchmark.dartCompilerVersion=$compiler" "$define" benchmark/runner.dart -o benchmark.wasm
+for run in 1 2; do
+  node benchmark/wasm_host.mjs benchmark.wasm --runtime=wasm --run="$run" --output="wasm-$run.json"
+done
 ```
 
-Both JavaScript commands cover the whole matrix; `--dialect=printf` is for
-local diagnosis only. Braces compile and run under dart2js like any other
-dialect, and they are the runtime's most expensive scenarios, so the gate
-requires them.
+`-O4` for dart2js is not a detail: above `-O2` it drops the implicit type
+checks it otherwise emits on every write into a typed list, which is worth
+24–37% on cold parsing — measuring `-O2` would be measuring a build nobody
+ships. The wasm host script is committed rather than generated, because a
+harness that writes itself is one more thing that can differ between a laptop
+and CI.
 
-Merge the reports after all six commands finish, passing the recorded
+`--dialect=` narrows a run to one mini-language and is for local diagnosis
+only: a gateable report carries the whole matrix, and braces are the most
+expensive scenarios dart2js has.
+
+Merge the reports after all eight commands finish, passing the recorded
 reference:
 
 ```sh
-dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private/tmp/format3-jit-2.json,/private/tmp/format3-aot-1.json,/private/tmp/format3-aot-2.json,/private/tmp/format3-js-1.json,/private/tmp/format3-js-2.json --baseline=benchmark/results/gate-baseline.json --output=/private/tmp/format3-gates.json
+dart run benchmark/gates.dart --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json --baseline=benchmark/results/gate-baseline.json --output=gate-report.json
 ```
+
+The easier route is the workflow: `gh workflow run ci.yaml --ref main` runs
+exactly the commands above on CI hardware, and `gh run download <id> -n
+performance-gate` brings back the eight reports along with the gate's own
+verdict.
 
 ## The recorded reference
 
@@ -99,7 +112,7 @@ dart run benchmark/gates.dart --reports=/private/tmp/format3-jit-1.json,/private
 measured, per runtime, dialect, phase, and scenario. The gate asks whether
 this build drifted away from them, not whether it clears a fixed number.
 
-The reason is that one set of constants cannot serve three runtimes. Against
+The reason is that one set of constants cannot serve four runtimes. Against
 the same frozen comparators, the candidate's ratios differ by an order of
 magnitude between the VM and dart2js, so a limit tight enough to mean
 anything on the VM fires immediately on JavaScript. A ratio, unlike an
@@ -118,12 +131,20 @@ tolerances have to cover that.
 runtime is slow today the reference says so, and the gate's job is then to
 keep it from getting worse.
 
-Re-record after an intentional performance change, and after adding or
-renaming a scenario — a reference with no entry for a scenario is a hard
-error rather than a silently skipped check:
+Re-record **immediately** after adding, renaming or removing a scenario: a
+reference missing an entry the reports carry is a hard error, and so is a
+reference carrying an entry the reports no longer have. Both directions are
+errors rather than silently skipped checks, because either one changes how
+much of the matrix is being checked.
+
+After an intentional speed-up there is no hurry. The reference is one-sided —
+a faster build never fails against it, it just stops being measured against
+anything tight — so a stale one is safe and merely less useful. Re-record in
+batches, when a run lands on the same processor model the reference was taken
+on.
 
 ```sh
-dart run benchmark/gates.dart --reports=<the same six paths> --record=$(date +%F) --output=benchmark/results/gate-baseline.json
+dart run benchmark/gates.dart --reports=<the same eight paths> --record=$(date +%F) --output=benchmark/results/gate-baseline.json
 ```
 
 Record and evaluate on comparable machines. The committed reference is
@@ -149,9 +170,16 @@ The operating system string is recorded and deliberately not compared: on a
 hosted runner it carries a kernel build number that changes with every image
 refresh without moving a timing.
 
-The reference committed today predates this and has no environment, so only
-its Node version is still implied. Re-recording it from a CI run is what
-turns the rest of the check on.
+A reference with no environment at all is refused outright, with the command
+to re-record it. That is the loud choice of two: a gate that quietly decides
+nothing, run after run, reads exactly like a gate that works.
+
+Which machine the pool hands out is worth knowing before dispatching. Measured
+across four dispatches on a fixed revision: two AMD models differ by at most
+1.13 with the tolerance at 1.25, so they are interchangeable in practice,
+while an Intel Xeon reaches 1.36 on `js/braces/cold` alone. The committed
+reference is therefore recorded on the model that comes up most often, and a
+night that lands elsewhere is expected to decide nothing.
 
 Each round is timed to a duration rather than to a fixed operation count, so
 the two engines run different counts and a ratio is read per operation. The
@@ -159,10 +187,11 @@ target is `max(10 ms, 100 clock ticks)`, measured per machine: under dart2js
 the clock advances in whole milliseconds, which is why a JavaScript run takes
 minutes where a VM run takes seconds.
 
-One consequence to keep in mind when reading a cold number: a longer round
-means far more operations over the same 200 templates, so the cold phase now
-sits even closer to the hot path than it did. Until the cold scenarios draw a
-fresh template per operation, treat their ratios as hot ones.
+A cold scenario draws a fresh template per operation — the iteration number is
+suffixed to it, which costs both engines the same and so leaves the ratio
+alone — so a cold ratio is a parsing ratio and reads as one. It is also the
+phase most sensitive to the template cache, since a workload that never
+repeats a template is precisely what the cache stops serving.
 
 The merge rejects smoke/non-gateable reports, fewer than seven or mismatched
 rounds, missing runtime/dialect/run pairs, missing or mismatched detected

@@ -89,8 +89,17 @@ final class GateEnvironment {
   /// on the VM and a bare compiler version under dart2js — so each field is
   /// taken from the side that knows it best rather than from whichever report
   /// happens to come first.
+  ///
+  /// "The VM side" means jit or aot by name, not "anything that is not js":
+  /// wasm is compiled like the web and carries a compiler version where the VM
+  /// carries an SDK banner, so taking it as the VM report would have recorded
+  /// one string here and compared it against another, and called a matching
+  /// machine a different one. Which report the caller lists first is not
+  /// supposed to change a verdict.
   factory GateEnvironment.of(Iterable<BenchmarkReport> reports) {
-    final vm = reports.firstWhere((report) => report.runtime != 'js');
+    final vm = reports.firstWhere(
+      (report) => report.runtime == 'jit' || report.runtime == 'aot',
+    );
     final js = reports.firstWhere((report) => report.runtime == 'js');
 
     return GateEnvironment(
@@ -190,6 +199,11 @@ final class GateBaseline {
 
   double scenarioRatio(String key, String scenarioId) =>
       _require(scenarioRatios[key]?[scenarioId], '$key $scenarioId');
+
+  /// Every scenario recorded under [key], so that a matrix which lost one can
+  /// be told from a matrix that never had it.
+  Set<String> recordedScenarios(String key) =>
+      scenarioRatios[key]?.keys.toSet() ?? const {};
 
   static double _require(double? value, String what) {
     if (value == null || !value.isFinite || value <= 0) {
@@ -298,7 +312,8 @@ GateReport evaluateGateReports(
   if (byRuntime.length != _requiredRuntimeDialects.length ||
       !byRuntime.keys.toSet().containsAll(_requiredRuntimeDialects.keys)) {
     throw const FormatException(
-      'Reports must contain exactly JIT, AOT, and JavaScript runtime pairs.',
+      'Reports must contain exactly JIT, AOT, dart2js and dart2wasm runtime '
+      'pairs.',
     );
   }
 
@@ -640,6 +655,23 @@ DialectGate _evaluateDialectAgainst(
   GateBaseline baseline,
 ) {
   final key = GateBaseline.keyFor(runtime, dialect);
+  // A scenario the reference does not know is a hard error further down, where
+  // its recorded ratio is asked for. The other direction had no check at all,
+  // and it is the one that goes unnoticed: dropping a scenario from the matrix
+  // narrowed what the gate covers while every remaining check still passed.
+  // Both are the same event — the matrix moved and the reference is stale —
+  // and both now say so.
+  final missing = baseline
+      .recordedScenarios(key)
+      .difference(first.keys.toSet());
+  if (missing.isNotEmpty) {
+    final names = missing.toList()..sort();
+    throw FormatException(
+      'The reports have no scenario for ${names.join(', ')} under $key, '
+      'which the gate baseline records. Re-record it after changing the '
+      'benchmark matrix.',
+    );
+  }
   final failures = <GateFailure>[];
   final metrics = <String, Object?>{
     'meanTolerance': _meanTolerance,
@@ -652,6 +684,9 @@ DialectGate _evaluateDialectAgainst(
       for (final entry in first.entries)
         if (entry.value.phase == phase) entry.key,
     };
+    // Reachable only for a phase the reference does not record either — a
+    // phase whose scenarios were dropped is caught above, where the recorded
+    // set is compared with the measured one.
     if (ids.isEmpty) continue;
     final run1 = geometricMean(_valuesFor(_ratios(first), ids));
     final run2 = geometricMean(_valuesFor(_ratios(second), ids));
