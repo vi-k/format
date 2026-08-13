@@ -25,6 +25,8 @@
 /// from an oracle rather than from a literal.
 library;
 
+import 'dart:typed_data';
+
 import 'package:format/src/engine.dart';
 import 'package:test/test.dart';
 
@@ -238,6 +240,34 @@ void main() {
           ..writeString('x=')
           ..writePadded('ab', 0x2e, 3, 1);
     expect(sink.toString(), 'x=...ab.');
+  });
+
+  // Prepared code units are compiled on the VM only, so on the web this method
+  // had no caller and no branch of its own: it grew the accumulator the web
+  // does not use, having first spun forever trying to double a buffer of
+  // length zero. Both halves are pinned here, and this file runs on all three
+  // runtimes, which is the only way the web half is ever executed.
+  test('writeCodeUnits appends on every runtime', () {
+    final sink =
+        CharSink(0)
+          ..writeString('a=')
+          ..writeCodeUnits(Uint16List.fromList('bc'.codeUnits))
+          ..writeString('!');
+
+    expect(sink.toString(), 'a=bc!');
+    expect(sink.length, 5);
+  });
+
+  // The same write as the sole one, where the pending string has to be
+  // materialized before the units land: forgetting that is exactly the silent
+  // loss the file's header describes.
+  test('writeCodeUnits materializes a pending single string', () {
+    final sink =
+        CharSink(0, soleOp: true)
+          ..writeString('head')
+          ..writeCodeUnits(Uint16List.fromList([0x2d, 0x74, 0x61, 0x69, 0x6c]));
+
+    expect(sink.toString(), 'head-tail');
   });
 
   test('a second writeString materializes the first before appending', () {

@@ -434,8 +434,16 @@ final class _TemplateCache<T extends _PricedTemplate> {
     }
 
     var evicted = false;
-    while (_entries.length >= _templateCacheCapacity ||
-        _memory + price > _templateCacheMemoryLimit) {
+    // The emptiness test is what [trim] has, and for the same reason: today it
+    // cannot fire — an entry that does not fit alone was returned above, so
+    // some eviction always brings the total under the limit — but that holds
+    // only while `_memory` equals the sum of the charges. If it ever drifted
+    // upwards, the loop would evict its way to an empty cache and then ask
+    // `Random.nextInt(0)` for a victim, turning a slow cache into a thrown
+    // `ArgumentError` on a formatting call.
+    while (_entries.isNotEmpty &&
+        (_entries.length >= _templateCacheCapacity ||
+            _memory + price > _templateCacheMemoryLimit)) {
       _evict();
       evicted = true;
     }
@@ -477,7 +485,12 @@ final class _TemplateCache<T extends _PricedTemplate> {
     final key = _keys[victim];
     final parsed = _entries.remove(key);
     if (parsed != null) {
-      _memory -= parsed.chargedBytes ?? _price(key, parsed);
+      // The charge is written when an entry is stored and cleared when it
+      // leaves, so a resident entry always carries one. Recomputing it instead
+      // would be the bug this field was introduced to fix: an entry that grew
+      // after being stored prices higher than it was charged, and refunding
+      // the higher figure walks `_memory` downwards on every eviction.
+      _memory -= parsed.chargedBytes!;
       parsed.chargedBytes = null;
     }
     _keys[victim] = _keys.last;

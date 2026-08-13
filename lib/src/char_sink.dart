@@ -67,7 +67,12 @@ final class CharSink {
   void _ensure(int extra) {
     final required = _length + extra;
     if (required <= _buffer.length) return;
-    var capacity = _buffer.length * 2;
+    // Doubling from zero never reaches anything, so a sink whose buffer is
+    // empty — the web one, which accumulates into [_text] instead — would spin
+    // here forever rather than fail. The floor is the same 16 the constructor
+    // uses, and it costs one comparison on the growth path, which is not the
+    // hot one.
+    var capacity = _buffer.length < 8 ? 16 : _buffer.length * 2;
     while (capacity < required) {
       capacity *= 2;
     }
@@ -117,11 +122,18 @@ final class CharSink {
 
   /// Appends units prepared once at compile time.
   ///
-  /// VM only. `setRange` from a `Uint16List` is a block copy, where the
-  /// `codeUnits` view a string yields is walked element by element — a
-  /// literal written this way measured 78 ns against 117 ns per call.
+  /// Prepared units are a VM device: `setRange` from a `Uint16List` is a block
+  /// copy, where the `codeUnits` view a string yields is walked element by
+  /// element — a literal written this way measured 78 ns against 117 ns per
+  /// call. The web compiles no units and so never calls this today; it is
+  /// handled all the same, because the alternative was not "unused" but
+  /// "silently writes into a buffer nothing reads".
   void writeCodeUnits(Uint16List units) {
     _materialize();
+    if (_isWeb) {
+      _append(String.fromCharCodes(units));
+      return;
+    }
     _ensure(units.length);
     _buffer.setRange(_length, _length + units.length, units);
     _length += units.length;

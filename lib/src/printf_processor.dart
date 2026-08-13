@@ -1,11 +1,5 @@
 part of 'engine.dart';
 
-/// Upper bound for a resolved printf width/precision (and lower bound,
-/// negated, for width), and for a brace-specification width. Shared by the
-/// legacy per-call resolver, the hot-op classifier (which gates static
-/// literal options against it at compile time), and the brace spec parser.
-const _maximumSafeFormatOption = 100000;
-
 final class _PrintfProcessor {
   final String template;
   final List<Object?> values;

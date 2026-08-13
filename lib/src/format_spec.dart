@@ -32,6 +32,18 @@ final class _FormatSpec {
   });
 }
 
+/// Upper bound for a width or precision, in either mini-language: a brace
+/// specification's own, a printf option resolved from a `*` argument, and a
+/// static printf option the classifier gates at compile time. Also the lower
+/// bound, negated, for a printf width.
+///
+/// It lives here, with the other bounds a specification has to satisfy, rather
+/// than beside one of its readers: it used to be declared in
+/// `printf_processor.dart` while the brace parser was its heaviest user, and
+/// the precision validator in `number_format.dart` spelled the same number as
+/// a literal — a pair the compiler would never have told anyone about.
+const _maximumSafeFormatOption = 100000;
+
 /// The most code units a field's padding may write.
 ///
 /// Checked against `width * fill.length` rather than against the padding the

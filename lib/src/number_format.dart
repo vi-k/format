@@ -159,6 +159,15 @@ String groupDigits(
         grouping[groupingIndex < grouping.length
             ? groupingIndex
             : grouping.length - 1];
+    // A group of no digits would consume nothing and repeat forever. Callers
+    // validate the locale's grouping before reaching here, so this is a guard
+    // against a future caller rather than against today's; it turns a hang —
+    // the one failure a caller can neither catch nor diagnose — into the
+    // sensible reading of "group by nothing", which is not grouping at all.
+    if (size <= 0) {
+      groups.add(digits.substring(0, end));
+      break;
+    }
     final start = (end - size).clamp(0, end);
     groups.add(digits.substring(start, end));
     end = start;
@@ -995,7 +1004,7 @@ void _validateDoubleSpec(
   // would buy time by introducing exactly the kind of divergence the mode
   // exists to remove. The default mode is unaffected — the SDK caps precision
   // at 20 and 21 there.
-  if (spec.precision != null && spec.precision! > 100000) {
+  if (spec.precision != null && spec.precision! > _maximumSafeFormatOption) {
     throw _invalidSpecifier(
       context,
       'Precision is too large to format safely.',

@@ -23,6 +23,10 @@
 library;
 
 import 'package:format/format.dart';
+// The grouping helper itself is reachable only from inside the engine: both of
+// its callers validate the locale's sizes before calling, so its own behaviour
+// on a size no caller passes has to be asked for directly.
+import 'package:format/src/engine.dart' show groupDigits;
 import 'package:test/test.dart';
 
 final class _LocalizedNumberLocale implements NumberLocale {
@@ -350,4 +354,21 @@ void main() {
       );
     });
   }
+
+  // A group of no digits takes nothing off the number, so the loop that walks
+  // it backwards would never reach the front: the failure is a hang, which no
+  // caller can catch, log or time out. A locale reaching this is a bug in the
+  // engine rather than in the locale — both callers validate the sizes first —
+  // so what matters is only that it stops, with the one reading that means
+  // anything: no size to group by is no grouping.
+  test('grouping by a zero-sized group stops instead of looping', () {
+    expect(
+      groupDigits('1234567', separator: ',', grouping: const [0]),
+      '1234567',
+    );
+    expect(
+      groupDigits('1234567', separator: ',', grouping: const [3, 0]),
+      '1234,567',
+    );
+  });
 }

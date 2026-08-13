@@ -298,6 +298,10 @@ String applyFieldWidth(
       final half = padding ~/ 2;
       return '${fillUnit * half}$value${fillUnit * (padding - half)}';
     default:
+      // Unreachable, and not removable: `=` is the only other alignment the
+      // parser produces, and every path into here rejects it first, but a
+      // switch statement that returns needs a branch that cannot fall out of
+      // the bottom.
       // ignore: prefer_interpolation_to_compose_strings
       throw StateError('Unsupported text alignment: ' + align);
   }
@@ -311,7 +315,6 @@ void _validateTextSpec(_FormatSpec spec, FormatExceptionContext context) {
       spec.grouping != null ||
       spec.fractionalGrouping != null ||
       spec.align == '=' ||
-      spec.type == 'c' ||
       (spec.type != null && spec.type != 's') ||
       spec.customName != null ||
       spec.payload != null) {
