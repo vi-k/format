@@ -49,6 +49,53 @@ forms must balance: `{{` requires a later `}}`, because the first unescaped
 `}` is what ends the specification. In ordinary text they are independent, so
 a lone `{{` is fine there and a lone `{` is not.
 
+## Presentation types
+
+The letter that ends a brace specification chooses the presentation. Which
+letters a value accepts follows from its own type, so a specification meant for
+another type raises `InvalidSpecifierException` rather than converting
+silently:
+
+| type | accepts | produces |
+|---|---|---|
+| none | any value | `42`, `2.5`, `hi`, `true`, `null` — the value's own text |
+| `s` | text | the text, precision truncating rather than rounding |
+| `d` | `int`, `BigInt` | decimal: `42` |
+| `b` | `int`, `BigInt` | binary: `101010` |
+| `o` | `int`, `BigInt` | octal: `52` |
+| `x`, `X` | `int`, `BigInt` | hexadecimal, lower or upper: `2a`, `2A` |
+| `c` | `int`, `BigInt` | the character that code point encodes |
+| `n` | `int`, `BigInt`, `double` | decimal in the configured locale |
+| `f`, `F` | `int`, `BigInt`, `double` | fixed point: `2.500000` |
+| `e`, `E` | `int`, `BigInt`, `double` | scientific: `2.5e+0`, `2.5E+0` |
+| `g`, `G` | `int`, `BigInt`, `double` | general: `2.5` |
+| `%` | `int`, `BigInt`, `double` | the value times 100 with a percent sign |
+
+A name that is not one of these is a custom formatter (see
+[Custom formatters](#custom-formatters)), and `bool` and `null` reach only the
+empty specification: no presentation type accepts them.
+
+`sprintf` uses conversion letters instead, and decides from the letter rather
+than from the value — so a value the conversion cannot render raises
+`UnsupportedFormatValueException`:
+
+| conversion | accepts | produces |
+|---|---|---|
+| `%s` | any value | the value's own text |
+| `%c` | `int`, `BigInt` | the character that code point encodes |
+| `%d`, `%i` | `int`, `BigInt` | decimal, signed |
+| `%u` | `int`, `BigInt` ≥ 0 | decimal, unsigned: a negative value is rejected |
+| `%o` | `int`, `BigInt` ≥ 0 | octal |
+| `%x`, `%X` | `int`, `BigInt` ≥ 0 | hexadecimal, lower or upper |
+| `%f`, `%F` | `double` | fixed point |
+| `%e`, `%E` | `double` | scientific |
+| `%g`, `%G` | `double` | general |
+| `%a`, `%A` | `double` | hexadecimal floating point: `0x1.4p+1` |
+| `%%` | — | a literal percent sign; consumes no argument |
+
+Unlike the brace types, the numeric printf conversions do not accept the other
+numeric type: `%d` rejects a `double` and `%f` rejects an `int`, as in C.
+
 ## Text formatting
 
 Fill, alignment, and width apply to whatever the placeholder produced, and
@@ -140,7 +187,9 @@ format('{}', double.infinity);  // Infinity
 ```
 
 SDK precision limits therefore apply: `f`, `e`, and `%` accept 0 through 20,
-while `g` and `n` accept 1 through 21. As with `toStringAsFixed`, `f` may use
+while `g` and `n` accept 1 through 21. A specification with a precision but no
+type counts as `g` here, so `format('{:.0}', 2.0)` is rejected in this mode and
+gives `2e+00` in the compatible one. As with `toStringAsFixed`, `f` may use
 exponential notation for magnitudes at or above `10^21`.
 
 Select `DoubleFormatMode.compatible` when exact Python brace-formatting and
@@ -157,7 +206,9 @@ compatible.format('{:.3g}', 1.0);          // 1
 compatible.format('{}', double.infinity);  // inf
 ```
 
-Compare both profiles on the current machine with the ANSI-colored benchmark:
+Compare both profiles on the current machine with the ANSI-colored benchmark,
+from a clone of the [repository](https://github.com/vi-k/format) — the
+benchmarks are not part of the published package:
 
 ```console
 cd benchmark/suite
@@ -248,6 +299,15 @@ The printf dialect has no `n`, so every numeric conversion reads the locale —
 `%d` and `%x` take its digits and signs, `%f` and `%e` its separators too. It
 never groups on its own: a template that did not ask for separators does not
 get them.
+
+A locale localizes digits, and only digits: `localizeDigits` is handed the
+ASCII `0`–`9` of a number and nothing else. In `%x`, `%X` and `%#o` that means
+the digits change and the hexadecimal letters do not — under a locale with
+Eastern Arabic digits, `sprintf('%x', 0xabc123)` is `abc١٢٣` — and in `%a` the
+mantissa digits and exponent are localized while the `0x` prefix and the `p`
+that marks the exponent stay as they are. C localizes none of this, and Python
+has no such conversions; the mixed script is the price of localizing the digits
+of a conversion whose letters are not digits.
 
 A locale may localize signs, separators, and digits beyond what the C locale
 core specifies; the compatibility fixtures pin only the C locale behavior.
@@ -547,7 +607,8 @@ braces and printf alike can read 1024 resident templates with the capacity at
 cache full of small templates from one held by a handful of large or
 field-dense ones — the two need opposite adjustments. To see the difference
 the cache makes on the current machine, the benchmark measures every case with
-it on and off:
+it on and off — again from a clone of the repository, not from the published
+package:
 
 ```console
 cd benchmark/suite

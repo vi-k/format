@@ -131,7 +131,11 @@ unpublished 2.0.0 below.
   already read the locale. `%d`, `%i`, `%u`, `%o`, `%x` and `%X` now use the
   locale's signs and digits, padding zeros included; the `0x` marker of `%#x`
   stays ASCII, and the alternate zero of `%#o` localizes as the digit it is.
-  Nothing changes under the default C locale.
+  Only digits are localized, so the hexadecimal letters of `%x` and `%X` pass
+  through unchanged and a locale with non-ASCII digits produces both scripts in
+  one number — `%x` of `0xabc123` under Eastern Arabic digits is `abc١٢٣`. The
+  same rule governs `%a`, where the digits and exponent localize while `0x` and
+  `p` do not. Nothing changes under the default C locale.
 * Cache parsed templates, and expose `templateCacheCapacity`,
   `templateCacheSize`, and `clearTemplateCache()` so an application whose
   working set is larger than the default can widen it, one whose templates
