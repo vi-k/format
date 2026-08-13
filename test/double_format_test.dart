@@ -324,6 +324,32 @@ void main() {
     expect(format('{:.9_e}', 1234567.123456789), '1.234_567_123e+06');
   });
 
+  // The separator without a precision, which is a form of its own in CPython's
+  // grammar — `["." (precision [grouping] | grouping)]` — and was rejected
+  // here until 2026-08-13, at 1100 disagreements on a measured grid, every one
+  // of them "Dart refuses where Python formats". It asks for a grouped
+  // fraction at the presentation's own default precision, so the first two
+  // lines are what CPython 3.14.6 prints for the same templates.
+  test('a fraction separator without a precision keeps the default', () {
+    final compatible = Format(doubleFormatMode: DoubleFormatMode.compatible);
+
+    expect(compatible.format('{:.,f}', 1234.5678), '1234.567,800');
+    expect(compatible.format('{:_.,f}', 1234567.5678), '1_234_567.567,800');
+    // Spelling the precision out gives the same string, which is what "the
+    // default" means here.
+    expect(compatible.format('{:.6,f}', 1234.5678), '1234.567,800');
+    // Still a floating form only: an integer has no fraction to separate, and
+    // a lone `.` is still not a precision.
+    expect(
+      () => format('{:.,d}', 1234),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => format('{:.f}', 1.5),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
   // Zero padding puts the sign first and the zeros after it — and applies to
   // the special values too, where there are no digits to pad: `{:010f}` of
   // infinity is seven zeros and `inf`, which reads oddly but is what C does.

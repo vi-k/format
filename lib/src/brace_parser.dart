@@ -368,16 +368,40 @@ final class _BraceParser {
     return _StringItemAccess(key);
   }
 
+  /// Reads a run of decimal digits, keeping only as much of it as an index
+  /// could be made of.
+  ///
+  /// Leading zeros are dropped as they are read, and significant digits past
+  /// what [_maximumIndexDigits] allows are consumed but not kept. Otherwise a
+  /// token of a million digits — which costs an attacker a million characters
+  /// of template and nothing else — became a million-element list before
+  /// anything looked at how wide it was, and the refusal it was always going
+  /// to get arrived after the allocation rather than before it.
+  ///
+  /// What is kept is enough to decide the value and enough to refuse it: a run
+  /// short enough to be an index is complete, and a longer one is one element
+  /// over the limit, which is all the caller needs to reject it. Consuming
+  /// continues to the end of the run either way, so the token still ends where
+  /// it ends and the error still points at all of it.
   List<int> _readDecimalDigits() {
     final digits = <int>[];
+    var significant = 0;
+    var any = false;
     while (_index < template.length) {
       final scalar = _readScalar(_index);
       if (scalar == null) break;
       final digit = pythonDecimalDigitValue(scalar.value);
       if (digit == null) break;
-      digits.add(digit);
       _index = scalar.end;
+      any = true;
+      if (digits.isEmpty && digit == 0) continue;
+      significant++;
+      if (significant <= _maximumIndexDigits + 1) digits.add(digit);
     }
+    // A run that was nothing but zeros is the index zero, and dropping them
+    // all would have left it looking like no digits at all.
+    if (any && digits.isEmpty) digits.add(0);
+
     return digits;
   }
 

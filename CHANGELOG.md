@@ -110,6 +110,12 @@ unpublished 2.0.0 below.
   tables — 15.0.0 and 16.0.0 — so `TextUnit.graphemeClusters` follows whichever
   version resolves; nothing else in the package depends on the difference, and
   CI now runs the whole test suite on the floor to keep that true.
+* A fraction separator may now be written without a precision — `'{:.,f}'` —
+  which CPython's grammar allows and this package rejected. It groups the
+  fraction at the presentation's own default precision, so `'{:.,f}'` of
+  1234.5678 is `1234.567,800` and `'{:_.,f}'` of 1234567.5678 is
+  `1_234_567.567,800`, both exactly as CPython writes them. A lone `.` is
+  still an error, and an integer conversion still has no fraction to separate.
 * **Breaking, from the published 1.6.0:** `n` no longer follows `intl`. 1.6.0
   depended on `intl` and read `Intl.defaultLocale`, so `'{:n}'` localized
   itself and `'{:,n}'` was accepted. 3.0.0 drops that dependency: `n` follows

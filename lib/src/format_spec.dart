@@ -146,21 +146,31 @@ _FormatSpec _parseFormatSpecGeneral(
   if (index < units.length && _isGrouping(units[index])) grouping = take();
   if (at('.')) {
     take();
-    if (index >= units.length || !_isAsciiDigit(units[index])) {
-      throw _invalidSpecifier(
-        context,
-        'Precision must contain decimal digits.',
-      );
-    }
-    precision = _readDecimal(units, index, () => index++);
-    if (precision > _maximumSafeFormatOption) {
-      throw _invalidSpecifier(
-        context,
-        'The precision is too large to format safely.',
-      );
-    }
+    // `.` may introduce a precision, a fraction separator, or a precision and
+    // then a separator — CPython's grammar is
+    // `["." (precision [grouping] | grouping)]`, and the separator-only form
+    // was the one branch missing here. It asks for a grouped fraction at the
+    // presentation's own default precision, so `'{:.,f}'` of 1234.5678 is
+    // `1234.567,800`, exactly as CPython writes it.
     if (index < units.length && _isGrouping(units[index])) {
       fractionalGrouping = take();
+    } else {
+      if (index >= units.length || !_isAsciiDigit(units[index])) {
+        throw _invalidSpecifier(
+          context,
+          'Precision must contain decimal digits.',
+        );
+      }
+      precision = _readDecimal(units, index, () => index++);
+      if (precision > _maximumSafeFormatOption) {
+        throw _invalidSpecifier(
+          context,
+          'The precision is too large to format safely.',
+        );
+      }
+      if (index < units.length && _isGrouping(units[index])) {
+        fractionalGrouping = take();
+      }
     }
   }
 
