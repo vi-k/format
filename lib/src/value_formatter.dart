@@ -29,7 +29,7 @@ String _formatParsedValue(
     return _formatText(value, spec, engine.textUnit, context);
   }
   if (_isIntegerValue(value)) {
-    if (_isFloatingFormatType(spec.type)) {
+    if (_isFloatingFormatType(spec.type) || _demandsFloating(spec)) {
       return _formatBraceDouble(value!, spec, engine, context);
     }
     return _formatBraceInteger(value!, spec, engine, context);
@@ -215,6 +215,31 @@ bool _isFloatingFormatType(String? type) => switch (type) {
   'e' || 'E' || 'f' || 'F' || 'g' || 'G' || '%' => true,
   _ => false,
 };
+
+/// Whether a specification carrying no floating type can still only have been
+/// meant for a floating value.
+///
+/// Asked only under dart2js, and only of a value that reached the integer
+/// branch there — which is every whole `double`, because `2.0 is int` holds.
+/// Without this, `format('{:.3}', 2.0)` met the integer validator, which
+/// rejects a precision outright: the same source formatted on the VM and under
+/// dart2wasm and threw in the browser, on values that merely happened to come
+/// out whole. That is the worst shape a defect can take — it depends on data,
+/// it does not reproduce where the author develops, and it reaches the user as
+/// an exception rather than as a wrong string.
+///
+/// A precision, `z` and a fraction separator are the three options an integer
+/// specification cannot carry at all, so a specification carrying one of them
+/// is a floating specification whatever the runtime believes the value to be.
+///
+/// dart2js cannot tell `2` from `2.0`, so one divergence from CPython here is
+/// unavoidable. This is the milder one: it formats where CPython raises,
+/// instead of raising where CPython formats.
+bool _demandsFloating(_FormatSpec spec) =>
+    _isWebInt &&
+    (spec.precision != null ||
+        spec.normalizeNegativeZero ||
+        spec.fractionalGrouping != null);
 
 String _formatText(
   String value,

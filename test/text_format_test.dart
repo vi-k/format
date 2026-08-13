@@ -55,6 +55,34 @@ void main() {
     expect(graphemes.format('{:👩‍🔬>3s}', 'x'), '👩‍🔬👩‍🔬x');
   });
 
+  // The width counts units, and that bounds the result only while a unit is
+  // bounded. A grapheme cluster is not: the ceiling of 100 000 units, which
+  // reports itself as "too large to format safely", let a cluster fill write
+  // that many copies of itself — five hundred million characters from a
+  // seven-character template, and `OutOfMemoryError` one cluster larger, which
+  // is not a `FormattingException` and so takes the isolate with it.
+  //
+  // The bound is on the specification rather than on the call, so a width that
+  // is safe is safe for every value. Its size is what `unicodeScalars` could
+  // already produce at the maximum width, which is why the two cases below it
+  // still format.
+  test('a fill of many code units bounds the width it may pad to', () {
+    final graphemes = Format(textUnit: TextUnit.graphemeClusters);
+    // One cluster: a letter and five thousand combining marks.
+    final cluster = 'a${'́' * 5000}';
+
+    expect(
+      () => graphemes.format('{:$cluster<40s}', 'x'),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    // Small enough to stay inside the bound, and still padded with the cluster.
+    expect(graphemes.format('{:$cluster<10s}', 'x').length, 45010);
+    // What the bound is measured against: the widest scalar fill at the widest
+    // width, which formatted before the bound existed and formats after it.
+    expect(format('{:\u{1F600}<100000s}', 'x').length, 199999);
+    expect(format('{:*<100000s}', 'x').length, 100000);
+  });
+
   // A fill can be almost any character, which makes `{{` inside a
   // specification ambiguous: an escaped brace used as fill, or the start of a
   // nested field. The template grammar wins and the whole template is rejected

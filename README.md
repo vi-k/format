@@ -365,9 +365,17 @@ dart2js represents an `int` and an integral `double` as the same JavaScript
 `number`. Format canonically treats that indistinguishable value as an integer:
 empty, integer, `!r`, and container formatting spell both `42` and `42.0` as
 `42`. Explicit floating-point specifiers such as `f`, `e`, `g`, and `%` still
-select floating-point formatting. On the Dart VM, `42` and `42.0` remain
-distinct and empty formatting produces `42` and `42.0` respectively. `BigInt`
-remains a separate value kind on every platform.
+select floating-point formatting. So does a specification that carries no type
+but does carry a precision, a `z`, or a fraction separator — no integer
+specification accepts any of those, so `'{:.3}'` is a floating specification
+whatever the runtime believes the value to be, and `format('{:.3}', 2.0)` is
+`2.00` in a browser as it is everywhere else. The cost of that is the mirror
+case: `format('{:.3}', 2)` also produces `2.00` on the web, where the VM and
+CPython reject it. dart2js cannot tell the two values apart, so one of the two
+answers has to give; this way the divergence hands back a string rather than an
+exception. On the Dart VM, `42` and `42.0` remain distinct and empty formatting
+produces `42` and `42.0` respectively. `BigInt` remains a separate value kind on
+every platform.
 
 ## Representations
 

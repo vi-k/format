@@ -32,6 +32,57 @@ void main() {
   const isJavaScript = identical(1, 1.0);
 
   group('integral number dispatch', () {
+    // The other direction of the same divergence, and the one that used to
+    // arrive as an exception. A specification with no type but a precision is
+    // a floating specification — an integer conversion cannot carry one at
+    // all — yet on the web the value reaching it is an `int` whenever it came
+    // out whole, and the integer validator rejected the precision outright.
+    // So `format('{:.3}', someDouble)` formatted on the VM and threw in the
+    // browser, depending on whether the arithmetic happened to land on a whole
+    // number: a defect that depends on data and never reproduces where the
+    // author develops.
+    //
+    // Since dart2js cannot tell `2` from `2.0`, one divergence from CPython is
+    // unavoidable here, and the milder one is taken: the web formats where
+    // CPython raises, rather than raising where CPython formats. The VM keeps
+    // CPython's answer exactly.
+    test(
+      'a precision without a type formats an integral double everywhere',
+      () {
+        const integer = 7;
+        const integralDouble = 2.0;
+
+        for (final template in ['{:.3}', '{:10.3}', '{:,.3}']) {
+          expect(
+            format(template, 2.5).trim(),
+            '2.50',
+            reason: '$template on a fractional double',
+          );
+          expect(
+            format(template, integralDouble).trim(),
+            '2.00',
+            reason: '$template on a whole double',
+          );
+        }
+
+        // `z` and a fraction separator are the other two options no integer
+        // specification accepts, so they take the same route.
+        expect(format('{:.2n}', integralDouble), '2.0');
+        expect(format('{:z}', integralDouble), isJavaScript ? '2' : '2.0');
+
+        // A value the author meant as an integer: indistinguishable from the
+        // whole double on the web, so the two answers cannot both be CPython's.
+        if (isJavaScript) {
+          expect(format('{:.3}', integer), '7.00');
+        } else {
+          expect(
+            () => format('{:.3}', integer),
+            throwsA(isA<InvalidSpecifierException>()),
+          );
+        }
+      },
+    );
+
     // The core divergence, across every integer conversion. On the web an
     // integral double *is* an integer, so all seven conversions accept it and
     // give the same answer as the `int`; on the VM the same value is rejected.

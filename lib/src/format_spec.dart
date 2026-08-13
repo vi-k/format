@@ -32,6 +32,16 @@ final class _FormatSpec {
   });
 }
 
+/// The most code units a field's padding may write.
+///
+/// Checked against `width * fill.length` rather than against the padding the
+/// call turns out to need, so the promise is decided by the specification
+/// alone: a width that is safe is safe for every value. The figure is what
+/// [TextUnit.unicodeScalars] could already produce at the maximum width — a
+/// scalar is at most two code units — so nothing that formatted before this
+/// bound stops formatting, and the grapheme mode gains the bound it never had.
+const _maximumSafePaddingUnits = 2 * _maximumSafeFormatOption;
+
 _FormatSpec _parseFormatSpec(
   String source,
   TextUnit textUnit,
@@ -117,6 +127,19 @@ _FormatSpec _parseFormatSpecGeneral(
       throw _invalidSpecifier(
         context,
         'The width is too large to format safely.',
+      );
+    }
+    // The width counts text units, and that bounds the result only while a
+    // unit is bounded. Under [TextUnit.graphemeClusters] a fill unit is a whole
+    // cluster of any length, so `fill * padding` writes `fill.length * width`
+    // code units however small the width reads — a seven-character template
+    // with the fill arriving in a value reached 500 095 000 characters, and one
+    // cluster larger threw OutOfMemoryError, which is not a FormattingException
+    // and takes the isolate with it.
+    if (fill != null && width * fill.length > _maximumSafePaddingUnits) {
+      throw _invalidSpecifier(
+        context,
+        'The width is too large to format safely with this fill.',
       );
     }
   }
