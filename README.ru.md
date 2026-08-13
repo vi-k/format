@@ -386,6 +386,20 @@ jsonFormat.format('{:json:a{{b}', <String, Object?>{'answer': 42});
 // бросает InvalidFormatException — у {{ нет парного }}
 ```
 
+`FormatOptions` описывает спецификацию, а не движок: ни `NumberLocale`, ни
+`TextUnit`, ни `DoubleFormatMode` форматтеру не передаются. Поэтому
+`grouping` — это флаг, как он написан (`,` или `_`), а не разделитель,
+которым группировать: форматтеру, который группирует цифры сам, нужна
+локаль, и приложение отдаёт её ему так же, как отдаёт движку:
+
+```dart
+const locale = MyLocale();
+final engine = Format(
+  numberLocale: locale,
+  formatters: [MoneyFormatter(locale)],
+);
+```
+
 ### Доступ к атрибутам
 
 Рефлексии в Dart нет, поэтому `{value.attribute}` разрешается только через

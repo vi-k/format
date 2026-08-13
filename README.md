@@ -371,6 +371,20 @@ jsonFormat.format('{:json:a{{b}', <String, Object?>{'answer': 42});
 // throws InvalidFormatException — the {{ has no matching }}
 ```
 
+`FormatOptions` describes the specification, not the engine: a formatter
+receives no `NumberLocale`, `TextUnit` or `DoubleFormatMode`. So `grouping` is
+the flag as written (`,` or `_`), not the separator to write with — a
+formatter that groups digits itself needs the locale, and the application
+hands it over the same way it hands it to the engine:
+
+```dart
+const locale = MyLocale();
+final engine = Format(
+  numberLocale: locale,
+  formatters: [MoneyFormatter(locale)],
+);
+```
+
 ### Attribute lookup
 
 Dart has no reflection, so `{value.attribute}` resolves only through a
