@@ -216,8 +216,17 @@ to a C machine width. A configured `NumberLocale`, including one supplied by
 The `n` presentation type reads a `NumberLocale`. The `,` and `_` grouping
 flags do not: they always write the separator they name, exactly as CPython
 does, so `'{:,d}'` is `1,234,567` under every locale and only `'{:n}'` follows
-the configured one. The default locale is the C locale, which groups with `,`,
-separates decimals with `.`, and leaves `n` ungrouped:
+the configured one.
+
+The printf dialect answers differently, and deliberately: `%f`, `%e`, `%g` and
+`%a` write the locale's decimal separator, because that is what C does with
+`LC_NUMERIC`, while the brace dialect keeps `.` because that is what Python
+does. Under a locale that separates decimals with a comma, `'{:.2f}'` is
+`1234.50` and `'%.2f'` is `1234,50` — each dialect follows the language it
+comes from rather than the other one.
+
+The default locale is the C locale, which groups with `,`, separates decimals
+with `.`, and leaves `n` ungrouped:
 
 ```dart
 format('{:,.2f}', 1234567.5);  // 1,234,567.50

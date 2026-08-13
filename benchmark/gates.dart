@@ -961,8 +961,44 @@ String? _git(List<String> arguments) {
   return result.exitCode == 0 ? result.stdout as String : null;
 }
 
+/// The single line a CI step prints about a finished run.
+///
+/// `comparable` when the run decided something, and otherwise why it did not.
+/// Separate from the evaluation itself because the answer has to survive the
+/// step that produced it: a run on a machine the reference does not describe
+/// exits 0 and goes green, so without this the only trace is a line on stderr
+/// inside a successful step, which nobody opens.
+String _describeVerdict(String path) {
+  final file = File(path);
+  if (!file.existsSync()) return 'no gate report at $path';
+  final report = jsonDecode(file.readAsStringSync());
+  if (report is! Map<String, Object?>) return 'malformed gate report at $path';
+  if (report['comparable'] == true) return 'comparable';
+  final differences = report['environmentDifferences'];
+  final detail =
+      differences is List && differences.isNotEmpty
+          ? differences.join('; ')
+          : 'the report does not say which part of the environment differs';
+  return 'the gate decided nothing: not comparable with the recorded '
+      'reference ($detail)';
+}
+
+/// The value of the first `<prefix>value` argument, or null.
+String? _valueOf(List<String> arguments, String prefix) {
+  for (final argument in arguments) {
+    if (argument.startsWith(prefix)) return argument.substring(prefix.length);
+  }
+
+  return null;
+}
+
 void main(List<String> arguments) {
   try {
+    final describe = _valueOf(arguments, '--describe=');
+    if (describe != null) {
+      stdout.writeln(_describeVerdict(describe));
+      return;
+    }
     final reports = _parseReports(arguments);
     final output = _outputPath(arguments);
     final record = _recordArgument(arguments);

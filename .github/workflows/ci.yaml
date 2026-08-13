@@ -29,6 +29,10 @@ permissions:
 
 jobs:
   checks:
+    # Named explicitly because the matrix carries a flag as well as a version:
+    # left to GitHub the job would be "checks (3.12.2, true)", and the name is
+    # what other places refer to this check by.
+    name: checks (${{ matrix.sdk }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -52,7 +56,18 @@ jobs:
         # two backends could not. Unpin as soon as `package:test` speaks the
         # new loader — the check is a one-line `dart test -c dart2wasm` on a
         # 3.13 SDK.
-        sdk: ['3.7.2', '3.12.2']
+        # Written as `include` with an explicit flag rather than as a list of
+        # versions: nine steps below run on the primary entry only, and keying
+        # them on the version string meant that moving it — which this pin
+        # exists to do, as soon as `package:test` speaks the new loader — would
+        # silently switch off formatting, `--fatal-infos`, both web runs, the
+        # harness tests, the dependency floor, the archive check and
+        # `publish --dry-run`, on both legs, with the workflow still green.
+        include:
+          - sdk: '3.7.2'
+            primary: false
+          - sdk: '3.12.2'
+            primary: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
@@ -61,12 +76,12 @@ jobs:
       - name: Resolve dependencies
         run: dart pub get
       - name: Formatting
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         # The format16 baseline is not materialized in this job, so the
         # whole checkout must be format-clean.
         run: dart format --output=none --set-exit-if-changed .
       - name: Analyze (zero-info baseline)
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         # The full-repository pass lives in the benchmark-suite job:
         # here the suite and the format16 baseline are not resolved yet.
         run: dart analyze --fatal-infos lib test example tool
@@ -84,13 +99,13 @@ jobs:
       # number model, and the `no-dart2wasm` tag on the one file that crashes
       # inside `package:test` rather than in this package.
       - name: Tests (node platform, dart2js)
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: dart test -p node
       - name: Tests (node platform, dart2wasm)
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: dart test -p node -c dart2wasm -x no-dart2wasm
       - name: Tests (harness, outside the published archive)
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: dart test benchmark/test tool/test
       # The dependency floor, made real. `dart pub get` always resolves to the
       # newest allowed, so a lower bound in the pubspec is a claim nothing
@@ -104,13 +119,13 @@ jobs:
       # 15 grapheme tables and 1.4.x carries Unicode 16 — so this run also
       # says that nothing in the package depends on which of them resolved.
       - name: Tests on the dependency floor
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: dart pub downgrade characters && dart test
       # Back to the committed resolution, not to the newest one: `dart pub
       # upgrade` would leave every later step running against a graph this
       # repository never locked.
       - name: Restore the committed resolution
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: git checkout pubspec.lock && dart pub get
       - name: Example runs
         run: dart run example/format_example.dart
@@ -118,12 +133,12 @@ jobs:
         run: dart test
         working-directory: packages/format_intl
       - name: Published archive stands on its own
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         # Reconstructs what pub would ship and analyzes and tests it there:
         # a local pass cannot see a .pubignore that drops a referenced path.
         run: dart run tool/verify_package_archive.dart
       - name: Publish dry-run
-        if: matrix.sdk == '3.12.2'
+        if: matrix.primary
         run: dart pub publish --dry-run
 
   generated-artifacts:
@@ -291,6 +306,27 @@ jobs:
           --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json
           --baseline=benchmark/results/gate-baseline.json
           --output=gate-report.json
+      # A run whose machine does not match the reference is not a pass: the
+      # gate reports `comparable: false`, decides nothing and exits 0, so the
+      # step goes green and the only trace is a line on stderr inside a
+      # successful step. The project's own measurement says that is the common
+      # case rather than the rare one — the reference model came up once in
+      # four dispatches on 2026-08-12, and zero of two on 2026-08-13 — so a
+      # night that decided nothing has to say so where the run summary shows
+      # it. Still not a failure: nothing is wrong, the night simply proved
+      # nothing.
+      - name: Report whether the run decided anything
+        if: always()
+        run: |
+          if [ ! -f gate-report.json ]; then
+            echo "::warning::the gate produced no report"
+            exit 0
+          fi
+          describe='--describe=gate-report.json'
+          comparable="$(dart run benchmark/gates.dart "$describe")"
+          if [ "$comparable" != 'comparable' ]; then
+            echo "::warning::$comparable"
+          fi
       - name: Upload the gate report
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

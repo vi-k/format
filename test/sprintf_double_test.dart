@@ -188,6 +188,37 @@ void main() {
     expect(localized.sprintf('%+015.1e', 12.0), '＋٠٠٠٠١,٢×10^＋٠١');
   });
 
+  // The hexadecimal conversion under a locale, which nothing reached before:
+  // `%a` was only ever run on the default engine, and the fuzzer does not draw
+  // `a`/`A` at all, leaving the twenty-nine lines that split the mantissa and
+  // localize each part unexecuted. The rules they implement are visible only
+  // in combination, so they are asserted together:
+  //
+  // - the `0x` marker stays ASCII, because it is a marker and not a number;
+  // - hex letters pass through while decimal digits localize, the same split
+  //   `%x` follows in `sprintf_integer_test.dart`;
+  // - the point becomes the locale's decimal separator, and the sign before
+  //   the exponent its plus sign — the exponent digits localize too;
+  // - the sign of the value uses the locale's minus, and `#` is not involved;
+  // - zero padding is fitted after localization, so `%020a` is twenty
+  //   characters of localized text rather than twenty of ASCII widened later.
+  test('localizes the hexadecimal conversion part by part', () {
+    final localized = Format(
+      numberLocale: _PrintfNumberLocale(),
+      doubleFormatMode: DoubleFormatMode.compatible,
+    );
+
+    expect(localized.sprintf('%a', 1.5), '0x١,٨p＋٠');
+    expect(localized.sprintf('%a', -1.7), '−0x١,b٣٣٣٣٣٣٣٣٣٣٣٣p＋٠');
+    expect(localized.sprintf('%A', -1.7), '−0X١,B٣٣٣٣٣٣٣٣٣٣٣٣P＋٠');
+    expect(localized.sprintf('%+.3a', 1024.5), '＋0x١,٠٠٢p＋١٠');
+    expect(localized.sprintf('%020a', 1.5), '0x٠٠٠٠٠٠٠٠٠٠٠٠١,٨p＋٠');
+    expect(localized.sprintf('%020a', 1.5).length, 20);
+    // The control: the same value under the default engine is untouched ASCII,
+    // so every difference above belongs to the locale and not to `%a`.
+    expect(sprintf('%a', -1.7), '-0x1.b333333333333p+0');
+  });
+
   // A locale whose digits are *wider* than the ASCII ones — each `0` becomes
   // two characters. Padding computed before localization would overshoot the
   // requested width, so the fit has to happen after: the result is exactly ten
