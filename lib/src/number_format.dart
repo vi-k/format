@@ -982,6 +982,19 @@ void _validateDoubleSpec(
       'Explicit grouping is not valid for locale-aware formatting.',
     );
   }
+  // "Safely" here means bounded, not cheap. The exact path spells the value
+  // through `BigInt`, whose `toString` is superlinear, so the cost climbs
+  // faster than the precision: measured at 11 ms for 12 500 digits, 39 ms for
+  // 25 000 and 142 ms for 50 000, which is about O(n^1.85) and puts the
+  // ceiling itself at roughly half a second of CPU — per field, so a template
+  // of a hundred such fields is a minute.
+  //
+  // The ceiling is not lowered, and that is the trade: this validator runs in
+  // `compatible` mode, whose whole purpose is to answer as CPython answers,
+  // and CPython formats `'{:.50000f}'` without complaint. Refusing it here
+  // would buy time by introducing exactly the kind of divergence the mode
+  // exists to remove. The default mode is unaffected — the SDK caps precision
+  // at 20 and 21 there.
   if (spec.precision != null && spec.precision! > 100000) {
     throw _invalidSpecifier(
       context,

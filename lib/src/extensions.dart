@@ -1,3 +1,5 @@
+import 'errors.dart';
+
 /// A custom formatter selected by `{:name}` in a brace template.
 ///
 /// The [specifier] must match `[A-Za-z][A-Za-z0-9_]*` and must not collide
@@ -20,7 +22,9 @@
 /// `FormatExtensionException`, which carries the original `error` and
 /// `stackTrace` along with the template location. The one exception is a
 /// `FormattingException`: an extension that reports a formatting failure in
-/// the engine's own vocabulary has that failure passed through unchanged.
+/// the engine's own vocabulary has that failure passed through unchanged —
+/// build it with `options.context` so it points at the placeholder the way an
+/// engine failure does.
 /// Errors Dart raises on the extension's behalf are wrapped the same way — a
 /// `canFormat` that accepts a value of the wrong type produces a `TypeError`
 /// when the engine calls `format`, and an extension that formats by calling
@@ -82,6 +86,18 @@ final class FormatOptions {
   /// The additional template after `name:` in the specification, if any.
   final String? payload;
 
+  /// Where in the template this call came from.
+  ///
+  /// For building a failure that points at the placeholder. An extension that
+  /// throws a `FormattingException` has it passed through unchanged, which is
+  /// the documented way to report a failure in the engine's own vocabulary —
+  /// but a context is not something an extension can know, so without this the
+  /// documented path produced *worse* diagnostics than an ordinary error did:
+  /// a wrapped `StateError` arrives with the template, offset, fragment and
+  /// specifier filled in, while the deliberate exception arrived with all four
+  /// empty.
+  final FormatExceptionContext context;
+
   const FormatOptions({
     this.sign,
     this.normalizeNegativeZero = false,
@@ -90,6 +106,7 @@ final class FormatOptions {
     this.grouping,
     this.precision,
     this.payload,
+    this.context = const FormatExceptionContext(),
   });
 }
 

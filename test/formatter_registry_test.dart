@@ -187,6 +187,31 @@ void main() {
   // arrive as the package's own extension failure, naming the class, rather
   // than as a raw `StateError` from somewhere inside a constructor the caller
   // never sees.
+  // The documented way for an extension to report a failure is to throw a
+  // FormattingException, which the engine passes through unchanged. Until
+  // `options.context` existed that produced *worse* diagnostics than an
+  // ordinary error did: a wrapped StateError arrived with the template,
+  // offset, fragment and specifier filled in, while the deliberate exception
+  // arrived with all four empty, because a context is not something an
+  // extension can know.
+  test('an extension can report a failure that points at the placeholder', () {
+    final engine = Format(formatters: [_LocatedFailureFormatter()]);
+
+    Object? caught;
+    try {
+      engine.format('a {0:loc} b', 42);
+    } on FormattingException catch (error) {
+      caught = error;
+    }
+
+    expect(caught, isA<InvalidSpecifierException>());
+    final failure = caught! as InvalidSpecifierException;
+    expect(failure.context.template, 'a {0:loc} b');
+    expect(failure.context.offset, 2);
+    expect(failure.context.fragment, '{0:loc}');
+    expect(failure.context.specifier, 'loc');
+  });
+
   test('Format reports a throwing specifier as a formatting failure', () {
     // Configuration reads user code, so it owes the same typed-failure
     // contract as formatting itself.
@@ -225,4 +250,16 @@ void main() {
     final failure = caught! as FormatExtensionException;
     expect((failure.error as StateError).message, 'canFormat boom');
   });
+}
+
+final class _LocatedFailureFormatter extends Formatter<Object> {
+  @override
+  String get specifier => 'loc';
+
+  @override
+  bool canFormat(Object? value) => true;
+
+  @override
+  String format(Object value, FormatOptions options) =>
+      throw InvalidSpecifierException(options.context, 'reported by the test');
 }

@@ -167,6 +167,7 @@ String _invokeFormatter(
         grouping: spec.grouping,
         precision: spec.precision,
         payload: spec.payload,
+        context: context,
       ),
     );
   } on FormattingException {
