@@ -14,6 +14,11 @@
 /// sequence. Here the sequences are written out directly, including the
 /// degenerate ones (empty string first, zero and negative fills).
 ///
+/// [CharSink.writePadded] is here for the same reason: it is the one write
+/// that skips the buffer entirely, and the engine only ever calls it for a
+/// template that is a single field, so the degenerate cases — no padding at
+/// all, a sink that already holds something — are unreachable from above.
+///
 /// The grouped writes ([CharSink.writeGroupedMagnitude],
 /// [CharSink.writeGroupedBody]) are not here — they are covered against the
 /// legacy path in `template_ir_diff_test`, where the expected grouping comes
@@ -192,6 +197,47 @@ void main() {
           ..writeString('x');
     expect(sink.length, 1);
     expect(sink.toString(), 'x');
+  });
+
+  // The padded write, which a program that is one op uses to assemble its
+  // whole result without the accumulator: the fill has to land on the side
+  // asked for, in the amount asked for, and the sink has to stay in
+  // single-string mode while it does.
+  test('writePadded assembles the layout as one string', () {
+    expect(
+      (CharSink(0, soleOp: true)..writePadded('ab', 0x2e, 3, 0)).toString(),
+      '...ab',
+    );
+    expect(
+      (CharSink(0, soleOp: true)..writePadded('ab', 0x2e, 0, 3)).toString(),
+      'ab...',
+    );
+    final centred = CharSink(0, soleOp: true)..writePadded('ab', 0x2e, 2, 3);
+    expect(centred.toString(), '..ab...');
+    expect(centred.length, 7);
+  });
+
+  // Nothing to pad — `{:>5s}` of a string already five units wide — so the
+  // text has to come back the way writeString would have returned it, by
+  // reference rather than through a copy that happens to compare equal.
+  test('writePadded without padding keeps the text by reference', () {
+    const text = 'hello';
+    final sink = CharSink(0, soleOp: true)..writePadded(text, 0x20, 0, -2);
+    expect(sink.length, text.length);
+    expect(identical(sink.toString(), text), isTrue);
+  });
+
+  // The emptiness check inside writePadded is a guard, not the condition:
+  // callers reach it only for a sole op, so a sink that already holds
+  // something is not supposed to arrive here at all. If one ever did, what it
+  // held must survive — the failure this guards against is silent, because
+  // replacing the pending string still produces a plausible result.
+  test('writePadded after another write accumulates instead of replacing', () {
+    final sink =
+        CharSink(0, soleOp: true)
+          ..writeString('x=')
+          ..writePadded('ab', 0x2e, 3, 1);
+    expect(sink.toString(), 'x=...ab.');
   });
 
   test('a second writeString materializes the first before appending', () {

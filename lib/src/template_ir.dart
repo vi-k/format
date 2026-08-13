@@ -45,7 +45,11 @@ final class _BraceProgram {
   /// asks for nothing, however long that string is. See [_BraceSoleLiteralOp].
   final int estimatedCapacity;
 
-  const _BraceProgram(this.ops, this.estimatedCapacity);
+  /// Whether the program is a single op, so that op's write is the whole
+  /// output. See [CharSink.soleOp], which is what the flag is for.
+  final bool soleOp;
+
+  _BraceProgram(this.ops, this.estimatedCapacity) : soleOp = ops.length == 1;
 }
 
 final class _BraceLiteralOp extends _BraceOp {
@@ -488,6 +492,13 @@ final class _BraceTextOp extends _BraceOp {
       return;
     }
     final padding = width - textUnit.length(text);
+    if (sink.soleOp && padding > 0) {
+      _writeSolePadded(sink, text, padding);
+      return;
+    }
+    // Deliberately not shared with the branch above: writing the fill around
+    // the body needs no left/right pair, and computing one cost a template of
+    // several padded fields 1 to 5 ns per call under dart2js.
     if (align == _alignRight) {
       sink.fill(fillChar, padding);
     } else if (align == _alignCenter) {
@@ -499,6 +510,23 @@ final class _BraceTextOp extends _BraceOp {
     } else if (align == _alignCenter) {
       sink.fill(fillChar, padding - padding ~/ 2);
     }
+  }
+
+  /// Kept out of [write] rather than inlined into it: the branch runs only for
+  /// a template that is this one field, and carrying it in the hot method cost
+  /// every other template the size.
+  void _writeSolePadded(CharSink sink, String text, int padding) {
+    var left = 0;
+    var right = 0;
+    if (align == _alignRight) {
+      left = padding;
+    } else if (align == _alignCenter) {
+      left = padding ~/ 2;
+      right = padding - left;
+    } else if (align == _alignLeft) {
+      right = padding;
+    }
+    sink.writePadded(text, fillChar, left, right);
   }
 
   FormatExceptionContext _context(_BraceProcessor frame) =>
@@ -602,6 +630,29 @@ void _writeAsciiFloatDirect(
       groupSeparator == 0 ? body.length : body.length + (integerEnd - 1) ~/ 3;
   final content = grouped + signWidth + suffixWidth;
   final padding = width < 0 ? 0 : width - content;
+  if (sink.soleOp &&
+      padding > 0 &&
+      signChar == 0 &&
+      !percentSuffix &&
+      groupSeparator == 0) {
+    // Nothing is written around the body, so the whole field is the body
+    // between two runs of fill — and being the whole output, it can be
+    // assembled without an accumulator. `=` coincides with `>` here: with no
+    // sign to separate, the fill it puts after the sign is fill before the
+    // body.
+    var left = 0;
+    var right = 0;
+    if (align == _alignRight || align == _alignSign) {
+      left = padding;
+    } else if (align == _alignCenter) {
+      left = padding ~/ 2;
+      right = padding - left;
+    } else if (align == _alignLeft) {
+      right = padding;
+    }
+    sink.writePadded(body, fillChar, left, right);
+    return;
+  }
   if (align == _alignRight) {
     sink.fill(fillChar, padding);
   } else if (align == _alignCenter) {
@@ -1050,7 +1101,10 @@ final class _PrintfProgram {
   /// What the sink should preallocate; see [_BraceProgram.estimatedCapacity].
   final int estimatedCapacity;
 
-  const _PrintfProgram(this.ops, this.estimatedCapacity);
+  /// See [_BraceProgram.soleOp].
+  final bool soleOp;
+
+  _PrintfProgram(this.ops, this.estimatedCapacity) : soleOp = ops.length == 1;
 }
 
 final class _PrintfLiteralOp extends _PrintfOp {
@@ -1297,6 +1351,15 @@ final class _PrintfStringOp extends _PrintfOptionsOp {
       return;
     }
     final padding = width - textUnit.length(truncated);
+    if (sink.soleOp && padding > 0) {
+      sink.writePadded(
+        truncated,
+        0x20,
+        effectiveLeft ? 0 : padding,
+        effectiveLeft ? padding : 0,
+      );
+      return;
+    }
     if (!effectiveLeft) sink.fill(0x20, padding);
     sink.writeString(truncated);
     if (effectiveLeft) sink.fill(0x20, padding);

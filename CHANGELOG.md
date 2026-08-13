@@ -39,6 +39,17 @@ unpublished 2.0.0 below.
   character template and 4600 times for one of a hundred thousand, where the
   copies were the whole cost, and a cached entry for such a template retains
   about a third of what it did.
+* A template that is a single padded field — `{:>12.2f}`, `{:^10s}`, `%10s` —
+  assembles its result as one string instead of writing the fill around the
+  body into the buffer and building the string back out of it. Where the field
+  is the whole output that round trip buys nothing. Measured on the VM:
+  `{:>12.2f}` 179 ns becomes 140, `{:012.2f}` 181 becomes 145, `{:^12.2f}` 189
+  becomes 152, `{:>10s}` 83 becomes 50, `%10s` 86 becomes 56 and `%12.2f` 179
+  becomes 144. The web backends accumulate into a string to begin with and so
+  move less — under dart2js `{:>12.2f}` 107 ns becomes 104, under dart2wasm 150
+  becomes 144. Templates of more than one field are unchanged, and so is a
+  field whose sign, percent suffix or grouping separator has to be written
+  around or through the body rather than beside it.
 * Integers beyond 2^53 no longer go through `BigInt` to reach base 2, 8 or 16
   on the web. Every radix this package supports is a power of two, and a
   binary double converts into one exactly, so the platform's own conversion

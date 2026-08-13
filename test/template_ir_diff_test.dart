@@ -740,6 +740,50 @@ void main() {
     expectPrintfParity('%0*d/%.*s/%%', [6, 42, 2, 'abcdef']);
   });
 
+  // The sole-op shortcut, stated as its own invariant. A template that is one
+  // field assembles its padded result as a single string
+  // ([CharSink.writePadded]); every other template writes the fill around the
+  // body into the accumulator. Both halves are checked against the legacy path
+  // elsewhere in this file, but only separately — nothing there requires the
+  // two to agree with each other on the same specification. Bracketing is what
+  // turns the sole op into three.
+  test('a padded field renders the same alone as inside a template', () {
+    const cases = <(String, Object?)>[
+      ('{:>12.2f}', 12.5),
+      ('{:<12.2f}', 12.5),
+      ('{:^12.2f}', 12.5),
+      ('{:012.2f}', 12.5),
+      ('{:>12.2f}', -12.5),
+      ('{:*^13.3e}', 1234.5),
+      ('{:>12.2%}', 0.125),
+      ('{:>14,.2f}', 12345.5),
+      ('{:>12.2f}', double.nan),
+      ('{:>10s}', 'abc'),
+      ('{:<10s}', 'abc'),
+      ('{:^10s}', 'abc'),
+      ('{:*>10s}', 'ééé'),
+      ('{:>4s}', 'exactly8'),
+      ('{:>10d}', 42),
+    ];
+    for (final (spec, value) in cases) {
+      for (final engine in [defaultFormat, graphemeFormat]) {
+        final alone = engine.format(spec, value);
+        expect('[$alone]', engine.format('[$spec]', value), reason: spec);
+      }
+    }
+    const printfCases = <(String, Object?)>[
+      ('%10s', 'abc'),
+      ('%-10s', 'abc'),
+      ('%12.2f', 12.5),
+      ('%012.2f', -12.5),
+      ('%4s', 'exactly8'),
+    ];
+    for (final (template, value) in printfCases) {
+      final alone = sprintf(template, value);
+      expect('[$alone]', sprintf('[$template]', value), reason: template);
+    }
+  });
+
   // The exhaustive grouping sweep: both separators, every radix each one
   // allows, eight layout prefixes and five widths, against values on both sides
   // of every group boundary plus a `BigInt` far beyond them. Tens of thousands

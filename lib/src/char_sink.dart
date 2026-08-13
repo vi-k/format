@@ -41,7 +41,17 @@ final class CharSink {
   // falls back to normal accumulation.
   String? _single;
 
-  CharSink(int initialCapacity)
+  /// Whether the program filling this sink is a single op, so that op's write
+  /// is the whole output.
+  ///
+  /// Read by [writePadded], which can assemble its result in string space only
+  /// when nothing else will be appended to it. The sink cannot work this out
+  /// for itself — an empty sink says nothing about what comes next, and using
+  /// emptiness as the proxy made `'{:>8s} {:>8s}'` pay for a padded string it
+  /// then had to copy out again (13 to 18 ns per call on the VM).
+  final bool soleOp;
+
+  CharSink(int initialCapacity, {this.soleOp = false})
     : _buffer =
           _isWeb
               ? _unusedBuffer
@@ -115,6 +125,37 @@ final class CharSink {
     _ensure(units.length);
     _buffer.setRange(_length, _length + units.length, units);
     _length += units.length;
+  }
+
+  /// Writes [text] with [left] fill units before it and [right] after, as one
+  /// string.
+  ///
+  /// Only for a [soleOp] program, and callers check that before calling: a
+  /// padded field written as fill-body-fill costs the accumulator it is copied
+  /// into and the string built back out of it, and when the field is the whole
+  /// output that round trip buys nothing. The platform's own padding replaces
+  /// it — measured for a five-character body padded to twelve at 25 ns against
+  /// 53 on the VM, and 24 against 38 under dart2js.
+  ///
+  /// The emptiness check is not the condition, only a guard: an op that had
+  /// already written here would otherwise lose what it wrote.
+  void writePadded(String text, int fillChar, int left, int right) {
+    if (_single == null && _length == 0) {
+      if (left <= 0 && right <= 0) {
+        _single = text;
+        return;
+      }
+      final fill = String.fromCharCode(fillChar);
+      var padded = left <= 0 ? text : text.padLeft(text.length + left, fill);
+      if (right > 0) padded = padded.padRight(padded.length + right, fill);
+      _single = padded;
+      return;
+    }
+    // Guarded rather than left to `fill`'s own early return: a field wider
+    // than its width pads on neither side, and the call is the cost.
+    if (left > 0) fill(fillChar, left);
+    writeString(text);
+    if (right > 0) fill(fillChar, right);
   }
 
   void fill(int codeUnit, int count) {

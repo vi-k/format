@@ -15,7 +15,7 @@ final class _BraceProcessor {
 
   String format() {
     final program = _cachedBraceTemplate(template).programFor(engine.textUnit);
-    final output = CharSink(program.estimatedCapacity);
+    final output = CharSink(program.estimatedCapacity, soleOp: program.soleOp);
     for (final op in program.ops) {
       op.write(output, this);
     }
