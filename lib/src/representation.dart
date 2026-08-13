@@ -12,13 +12,40 @@ Object? applyConversion(
     case 's':
       return _fallbackToString(value, context);
     case 'r':
-      return _RepresentationWriter(engine, context).represent(value);
+      return _represent(value, engine, context);
     case 'a':
-      return _asciiEscape(
-        _RepresentationWriter(engine, context).represent(value),
-      );
+      return _asciiEscape(_represent(value, engine, context));
     default:
       throw UnsupportedConversionException(context, value);
+  }
+}
+
+/// Walks [value] under the same failure contract as `_fallbackToString`.
+///
+/// `_active` catches a structure that refers to itself, which is the loop that
+/// has no depth at all. A structure that is merely very deep has one, and the
+/// walk is recursive, so past some nesting it exhausts the stack — twenty
+/// thousand levels does it. Left alone, that arrived as a bare
+/// `StackOverflowError`, which is not a `FormattingException` and which the
+/// README promises callers will not see; `'{}'` and `'{!s}'` on the same value
+/// already reported it as a `FormatExtensionException`, because they go through
+/// `_fallbackToString`. This makes `'{!r}'` and `'{!a}'` answer the same way.
+String _represent(
+  Object? value,
+  Format engine,
+  FormatExceptionContext context,
+) {
+  try {
+    return _RepresentationWriter(engine, context).represent(value);
+  } on FormattingException {
+    rethrow;
+  } catch (error, stackTrace) {
+    throw FormatExtensionException(
+      context,
+      value.runtimeType.toString(),
+      error,
+      stackTrace,
+    );
   }
 }
 

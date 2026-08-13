@@ -405,6 +405,52 @@ void main() {
   // are wrapped and attributed. Same rule as for `AttributeLookup`; the two
   // extension points reach the engine through different code, so neither
   // inherits the other's guarantee.
+  // A structure that refers to itself is caught by identity, and that is the
+  // loop with no depth at all. One that is merely very deep has depth, and the
+  // walk is recursive, so past some nesting it exhausts the stack. That used to
+  // leave `{!r}` and `{!a}` throwing a bare `StackOverflowError` — not a
+  // `FormattingException`, and not what the README promises — while `{}` and
+  // `{!s}` on the very same value already reported it as an extension failure,
+  // because they go through `toString`. All four are asserted together here:
+  // what matters is not which class it is but that one value cannot produce
+  // two different kinds of failure depending on the conversion written.
+  test(
+    'a structure too deep to walk fails alike for every conversion',
+    () {
+      Object deep = 'leaf';
+      for (var level = 0; level < 20000; level++) {
+        deep = [deep];
+      }
+
+      for (final template in ['{}', '{!s}', '{!r}', '{!a}']) {
+        expect(
+          () => format(template, deep),
+          throwsA(isA<FormatExtensionException>()),
+          reason: template,
+        );
+      }
+
+      // The cycle guard is untouched by the depth guard: a self-referential map
+      // still renders rather than failing.
+      final cycle = <String, Object?>{};
+      cycle['self'] = cycle;
+      expect(format('{!r}', cycle), "{'self': {...}}");
+    },
+    // Not skipped for what the package does but for what the runtime does
+    // with it: under dart2wasm the exhausted stack surfaces on the JS side
+    // as `RangeError: Maximum call stack size exceeded`, thrown out of the
+    // string interop inside `toString`, and it takes the module down instead
+    // of arriving as a Dart error. Nothing in this package can catch that,
+    // and it happens on `'{}'` alone — the conversions this test is about
+    // make no difference there. The VM and dart2js both raise a catchable
+    // `StackOverflowError`, which is where the promise this pins applies.
+    skip:
+        const bool.fromEnvironment('dart.library.js_interop') &&
+                !identical(1, 1.0)
+            ? 'dart2wasm turns the exhausted stack into a host RangeError'
+            : null,
+  );
+
   test('r conversion wraps failures from custom representation callbacks', () {
     final failedCanRepresent = Format(
       representations: [_ThrowingCanRepresent()],
