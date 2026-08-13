@@ -4,3 +4,7 @@
 /README.ru.md
 /benchmark/
 /tool/
+/build/
+/doc/api/
+/.coverage/
+/coverage/
