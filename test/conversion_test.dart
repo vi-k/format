@@ -410,19 +410,21 @@ void main() {
   // walk is recursive, so past some nesting it exhausts the stack. That used to
   // leave `{!r}` and `{!a}` throwing a bare `StackOverflowError` — not a
   // `FormattingException`, and not what the README promises — while `{}` and
-  // `{!s}` on the very same value already reported it as an extension failure,
-  // because they go through `toString`. All four are asserted together here:
-  // what matters is not which class it is but that one value cannot produce
-  // two different kinds of failure depending on the conversion written.
+  // `{!s}` on an equivalent value already reported it as an extension failure,
+  // because they go through `toString`. Each conversion gets a fresh structure:
+  // after a stack overflow the SDK's identity-based `toString` cycle guard can
+  // retain part of the old structure, making a later call on that same object
+  // return `[...]` instead of walking it again. What matters here is that the
+  // structure cannot produce two different failure classes depending on the
+  // conversion written.
   test(
     'a structure too deep to walk fails alike for every conversion',
     () {
-      Object deep = 'leaf';
-      for (var level = 0; level < 20000; level++) {
-        deep = [deep];
-      }
-
       for (final template in ['{}', '{!s}', '{!r}', '{!a}']) {
+        Object deep = 'leaf';
+        for (var level = 0; level < 20000; level++) {
+          deep = [deep];
+        }
         expect(
           () => format(template, deep),
           throwsA(isA<FormatExtensionException>()),
