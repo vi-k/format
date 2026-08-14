@@ -44,9 +44,6 @@ final class _OptionsFormatter extends Formatter<int> {
   String get specifier => 'options';
 
   @override
-  bool canFormat(Object? value) => value is int;
-
-  @override
   String format(int value, FormatOptions options) => [
     options.sign,
     options.normalizeNegativeZero,
@@ -63,10 +60,34 @@ final class _AutomaticFormatter extends Formatter<_Value> {
   String get specifier => 'auto';
 
   @override
-  bool canFormat(Object? value) => value is _Value;
+  String format(_Value value, FormatOptions options) => 'auto:${value.name}';
+}
+
+final class _SelectiveFormatter extends Formatter<_Value> {
+  @override
+  String get specifier => 'selective';
 
   @override
-  String format(_Value value, FormatOptions options) => 'auto:${value.name}';
+  bool canFormat(_Value value) => value.name.startsWith('accepted');
+
+  @override
+  String format(_Value value, FormatOptions options) => value.name;
+}
+
+final class _NullableFormatter extends Formatter<_Value?> {
+  Object? seen = Object();
+
+  @override
+  String get specifier => 'nullable';
+
+  @override
+  bool canFormat(_Value? value) {
+    seen = value;
+    return true;
+  }
+
+  @override
+  String format(_Value? value, FormatOptions options) => value?.name ?? 'null';
 }
 
 final class _NamedFormatter extends Formatter<Object?> {
@@ -74,9 +95,6 @@ final class _NamedFormatter extends Formatter<Object?> {
   final String specifier;
 
   _NamedFormatter(this.specifier);
-
-  @override
-  bool canFormat(Object? value) => true;
 
   @override
   String format(Object? value, FormatOptions options) => '$specifier:$value';
@@ -87,7 +105,7 @@ final class _ThrowingCanFormat extends Formatter<_Value> {
   String get specifier => 'throwsCan';
 
   @override
-  bool canFormat(Object? value) => throw StateError('canFormat failed');
+  bool canFormat(_Value value) => throw StateError('canFormat failed');
 
   @override
   String format(_Value value, FormatOptions options) => 'unreachable';
@@ -98,9 +116,6 @@ final class _ThrowingFormat extends Formatter<_Value> {
   String get specifier => 'throwsFormat';
 
   @override
-  bool canFormat(Object? value) => value is _Value;
-
-  @override
   String format(_Value value, FormatOptions options) =>
       throw StateError('format failed');
 }
@@ -108,9 +123,6 @@ final class _ThrowingFormat extends Formatter<_Value> {
 final class _FormattingErrorFormatter extends Formatter<_Value> {
   @override
   String get specifier => 'typed';
-
-  @override
-  bool canFormat(Object? value) => value is _Value;
 
   @override
   String format(_Value value, FormatOptions options) =>
@@ -199,6 +211,27 @@ void main() {
     final engine = Format(formatters: [_AutomaticFormatter()]);
 
     expect(engine.format('{}', const _Value('ok')), 'auto:ok');
+  });
+
+  test('typed formatter predicates may reject values within their type', () {
+    final engine = Format(formatters: [_SelectiveFormatter()]);
+
+    expect(
+      engine.format('{:selective}', const _Value('accepted-one')),
+      'accepted-one',
+    );
+    expect(
+      () => engine.format('{:selective}', const _Value('rejected')),
+      throwsA(isA<UnsupportedFormatValueException>()),
+    );
+  });
+
+  test('nullable formatter types pass null to their typed predicates', () {
+    final formatter = _NullableFormatter();
+    final engine = Format(formatters: [formatter]);
+
+    expect(engine.format('{:nullable}', null), 'null');
+    expect(formatter.seen, isNull);
   });
 
   // And the guard on it. The registered formatter claims *everything*
@@ -351,6 +384,15 @@ void main() {
             .having((error) => error.extension, 'extension', 'throwsFormat')
             .having((error) => error.error, 'error', isA<StateError>()),
       ),
+    );
+  });
+
+  test('formatter type guards run before typed predicates', () {
+    final engine = Format(formatters: [_ThrowingCanFormat()]);
+
+    expect(
+      () => engine.format('{:throwsCan}', Object()),
+      throwsA(isA<UnsupportedFormatValueException>()),
     );
   });
 

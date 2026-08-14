@@ -16,17 +16,11 @@ import 'package:test/test.dart';
 
 final class MapAttributeLookup extends AttributeLookup<Map<String, Object?>> {
   @override
-  bool canLookup(Object? value) => value is Map<String, Object?>;
-
-  @override
   Object? lookup(Map<String, Object?> value, String attribute) =>
       value[attribute];
 }
 
 final class MapRepresentation extends Representation<Map<String, Object?>> {
-  @override
-  bool canRepresent(Object? value) => value is Map<String, Object?>;
-
   @override
   String represent(Map<String, Object?> value) => value.toString();
 }

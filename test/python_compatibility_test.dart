@@ -331,9 +331,6 @@ final class _PayloadFormatter extends Formatter<int> {
   String get specifier => 'json';
 
   @override
-  bool canFormat(Object? value) => value is int;
-
-  @override
   String format(int value, FormatOptions options) =>
       '$value/${options.payload}';
 }
@@ -345,9 +342,6 @@ final class _Named {
 }
 
 final class _NameLookup extends AttributeLookup<_Named> {
-  @override
-  bool canLookup(Object? value) => value is _Named;
-
   @override
   Object? lookup(_Named value, String attribute) =>
       attribute == 'name' ? value.name : null;

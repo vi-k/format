@@ -195,7 +195,7 @@ final class _RepresentationWriter {
 
   bool _canRepresent(Representation<dynamic> representation, Object? value) {
     try {
-      return representation.canRepresent(value);
+      return representationAccepts(representation, value);
     } on FormattingException {
       rethrow;
     } catch (error, stackTrace) {

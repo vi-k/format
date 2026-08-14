@@ -322,9 +322,6 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
   String get specifier => 'json';
 
   @override
-  bool canFormat(Object? value) => value is Map<String, Object?>;
-
-  @override
   String format(Map<String, Object?> value, FormatOptions options) =>
       value.toString();
 }
@@ -332,6 +329,12 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
 final jsonFormat = Format(formatters: [JsonFormatter()]);
 jsonFormat.format('{:json}', <String, Object?>{'answer': 42});
 ```
+
+The engine checks a value against the formatter's `T` before any extension
+code runs. `canFormat(T value)` returns `true` by default, so an ordinary
+formatter only implements `format`. Override the typed predicate only for a
+narrower condition within `T`, for example
+`bool canFormat(Money value) => value.currency == 'KZT'`.
 
 Custom specifiers must match `[A-Za-z][A-Za-z0-9_]*`. Built-in names are
 reserved. For a placeholder without an explicit specifier, built-in types take
@@ -394,9 +397,6 @@ registered `AttributeLookup`. Without one, the engine throws
 ```dart
 final class PointLookup extends AttributeLookup<Point> {
   @override
-  bool canLookup(Object? value) => value is Point;
-
-  @override
   Object? lookup(Point value, String attribute) => switch (attribute) {
     'x' => value.x,
     _ => throw ArgumentError.value(attribute, 'attribute'),
@@ -406,6 +406,10 @@ final class PointLookup extends AttributeLookup<Point> {
 final pointFormat = Format(lookups: [PointLookup()]);
 pointFormat.formatWith('{p.x}', named: {'p': const Point(7)});  // 7
 ```
+
+The same typed default applies to `canLookup`: the engine first checks
+`Point`, and the inherited method accepts every `Point`. Override
+`bool canLookup(Point value)` only to select a subset of points.
 
 A `Map` is the exception: `{value.name}` on a map is a shorthand for the
 string key `'name'`, resolved before any lookup is consulted, so a lookup that
@@ -436,9 +440,6 @@ and `!a` escapes non-ASCII characters in whatever the representation returned:
 ```dart
 final class MoneyRepresentation extends Representation<Money> {
   @override
-  bool canRepresent(Object? value) => value is Money;
-
-  @override
   String represent(Money value) => '${value.cents}¢';
 }
 
@@ -446,6 +447,9 @@ final moneyRepr = Format(representations: [MoneyRepresentation()]);
 moneyRepr.format('{!r}', const Money(250));  // 250¢
 moneyRepr.format('{!a}', const Money(250));  // 250\xa2
 ```
+
+`canRepresent(Money value)` likewise returns `true` by default and is needed
+only when a representation accepts a subset of `Money` values.
 
 ### Failures inside an extension
 
@@ -455,11 +459,11 @@ Anything an extension throws is caught and rethrown as
 `FormattingException`: an extension reporting a failure in the engine's own
 vocabulary has it passed through unchanged.
 
-Errors Dart raises on the extension's behalf are wrapped the same way. A
-`canFormat` that accepts a value of the wrong type produces a `TypeError` when
-the engine calls `format`, and an extension that formats by calling the engine
-again on the same value produces a `StackOverflowError` — both arrive as
-`FormatExtensionException` rather than escaping the engine raw.
+A value outside an extension's `T` is an ordinary non-match: the engine does
+not call its typed predicate. Errors Dart raises inside extension code are
+wrapped the same way; for example, an extension that formats by calling the
+engine again on the same value produces a `StackOverflowError`, which arrives
+as `FormatExtensionException` rather than escaping the engine raw.
 
 ## JavaScript number semantics
 

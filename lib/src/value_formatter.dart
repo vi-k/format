@@ -127,7 +127,7 @@ bool _canFormat(
   FormatExceptionContext context,
 ) {
   try {
-    return formatter.canFormat(value);
+    return formatterAccepts(formatter, value);
   } on FormattingException {
     rethrow;
   } catch (error, stackTrace) {

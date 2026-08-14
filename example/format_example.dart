@@ -6,9 +6,6 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
   String get specifier => 'json';
 
   @override
-  bool canFormat(Object? value) => value is Map<String, Object?>;
-
-  @override
   String format(Map<String, Object?> value, FormatOptions options) =>
       value.toString();
 }

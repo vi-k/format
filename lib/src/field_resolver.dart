@@ -103,7 +103,7 @@ final class _FieldResolver {
     Object? value,
   ) {
     try {
-      return lookup.canLookup(value);
+      return attributeLookupAccepts(lookup, value);
     } on FormattingException {
       rethrow;
     } catch (error, stackTrace) {

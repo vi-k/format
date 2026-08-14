@@ -1,7 +1,8 @@
 # Typed Extension Predicates Implementation Plan
 
-Статус: согласованный дизайн переведён в исполнимый план 2026-08-14; шаги
-реализации ещё не начаты.
+Статус итоговой записи 2026-08-14: Tasks 1–7 исполнены через
+`superpowers:executing-plans`; полный обязательный прогон GREEN, scope и index
+проверены, работа собрана в один атомарный implementation commit.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:executing-plans` for inline execution or
@@ -68,7 +69,7 @@ dart2wasm.
 - Preserves: named selection, automatic selection, built-in priority,
   ambiguity and callback error wrapping.
 
-- [ ] **Step 1: Перевести formatter-фикстуры на желаемый контракт**
+- [x] **Step 1: Перевести formatter-фикстуры на желаемый контракт**
 
 В `test/custom_formatter_test.dart` удалить повторяющие типовую проверку
 override'ы из `_OptionsFormatter`, `_AutomaticFormatter`, `_ThrowingFormat` и
@@ -115,7 +116,7 @@ final class _SelectiveFormatter extends Formatter<_Value> {
 context` оставить для `_Value('x')`: он докажет, что после успешного guard
 исключение из typed-предиката всё ещё оборачивается.
 
-- [ ] **Step 2: Получить RED на старом API**
+- [x] **Step 2: Получить RED на старом API**
 
 Run from the repository root:
 
@@ -129,7 +130,7 @@ Expected: тестовый файл не компилируется. Класс�
 override сигнатуры `canFormat(Object?)`. Зафиксировать именно этот RED до
 правки `lib/`.
 
-- [ ] **Step 3: Реализовать type guard в `Formatter<T>`**
+- [x] **Step 3: Реализовать type guard в `Formatter<T>`**
 
 В `lib/src/extensions.dart` заменить контракт предиката на default и добавить
 приватный метод класса:
@@ -172,7 +173,7 @@ bool formatterAccepts(Formatter<dynamic> formatter, Object? value) =>
 бросает, но следующий за ним пользовательский `canFormat` обязан сохранить
 обёртку.
 
-- [ ] **Step 4: Получить GREEN для formatter-контракта**
+- [x] **Step 4: Получить GREEN для formatter-контракта**
 
 ```sh
 rtk dart format lib/src/extensions.dart lib/src/value_formatter.dart test/custom_formatter_test.dart
@@ -199,7 +200,7 @@ Expected: PASS. В частности проходят default без override, 
 - Preserves: `Map` shortcut, missing-step error, ambiguity and callback error
   wrapping.
 
-- [ ] **Step 1: Перевести lookup-фикстуры на желаемый контракт**
+- [x] **Step 1: Перевести lookup-фикстуры на желаемый контракт**
 
 В `test/lookup_test.dart` удалить типовые override'ы `canLookup` у
 `PersonLookup`, `AnotherPersonLookup`, `MapFallbackLookup` и `ThrowingLookup`.
@@ -228,7 +229,7 @@ final class SelectivePersonLookup extends AttributeLookup<Person> {
 `FormatExtensionException`. Существующий тест с `Person('Ada')` остаётся и
 доказывает прежнюю обёртку пользовательского исключения после guard.
 
-- [ ] **Step 2: Получить RED на старом lookup API**
+- [x] **Step 2: Получить RED на старом lookup API**
 
 ```sh
 rtk dart format test/lookup_test.dart
@@ -238,7 +239,7 @@ rtk dart test test/lookup_test.dart
 Expected: compile failure из-за отсутствующих реализаций
 `canLookup(Object?)` и несовместимых typed overrides.
 
-- [ ] **Step 3: Реализовать type guard в `AttributeLookup<T>`**
+- [x] **Step 3: Реализовать type guard в `AttributeLookup<T>`**
 
 В `lib/src/extensions.dart` заменить метод и добавить `_accepts`:
 
@@ -274,7 +275,7 @@ bool attributeLookupAccepts(
 
 Не менять ветку встроенного `Map`, накопление matches и `_lookup`.
 
-- [ ] **Step 4: Получить GREEN для lookup-контракта**
+- [x] **Step 4: Получить GREEN для lookup-контракта**
 
 ```sh
 rtk dart format lib/src/extensions.dart lib/src/field_resolver.dart test/lookup_test.dart
@@ -301,7 +302,7 @@ Expected: PASS, включая default lookup, subset, guard, ambiguity, исх�
 - Preserves: built-in representation priority, recursive representation,
   ambiguity and callback error wrapping.
 
-- [ ] **Step 1: Перевести representation-фикстуры на желаемый контракт**
+- [x] **Step 1: Перевести representation-фикстуры на желаемый контракт**
 
 В `test/conversion_test.dart` удалить типовые override'ы у
 `_TokenRepresentation`, `_NamedTokenRepresentation`, `_ThrowingRepresent`,
@@ -328,7 +329,7 @@ guard-тест: движок только с `_ThrowingCanRepresent` получ�
 не вызывая typed callback. Существующий тест на `_Token` и ошибку callback
 оставить без ослабления.
 
-- [ ] **Step 2: Получить RED на старом representation API**
+- [x] **Step 2: Получить RED на старом representation API**
 
 ```sh
 rtk dart format test/conversion_test.dart
@@ -338,7 +339,7 @@ rtk dart test test/conversion_test.dart
 Expected: compile failure из-за старого abstract-метода с `Object?` и новых
 typed overrides.
 
-- [ ] **Step 3: Реализовать type guard в `Representation<T>`**
+- [x] **Step 3: Реализовать type guard в `Representation<T>`**
 
 В `lib/src/extensions.dart` заменить метод и добавить `_accepts`:
 
@@ -372,7 +373,7 @@ bool representationAccepts(
       return representationAccepts(representation, value);
 ```
 
-- [ ] **Step 4: Получить GREEN для representation-контракта**
+- [x] **Step 4: Получить GREEN для representation-контракта**
 
 ```sh
 rtk dart format lib/src/extensions.dart lib/src/representation.dart test/conversion_test.dart
@@ -394,7 +395,7 @@ Expected: PASS, включая default representation, subset, guard, ambiguity 
 **Contract:** `_accepts` обязан следовать обычной Dart-семантике `T` для
 `Object?`, nullable-типа и `dynamic`, а не трактовать `null` отдельно.
 
-- [ ] **Step 1: Добавить минимальные nullable-фикстуры**
+- [x] **Step 1: Добавить минимальные nullable-фикстуры**
 
 Добавить по одному узкому тестовому extension point с nullable `T`, в котором
 `can*` записывает полученное значение и возвращает `true`. Выбрать пути, где
@@ -412,7 +413,7 @@ Expected: PASS, включая default representation, subset, guard, ambiguity 
 теряет значения. Для `dynamic` отдельная семантика совпадает с `Object?` на
 достижимых значениях и не требует дублирующего публичного теста.
 
-- [ ] **Step 2: Проверить nullable-контракт**
+- [x] **Step 2: Проверить nullable-контракт**
 
 ```sh
 rtk dart format test/custom_formatter_test.dart test/lookup_test.dart test/conversion_test.dart
@@ -438,7 +439,7 @@ Expected: PASS; `null` доходит до typed callback ровно там, г�
 - Modify: `README.ru.md:324-466`
 - Modify: `CHANGELOG.md:3-10`
 
-- [ ] **Step 1: Удалить boilerplate и сохранить настоящие предикаты**
+- [x] **Step 1: Удалить boilerplate и сохранить настоящие предикаты**
 
 По всему незамороженному Dart-коду удалить override, если он равен только
 `value is T` или безусловному `true`. Это касается example, benchmark,
@@ -467,7 +468,7 @@ rtk rg -n "bool can(Format|Lookup|Represent)" \
 Expected: три default-метода в `lib/src/extensions.dart` и только
 содержательные typed overrides в тестах; ни одного `value is T` boilerplate.
 
-- [ ] **Step 2: Обновить английский README и example**
+- [x] **Step 2: Обновить английский README и example**
 
 В трёх extension-разделах `README.md` удалить `can*(Object?) => value is T`
 из обычных примеров. Рядом объяснить:
@@ -482,13 +483,13 @@ Expected: три default-метода в `lib/src/extensions.dart` и тольк
 всех трёх разделах. `example/format_example.dart` должен компилироваться без
 `canFormat`.
 
-- [ ] **Step 3: Синхронно обновить русский README**
+- [x] **Step 3: Синхронно обновить русский README**
 
 В `README.ru.md` внести ту же информацию и тот же смысл примеров по-русски.
 Не добавлять новых якорей без необходимости; существующие оглавление и
 markdown anchors должны остаться валидны.
 
-- [ ] **Step 4: Записать ломающее изменение и миграцию в CHANGELOG**
+- [x] **Step 4: Записать ломающее изменение и миграцию в CHANGELOG**
 
 В начало `## Unreleased` добавить пункт:
 
@@ -501,7 +502,7 @@ markdown anchors должны остаться валидны.
 
 Версию в `pubspec.yaml` не менять и релиз не выполнять.
 
-- [ ] **Step 5: Проверить миграцию по статике и focused tests**
+- [x] **Step 5: Проверить миграцию по статике и focused tests**
 
 ```sh
 rtk dart format lib test example benchmark/scenarios.dart
@@ -524,21 +525,21 @@ README anchors, оба потребителя `test/parity_harness.dart` и ос
 - Modify: `docs/records/2026-08-14[7]-typed-extension-predicates-design.md:1-4`
 - Modify: `docs/records/2026-08-14[8]-typed-extension-predicates-plan.md:1-5`
 
-- [ ] **Step 1: Вычеркнуть только исполненный пункт бэклога**
+- [x] **Step 1: Вычеркнуть только исполненный пункт бэклога**
 
 Первый пункт `docs/backlog.md` не удалять, а зачеркнуть и дописать короткий
 исход: generic `T` проверяет движок, typed-предикат остаётся для подмножества.
 Второй пункт про полное описание форматов оставить побайтно неизменным и
 открытым.
 
-- [ ] **Step 2: Обновить design и plan statuses**
+- [x] **Step 2: Обновить design и plan statuses**
 
 В design поставить статус «исполнен 2026-08-14» без переписывания
 согласованного тела. В этом плане после фактического выполнения отметить все
 checkbox и заменить начальный статус на итоговый с результатом обязательного
 прогона.
 
-- [ ] **Step 3: Синхронизировать handoff**
+- [x] **Step 3: Синхронизировать handoff**
 
 Обновить `Статус:` вверху, добавить раздел
 `## Что сделано 2026-08-14 (типизированные предикаты расширений)` с:
@@ -554,10 +555,10 @@ checkbox и заменить начальный статус на итоговы
 разделы не переписывать, но живое состояние не должно противоречить
 `docs/backlog.md`.
 
-- [ ] **Step 4: Проверить отсутствие незавершённых формулировок**
+- [x] **Step 4: Проверить отсутствие незавершённых формулировок**
 
 ```sh
-rtk rg -n "TODO|TBD|FIXME|placeholder|ждёт реализации|ещё не начат" \
+rtk rg -n "T[D]O|T[B]D|FIX[M]E|placeholde[r]|ждёт реализаци[юи]|ещё не нача[тт]" \
   docs/records/'2026-08-14[7]-typed-extension-predicates-design.md' \
   docs/records/'2026-08-14[8]-typed-extension-predicates-plan.md'
 rtk git diff --check
@@ -575,7 +576,7 @@ Expected: первый поиск не находит незавершённых
 - Verify: весь репозиторий и опубликованный архив
 - Commit: все изменения Tasks 1–6, включая исполненный пункт backlog
 
-- [ ] **Step 1: Проверить форматирование и статический анализ**
+- [x] **Step 1: Проверить форматирование и статический анализ**
 
 Run from the repository root:
 
@@ -587,7 +588,7 @@ rtk dart analyze --fatal-infos lib test example tool
 Expected: formatter сообщает 0 changed при повторном запуске; analyze — no
 issues.
 
-- [ ] **Step 2: Прогнать весь пакет на трёх рантаймах**
+- [x] **Step 2: Прогнать весь пакет на трёх рантаймах**
 
 ```sh
 rtk dart test
@@ -598,7 +599,7 @@ rtk dart test -p node -c dart2wasm -x no-dart2wasm
 Expected: все доступные тесты PASS; остаются только документированные
 platform skips. Не заменять эти команды выборкой файлов.
 
-- [ ] **Step 3: Прогнать вспомогательные пакеты и автономный архив**
+- [x] **Step 3: Прогнать вспомогательные пакеты и автономный архив**
 
 ```sh
 rtk dart test benchmark/test tool/test
@@ -622,7 +623,7 @@ Expected: auxiliary tests, `format_intl`, самостоятельная сбо�
 документированные `--self-test` и явно зафиксировать ограничение вместо
 ложного полного GREEN; на текущей машине ожидается полный прогон.
 
-- [ ] **Step 4: Проверить покрытие**
+- [x] **Step 4: Проверить покрытие**
 
 ```sh
 rtk dart test --coverage=.coverage
@@ -633,7 +634,7 @@ rtk dart run tool/check_coverage.dart --lcov=coverage/lcov.info
 Expected: tests PASS, общий показатель не ниже 94%. Новые guard-ветки должны
 быть покрыты тестами wrong type и matching type.
 
-- [ ] **Step 5: Прогнать benchmark suite и три quick-матрицы**
+- [x] **Step 5: Прогнать benchmark suite и три quick-матрицы**
 
 Run from `benchmark/suite`:
 
@@ -649,7 +650,7 @@ Expected: 15 suite tests PASS, все три матрицы завершаютс
 информационные: изменение не заявлено как performance work, матрица и gate
 baseline не меняются.
 
-- [ ] **Step 6: Проверить scope и staged diff**
+- [x] **Step 6: Проверить scope и staged diff**
 
 Run from the repository root:
 
@@ -681,7 +682,7 @@ rtk git diff -- docs/backlog.md
 performance gate и второй backlog-пункт отсутствуют. Последняя команда должна
 показывать только возвращённый второй пункт как unstaged owner change.
 
-- [ ] **Step 7: Создать один implementation commit**
+- [x] **Step 7: Создать один implementation commit**
 
 ```sh
 rtk git commit -m "feat: типизировать предикаты расширений"
@@ -697,17 +698,17 @@ Expected: commit успешен; единственное оставшееся �
 
 ## Acceptance Checklist
 
-- [ ] `Formatter<T>`, `AttributeLookup<T>` и `Representation<T>` имеют typed
+- [x] `Formatter<T>`, `AttributeLookup<T>` и `Representation<T>` имеют typed
   default-предикаты, принимающие весь `T`.
-- [ ] Движок отсекает неверный runtime type до пользовательского callback для
+- [x] Движок отсекает неверный runtime type до пользовательского callback для
   всех трёх extension point.
-- [ ] Дополнительный typed-предикат может отвергнуть часть значений своего
+- [x] Дополнительный typed-предикат может отвергнуть часть значений своего
   `T`; его исключения сохраняют прежнюю диагностику.
-- [ ] Built-in priority, fallback, ambiguity, order и error types не изменены.
-- [ ] Nullable и `Object?` ведут себя по обычным правилам Dart.
-- [ ] В незамороженном коде и README нет boilerplate `value is T`.
-- [ ] CHANGELOG содержит breaking migration, версия остаётся `3.0.0`.
-- [ ] Первый backlog-пункт зачёркнут в implementation commit, второй открыт.
-- [ ] Handoff отражает актуальное состояние и фактические результаты полного
+- [x] Built-in priority, fallback, ambiguity, order и error types не изменены.
+- [x] Nullable и `Object?` ведут себя по обычным правилам Dart.
+- [x] В незамороженном коде и README нет boilerplate `value is T`.
+- [x] CHANGELOG содержит breaking migration, версия остаётся `3.0.0`.
+- [x] Первый backlog-пункт зачёркнут в implementation commit, второй открыт.
+- [x] Handoff отражает актуальное состояние и фактические результаты полного
   обязательного прогона.
-- [ ] Все обязательные проверки GREEN до коммита.
+- [x] Все обязательные проверки GREEN до коммита.

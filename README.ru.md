@@ -336,9 +336,6 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
   String get specifier => 'json';
 
   @override
-  bool canFormat(Object? value) => value is Map<String, Object?>;
-
-  @override
   String format(Map<String, Object?> value, FormatOptions options) =>
       value.toString();
 }
@@ -346,6 +343,12 @@ final class JsonFormatter extends Formatter<Map<String, Object?>> {
 final jsonFormat = Format(formatters: [JsonFormatter()]);
 jsonFormat.format('{:json}', <String, Object?>{'answer': 42});
 ```
+
+До вызова кода расширения движок сам проверяет значение против `T`
+форматтера. `canFormat(T value)` по умолчанию возвращает `true`, поэтому
+обычный форматтер реализует только `format`. Typed-предикат переопределяется
+лишь для более узкого условия внутри `T`, например
+`bool canFormat(Money value) => value.currency == 'KZT'`.
 
 Собственные спецификаторы обязаны соответствовать `[A-Za-z][A-Za-z0-9_]*`.
 Встроенные имена зарезервированы. Для плейсхолдера без явного
@@ -409,9 +412,6 @@ final engine = Format(
 ```dart
 final class PointLookup extends AttributeLookup<Point> {
   @override
-  bool canLookup(Object? value) => value is Point;
-
-  @override
   Object? lookup(Point value, String attribute) => switch (attribute) {
     'x' => value.x,
     _ => throw ArgumentError.value(attribute, 'attribute'),
@@ -421,6 +421,10 @@ final class PointLookup extends AttributeLookup<Point> {
 final pointFormat = Format(lookups: [PointLookup()]);
 pointFormat.formatWith('{p.x}', named: {'p': const Point(7)});  // 7
 ```
+
+То же typed-правило действует для `canLookup`: движок сперва проверяет
+`Point`, а унаследованный метод принимает любой `Point`. Переопределять
+`bool canLookup(Point value)` нужно только для выбора подмножества точек.
 
 Исключение — `Map`: `{value.name}` на карте — сокращение для строкового
 ключа `'name'`, и разрешается оно раньше, чем спросят любой lookup,
@@ -452,9 +456,6 @@ formatWith("{0['key']}", positional: [{"'key'": 1}]);     // бросает
 ```dart
 final class MoneyRepresentation extends Representation<Money> {
   @override
-  bool canRepresent(Object? value) => value is Money;
-
-  @override
   String represent(Money value) => '${value.cents}¢';
 }
 
@@ -462,6 +463,9 @@ final moneyRepr = Format(representations: [MoneyRepresentation()]);
 moneyRepr.format('{!r}', const Money(250));  // 250¢
 moneyRepr.format('{!a}', const Money(250));  // 250\xa2
 ```
+
+`canRepresent(Money value)` так же по умолчанию возвращает `true` и нужен
+только представлению, принимающему подмножество значений `Money`.
 
 ### Отказы внутри расширения
 
@@ -471,11 +475,11 @@ moneyRepr.format('{!a}', const Money(250));  // 250\xa2
 расширение, сообщающее об отказе на собственном языке движка, пропускается
 без изменений.
 
-Ошибки, которые Dart поднимает за расширение, заворачиваются так же.
-`canFormat`, принявший значение неверного типа, даёт `TypeError`, когда
-движок зовёт `format`, а расширение, форматирующее через повторный вызов
-движка на том же значении, даёт `StackOverflowError` — оба приходят как
-`FormatExtensionException`, а не убегают из движка в сыром виде.
+Значение вне `T` расширения — обычное несовпадение: движок не вызывает его
+typed-предикат. Ошибки, которые Dart поднимает внутри кода расширения,
+заворачиваются так же; например, расширение, форматирующее через повторный
+вызов движка на том же значении, даёт `StackOverflowError`, который приходит
+как `FormatExtensionException`, а не убегает из движка в сыром виде.
 
 ## Числовая семантика JavaScript
 

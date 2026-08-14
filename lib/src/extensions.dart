@@ -25,10 +25,9 @@ import 'errors.dart';
 /// the engine's own vocabulary has that failure passed through unchanged —
 /// build it with `options.context` so it points at the placeholder the way an
 /// engine failure does.
-/// Errors Dart raises on the extension's behalf are wrapped the same way — a
-/// `canFormat` that accepts a value of the wrong type produces a `TypeError`
-/// when the engine calls `format`, and an extension that formats by calling
-/// the engine again on the same value produces a `StackOverflowError`.
+/// Errors Dart raises on the extension's behalf are wrapped the same way — an
+/// extension that formats by calling the engine again on the same value
+/// produces a `StackOverflowError`.
 /// {@endtemplate}
 abstract base class Formatter<T> {
   const Formatter();
@@ -47,12 +46,15 @@ abstract base class Formatter<T> {
   /// {@macro format.extension_failure}
   String get specifier;
 
-  /// Whether this formatter accepts [value].
+  /// Whether this formatter accepts [value] after its type has been checked.
   ///
-  /// Returning true commits to [format] accepting the same value as a `T`.
+  /// The engine filters values outside [T] before calling this method. Override
+  /// it only to express a narrower condition within [T].
   ///
   /// {@macro format.extension_failure}
-  bool canFormat(Object? value);
+  bool canFormat(T value) => true;
+
+  bool _accepts(Object? value) => value is T && canFormat(value);
 
   /// Formats [value] under the parsed [options].
   ///
@@ -62,6 +64,12 @@ abstract base class Formatter<T> {
   /// {@macro format.extension_failure}
   String format(T value, FormatOptions options);
 }
+
+/// Checks [value] against a formatter's reified type and typed predicate.
+///
+/// Internal to the engine; not exported from the package facade.
+bool formatterAccepts(Formatter<dynamic> formatter, Object? value) =>
+    formatter._accepts(value);
 
 /// The parsed format specification options handed to a [Formatter].
 final class FormatOptions {
@@ -122,12 +130,15 @@ final class FormatOptions {
 abstract base class AttributeLookup<T> {
   const AttributeLookup();
 
-  /// Whether this lookup accepts [value].
+  /// Whether this lookup accepts [value] after its type has been checked.
   ///
-  /// Returning true commits to [lookup] accepting the same value as a `T`.
+  /// The engine filters values outside [T] before calling this method. Override
+  /// it only to express a narrower condition within [T].
   ///
   /// {@macro format.extension_failure}
-  bool canLookup(Object? value);
+  bool canLookup(T value) => true;
+
+  bool _accepts(Object? value) => value is T && canLookup(value);
 
   /// Resolves [attribute] on [value].
   ///
@@ -138,6 +149,12 @@ abstract base class AttributeLookup<T> {
   Object? lookup(T value, String attribute);
 }
 
+/// Checks [value] against a lookup's reified type and typed predicate.
+///
+/// Internal to the engine; not exported from the package facade.
+bool attributeLookupAccepts(AttributeLookup<dynamic> lookup, Object? value) =>
+    lookup._accepts(value);
+
 /// A custom `!r`/`!a` representation for values of type [T].
 ///
 /// Built-in representations take priority the same way built-in formatters
@@ -146,12 +163,15 @@ abstract base class AttributeLookup<T> {
 abstract base class Representation<T> {
   const Representation();
 
-  /// Whether this representation accepts [value].
+  /// Whether this representation accepts [value] after its type is checked.
   ///
-  /// Returning true commits to [represent] accepting the same value as a `T`.
+  /// The engine filters values outside [T] before calling this method. Override
+  /// it only to express a narrower condition within [T].
   ///
   /// {@macro format.extension_failure}
-  bool canRepresent(Object? value);
+  bool canRepresent(T value) => true;
+
+  bool _accepts(Object? value) => value is T && canRepresent(value);
 
   /// The representation of [value].
   ///
@@ -161,3 +181,11 @@ abstract base class Representation<T> {
   /// {@macro format.extension_failure}
   String represent(T value);
 }
+
+/// Checks [value] against a representation's reified type and typed predicate.
+///
+/// Internal to the engine; not exported from the package facade.
+bool representationAccepts(
+  Representation<dynamic> representation,
+  Object? value,
+) => representation._accepts(value);

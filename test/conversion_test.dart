@@ -24,6 +24,7 @@
 library;
 
 import 'package:format/format.dart';
+import 'package:format/src/extensions.dart' show representationAccepts;
 import 'package:test/test.dart';
 
 final class _Token {
@@ -34,9 +35,6 @@ final class _Token {
 
 final class _TokenRepresentation extends Representation<_Token> {
   @override
-  bool canRepresent(Object? value) => value is _Token;
-
-  @override
   String represent(_Token value) => '<${value.value}>';
 }
 
@@ -46,24 +44,39 @@ final class _NamedTokenRepresentation extends Representation<_Token> {
   _NamedTokenRepresentation(this.name);
 
   @override
-  bool canRepresent(Object? value) => value is _Token;
+  String represent(_Token value) => name;
+}
+
+final class _SelectiveTokenRepresentation extends Representation<_Token> {
+  @override
+  bool canRepresent(_Token value) => value.value.startsWith('accepted');
 
   @override
-  String represent(_Token value) => name;
+  String represent(_Token value) => '<${value.value}>';
+}
+
+final class _NullableTokenRepresentation extends Representation<_Token?> {
+  Object? seen = Object();
+
+  @override
+  bool canRepresent(_Token? value) {
+    seen = value;
+    return true;
+  }
+
+  @override
+  String represent(_Token? value) => value?.value ?? 'null';
 }
 
 final class _ThrowingCanRepresent extends Representation<_Token> {
   @override
-  bool canRepresent(Object? value) => throw StateError('can represent failed');
+  bool canRepresent(_Token value) => throw StateError('can represent failed');
 
   @override
   String represent(_Token value) => 'unreachable';
 }
 
 final class _ThrowingRepresent extends Representation<_Token> {
-  @override
-  bool canRepresent(Object? value) => value is _Token;
-
   @override
   String represent(_Token value) => throw StateError('represent failed');
 }
@@ -341,6 +354,31 @@ void main() {
     expect(configured.format('{!r}', const _Token('ok')), '<ok>');
   });
 
+  test(
+    'typed representation predicates may reject values within their type',
+    () {
+      final configured = Format(
+        representations: [_SelectiveTokenRepresentation()],
+      );
+
+      expect(
+        configured.format('{!r}', const _Token('accepted-one')),
+        '<accepted-one>',
+      );
+      expect(
+        () => configured.format('{!r}', const _Token('rejected')),
+        throwsA(isA<UnsupportedConversionException>()),
+      );
+    },
+  );
+
+  test('nullable representation guards pass null to typed predicates', () {
+    final representation = _NullableTokenRepresentation();
+
+    expect(representationAccepts(representation, null), isTrue);
+    expect(representation.seen, isNull);
+  });
+
   // Built-in types win, even against an extension that explicitly claims them.
   // A registered `Map` representation would otherwise change the spelling of
   // every map anywhere in any template — including maps the caller passes for
@@ -482,6 +520,15 @@ void main() {
       ),
     );
   });
+
+  test('representation type guards run before typed predicates', () {
+    final configured = Format(representations: [_ThrowingCanRepresent()]);
+
+    expect(
+      () => configured.format('{!r}', Object()),
+      throwsA(isA<UnsupportedConversionException>()),
+    );
+  });
 }
 
 final class _OrderedValues extends Iterable<Object?> {
@@ -501,24 +548,15 @@ final class _RecursiveIterable extends Iterable<Object?> {
 final class _OrderedValuesRepresentation
     extends Representation<_OrderedValues> {
   @override
-  bool canRepresent(Object? value) => value is _OrderedValues;
-
-  @override
   String represent(_OrderedValues value) => '<ordered>';
 }
 
 final class _MapRepresentation extends Representation<Map<Object?, Object?>> {
   @override
-  bool canRepresent(Object? value) => value is Map<Object?, Object?>;
-
-  @override
   String represent(Map<Object?, Object?> value) => 'custom-map';
 }
 
 final class _BigIntRepresentation extends Representation<BigInt> {
-  @override
-  bool canRepresent(Object? value) => value is BigInt;
-
   @override
   String represent(BigInt value) => 'custom-big-int';
 }

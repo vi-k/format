@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+* **Breaking for code written against 3.0.0:** `canFormat`, `canLookup`, and
+  `canRepresent` now receive the extension's `T`; the engine checks the
+  runtime type before invoking user code, and each predicate accepts every
+  `T` by default. Remove overrides that only returned `value is T`; rewrite an
+  additional filter from `Object?` to `T`.
 * Avoided converting ordinary `int` values to `BigInt` while validating
   Unicode scalars for `{:c}` and `%c`. In a local dart2js A/B on arm64,
   cached `{:c}` fell from 133 ns to 56 ns and `%c` from 108 ns to 29 ns;

@@ -22,9 +22,9 @@ final class _TracingRepresentation extends Representation<_TraceValue> {
   _TracingRepresentation(this.events);
 
   @override
-  bool canRepresent(Object? value) {
+  bool canRepresent(_TraceValue value) {
     events.add('canRepresent');
-    return value is _TraceValue;
+    return true;
   }
 
   @override

@@ -29,9 +29,6 @@ final class Person {
 
 final class PersonLookup extends AttributeLookup<Person> {
   @override
-  bool canLookup(Object? value) => value is Person;
-
-  @override
   Object? lookup(Person value, String attribute) => switch (attribute) {
     'name' => value.name,
     _ => null,
@@ -40,16 +37,31 @@ final class PersonLookup extends AttributeLookup<Person> {
 
 final class AnotherPersonLookup extends AttributeLookup<Person> {
   @override
-  bool canLookup(Object? value) => value is Person;
+  Object? lookup(Person value, String attribute) => value.name;
+}
+
+final class SelectivePersonLookup extends AttributeLookup<Person> {
+  @override
+  bool canLookup(Person value) => value.name.startsWith('A');
 
   @override
   Object? lookup(Person value, String attribute) => value.name;
 }
 
-final class MapFallbackLookup extends AttributeLookup<Map<Object?, Object?>> {
-  @override
-  bool canLookup(Object? value) => value is Map<Object?, Object?>;
+final class NullablePersonLookup extends AttributeLookup<Person?> {
+  Object? seen = Object();
 
+  @override
+  bool canLookup(Person? value) {
+    seen = value;
+    return true;
+  }
+
+  @override
+  Object? lookup(Person? value, String attribute) => value?.name ?? 'null';
+}
+
+final class MapFallbackLookup extends AttributeLookup<Map<Object?, Object?>> {
   @override
   Object? lookup(Map<Object?, Object?> value, String attribute) => 'fallback';
 }
@@ -61,7 +73,7 @@ final class ThrowingCanLookup extends AttributeLookup<Person> {
   ThrowingCanLookup(this.error, this.stackTrace);
 
   @override
-  bool canLookup(Object? value) => Error.throwWithStackTrace(error, stackTrace);
+  bool canLookup(Person value) => Error.throwWithStackTrace(error, stackTrace);
 
   @override
   Object? lookup(Person value, String attribute) => value.name;
@@ -72,9 +84,6 @@ final class ThrowingLookup extends AttributeLookup<Person> {
   final StackTrace stackTrace;
 
   ThrowingLookup(this.error, this.stackTrace);
-
-  @override
-  bool canLookup(Object? value) => value is Person;
 
   @override
   Object? lookup(Person value, String attribute) =>
@@ -166,6 +175,36 @@ void main() {
       ),
       'Ada',
     );
+  });
+
+  test('typed lookup predicates may reject values within their type', () {
+    final engine = Format(lookups: [SelectivePersonLookup()]);
+
+    expect(
+      engine.formatWith(
+        '{person.name}',
+        named: {'person': const Person('Ada')},
+      ),
+      'Ada',
+    );
+    expect(
+      () => engine.formatWith(
+        '{person.name}',
+        named: {'person': const Person('Bob')},
+      ),
+      throwsA(isA<FormatLookupException>()),
+    );
+  });
+
+  test('nullable lookup types pass null to their typed predicates', () {
+    final lookup = NullablePersonLookup();
+    final engine = Format(lookups: [lookup]);
+
+    expect(
+      engine.formatWith('{person.name}', named: const {'person': null}),
+      'null',
+    );
+    expect(lookup.seen, isNull);
   });
 
   // Named fields do not consume positional values: the automatic counter is
@@ -324,6 +363,17 @@ void main() {
       }
     },
   );
+
+  test('lookup type guards run before typed predicates', () {
+    final engine = Format(
+      lookups: [ThrowingCanLookup(StateError('unreachable'), StackTrace.empty)],
+    );
+
+    expect(
+      () => engine.formatWith('{value.name}', named: {'value': Object()}),
+      throwsA(isA<FormatLookupException>()),
+    );
+  });
 
   // The same contract for the other half, where the extension has already been
   // chosen and is doing the work. Both halves are wrapped, and they are

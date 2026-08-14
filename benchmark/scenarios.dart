@@ -794,8 +794,5 @@ final class _BenchmarkFormatter extends Formatter<int> {
   String get specifier => 'bench';
 
   @override
-  bool canFormat(Object? value) => value is int;
-
-  @override
   String format(int value, FormatOptions options) => 'bench:$value';
 }

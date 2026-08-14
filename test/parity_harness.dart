@@ -96,9 +96,6 @@ final class IrTestPointLookup extends AttributeLookup<IrTestPoint> {
   const IrTestPointLookup();
 
   @override
-  bool canLookup(Object? value) => value is IrTestPoint;
-
-  @override
   Object? lookup(IrTestPoint value, String attribute) => switch (attribute) {
     'x' => value.x,
     'y' => value.y,
@@ -118,9 +115,6 @@ final class IrTestPointMirrorLookup extends AttributeLookup<IrTestPoint> {
   const IrTestPointMirrorLookup();
 
   @override
-  bool canLookup(Object? value) => value is IrTestPoint;
-
-  @override
   Object? lookup(IrTestPoint value, String attribute) => 'mirror:$attribute';
 }
 
@@ -128,9 +122,6 @@ final class IrTestPointMirrorLookup extends AttributeLookup<IrTestPoint> {
 /// reach extension code instead of falling back to `toString()`.
 final class IrTestPointRepresentation extends Representation<IrTestPoint> {
   const IrTestPointRepresentation();
-
-  @override
-  bool canRepresent(Object? value) => value is IrTestPoint;
 
   @override
   String represent(IrTestPoint value) => '<${value.x};${value.y}>';

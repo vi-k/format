@@ -27,9 +27,6 @@ final class NamedFormatter extends Formatter<Object?> {
   NamedFormatter(this.specifier);
 
   @override
-  bool canFormat(Object? value) => true;
-
-  @override
   String format(Object? value, FormatOptions options) => '$specifier:$value';
 }
 
@@ -54,9 +51,6 @@ final class EmptyRepresentation extends Representation<Object?> {
 final class ThrowingSpecifierFormatter extends Formatter<Object?> {
   @override
   String get specifier => throw StateError('specifier boom');
-
-  @override
-  bool canFormat(Object? value) => true;
 
   @override
   String format(Object? value, FormatOptions options) => '$value';
@@ -255,9 +249,6 @@ void main() {
 final class _LocatedFailureFormatter extends Formatter<Object> {
   @override
   String get specifier => 'loc';
-
-  @override
-  bool canFormat(Object? value) => true;
 
   @override
   String format(Object value, FormatOptions options) =>
