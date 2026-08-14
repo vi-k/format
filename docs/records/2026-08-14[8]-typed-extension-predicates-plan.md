@@ -1,8 +1,8 @@
 # Typed Extension Predicates Implementation Plan
 
-Статус итоговой записи 2026-08-14: Tasks 1–7 исполнены через
+Статус: исполнен 2026-08-14 коммитом `4d74070`. Tasks 1–7 завершены через
 `superpowers:executing-plans`; полный обязательный прогон GREEN, scope и index
-проверены, работа собрана в один атомарный implementation commit.
+проверены. Чекбоксы в теле отражают состояние плана до итогового коммита.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:executing-plans` for inline execution or

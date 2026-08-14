@@ -1,5 +1,9 @@
 # Завершение релиза 3.0.0
 
+Статус: исполнен 2026-08-14. `v3.0.0` и GitHub Release созданы на
+опубликованном коммите, issue #8 закрыта; чекбоксы в теле отражают состояние
+плана во время выполнения и не являются списком открытой работы.
+
 > **Для агентных исполнителей:** REQUIRED SUB-SKILL: Use
 > superpowers:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
@@ -30,7 +34,7 @@ Release и закрытием issue #8, а постоянное правило �
 **Файлы:**
 - Изменить: `AGENTS.md`
 - Изменить: `docs/handoff.md`
-- Создать: `docs/superpowers/plans/2026-08-14-release-housekeeping.md`
+- Создать: `docs/records/2026-08-14[10]-release-housekeeping-plan.md`
 
 **Интерфейсы:**
 - Потребляет: подтверждённые версии `format 3.0.0` и `format_intl 1.0.0`.

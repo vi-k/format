@@ -1,8 +1,8 @@
 # JavaScript Character Fast Path Implementation Plan
 
-Статус предкоммитной записи 2026-08-14: Tasks 1–3 локально завершены через
-`superpowers:executing-plans`; A/B и полный обязательный прогон GREEN. Шаги
-публикации ниже выполняются после этой записи.
+Статус: исполнен 2026-08-14 коммитом `17c0419`. Tasks 1–3 завершены через
+`superpowers:executing-plans`; A/B и полный обязательный прогон GREEN.
+Чекбоксы в теле отражают состояние плана до итогового коммита.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
