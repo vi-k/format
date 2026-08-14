@@ -182,8 +182,18 @@ void main() {
   // accepted for the same reason as elsewhere — on the web an integer can
   // arrive as either type.
   test('formats Unicode scalar values with c', () {
+    for (final scalar in [0, 0xd7ff, 0xe000, 0x10ffff]) {
+      expect(sprintf('%c', scalar), String.fromCharCode(scalar));
+    }
+    for (final scalar in [
+      BigInt.zero,
+      BigInt.from(0xd7ff),
+      BigInt.from(0xe000),
+      BigInt.from(0x10ffff),
+    ]) {
+      expect(sprintf('%c', scalar), String.fromCharCode(scalar.toInt()));
+    }
     expect(sprintf('%c', 0x1f44b), '👋');
-    expect(sprintf('%c', BigInt.from(65)), 'A');
     expect(sprintf('%4c', 0x1f44b), '   👋');
     expect(sprintf('%-4c', 65), 'A   ');
   });
@@ -194,7 +204,17 @@ void main() {
   // literal is included as the wrong type, since in C it would have been the
   // right one.
   test('rejects invalid Unicode scalar values with typed context', () {
-    for (final value in [-1, 0x110000, 0xd800, 'A']) {
+    for (final value in [
+      -1,
+      0x110000,
+      0xd800,
+      0xdfff,
+      BigInt.from(-1),
+      BigInt.from(0xd800),
+      BigInt.from(0xdfff),
+      BigInt.from(0x110000),
+      'A',
+    ]) {
       expect(
         () => sprintf('%c', value),
         throwsA(

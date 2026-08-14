@@ -360,20 +360,23 @@ void _validateCharacterSpec(_FormatSpec spec, FormatExceptionContext context) {
 }
 
 int _unicodeScalar(Object? value, FormatExceptionContext context) {
-  final candidate = switch (value) {
-    int() when _isIntegerValue(value) => BigInt.from(value),
-    BigInt() => value,
-    _ => null,
-  };
   const maximum = 0x10ffff;
   const surrogateStart = 0xd800;
   const surrogateEnd = 0xdfff;
-  if (candidate == null ||
-      candidate < BigInt.zero ||
-      candidate > BigInt.from(maximum) ||
-      (candidate >= BigInt.from(surrogateStart) &&
-          candidate <= BigInt.from(surrogateEnd))) {
-    throw UnsupportedFormatValueException(context, value);
+
+  if (value is int && _isIntegerValue(value)) {
+    if (value >= 0 &&
+        value <= maximum &&
+        (value < surrogateStart || value > surrogateEnd)) {
+      return value;
+    }
+  } else if (value is BigInt) {
+    if (value >= BigInt.zero &&
+        value <= BigInt.from(maximum) &&
+        (value < BigInt.from(surrogateStart) ||
+            value > BigInt.from(surrogateEnd))) {
+      return value.toInt();
+    }
   }
-  return candidate.toInt();
+  throw UnsupportedFormatValueException(context, value);
 }

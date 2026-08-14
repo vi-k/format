@@ -137,9 +137,17 @@ void main() {
   // on the web an integer can arrive as either. Alignment still applies — the
   // result is text, and one character wide even when it is two code units.
   test('formats Unicode scalar values with c', () {
-    expect(format('{:c}', 0), '\u0000');
-    expect(format('{:c}', 0x10ffff), String.fromCharCode(0x10ffff));
-    expect(format('{:c}', BigInt.from(65)), 'A');
+    for (final scalar in [0, 0xd7ff, 0xe000, 0x10ffff]) {
+      expect(format('{:c}', scalar), String.fromCharCode(scalar));
+    }
+    for (final scalar in [
+      BigInt.zero,
+      BigInt.from(0xd7ff),
+      BigInt.from(0xe000),
+      BigInt.from(0x10ffff),
+    ]) {
+      expect(format('{:c}', scalar), String.fromCharCode(scalar.toInt()));
+    }
     expect(format('{:4c}', 65), '   A');
     expect(format('{:<4c}', 65), 'A   ');
   });
@@ -178,8 +186,11 @@ void main() {
     -1,
     0x110000,
     0xd800,
+    0xdfff,
     BigInt.from(-1),
     BigInt.from(0x110000),
+    BigInt.from(0xd800),
+    BigInt.from(0xdfff),
     const <int>[65],
     // A string is the wrong type a caller is most likely to pass, and the one
     // place where `c` visibly departs from "brace decides from the value's

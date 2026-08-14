@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## Unreleased
+
+* Avoided converting ordinary `int` values to `BigInt` while validating
+  Unicode scalars for `{:c}` and `%c`. In a local dart2js A/B on arm64,
+  cached `{:c}` fell from 133 ns to 56 ns and `%c` from 108 ns to 29 ns;
+  Format 1.6 took 143–144 ns for the brace case. Real `BigInt` values retain
+  the same validation path and showed no reproducible regression.
+
 ## 3.0.0
 
 Upgrading from the published 1.6.0 also includes the changes of the
