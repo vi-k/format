@@ -14,13 +14,13 @@ import 'parser_platform_node.dart';
 export 'parser_platform_node.dart'
     show executableSizeBytes, readTextFile, sourceRevision, writeTextFile;
 
-/// The arguments arrive through `main`, not through `process.argv`.
+/// The runner arguments arrive through `main`, not through `process.argv`.
 ///
 /// The dart2js build has to read them off the process, because node calls its
-/// script with `main` empty. The wasm loader instead passes whatever the host
-/// handed `invoke` straight into `main` — and the host also passes the module
-/// path, which is not the runner's business, so reading `process.argv` here
-/// would feed it the path as an option and abort on it.
+/// script with `main` empty. Both wasm hosts instead pass only the runner
+/// arguments to `invokeMain`: the committed host removes its module path
+/// first, while the generated host always loads a fixed module. Reading
+/// `process.argv` here would therefore disagree with the loader contract.
 List<String> effectiveArguments(List<String> mainArguments) => mainArguments;
 
 String detectedRuntime() => 'wasm';

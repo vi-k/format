@@ -122,11 +122,12 @@ Future<List<String>> _compileWasm(
   final host = File('${directory.path}/host.mjs');
   await host.writeAsString('''
 import { readFile } from 'node:fs/promises';
-import { compile, instantiate, invoke } from './benchmark.mjs';
+import { compile } from './benchmark.mjs';
 
 const bytes = await readFile(new URL('./benchmark.wasm', import.meta.url));
-const instance = await instantiate(await compile(bytes), {});
-invoke(instance, ...process.argv.slice(2));
+const compiled = await compile(bytes);
+const instance = await compiled.instantiate({});
+instance.invokeMain(...process.argv.slice(2));
 ''');
 
   return ['node', host.path];

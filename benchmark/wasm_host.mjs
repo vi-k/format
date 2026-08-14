@@ -24,6 +24,7 @@ if (modulePath === undefined) {
 const moduleUrl = pathToFileURL(modulePath);
 const loaderUrl = new URL(moduleUrl.href.replace(/\.wasm$/, '.mjs'));
 
-const { compile, instantiate, invoke } = await import(loaderUrl.href);
-const instance = await instantiate(await compile(await readFile(moduleUrl)), {});
-invoke(instance, ...args);
+const { compile } = await import(loaderUrl.href);
+const compiled = await compile(await readFile(moduleUrl));
+const instance = await compiled.instantiate({});
+instance.invokeMain(...args);

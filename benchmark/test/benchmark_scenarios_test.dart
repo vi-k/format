@@ -36,6 +36,7 @@ import '../runner.dart';
 import '../scenarios.dart';
 
 const _testSourceRevision = '0123456789abcdef0123456789abcdef01234567';
+final _dartCompilerVersion = Platform.version.split(' ').first;
 
 void main() {
   // The coverage claim as a list of ids. A scenario removed silently narrows
@@ -617,76 +618,75 @@ void main() {
   // must arrive as the same typed outcome it has on the VM, or the web reports
   // would differ from the VM ones for reasons that have nothing to do with
   // speed.
-  test(
-    'compiled JavaScript runner preserves typed error outcomes',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'format-js-runner-',
+  test('compiled JavaScript runner preserves typed error outcomes', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'format-js-runner-',
+    );
+    final output = '${directory.path}/runner.js';
+    try {
+      final compile = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'js',
+        'benchmark/runner.dart',
+        '-Dformat.benchmark.dartCompilerVersion=$_dartCompilerVersion',
+        '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
+        '-O4',
+        '-o',
+        output,
+      ]);
+      expect(compile.exitCode, 0, reason: compile.stderr.toString());
+
+      final mismatch = await Process.run('node', [
+        output,
+        '--runtime=jit',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+      ]);
+      expect(mismatch.exitCode, isNonZero);
+
+      final run = await Process.run('node', [
+        output,
+        '--runtime=js',
+        '--dialect=printf',
+        '--run=1',
+        '--samples=1',
+        '--smoke',
+        '--output=${directory.path}/report.json',
+      ]);
+      expect(run.exitCode, 0, reason: run.stderr.toString());
+      final report = BenchmarkReport.fromJson(
+        jsonDecode(await File('${directory.path}/report.json').readAsString())
+            as Map<String, Object?>,
       );
-      final output = '${directory.path}/runner.js';
-      try {
-        final compile = await Process.run(Platform.resolvedExecutable, [
-          'compile',
-          'js',
-          'benchmark/runner.dart',
-          '-Dformat.benchmark.dartCompilerVersion=3.12.2',
-          '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
-          '-O4',
-          '-o',
-          output,
-        ]);
-        expect(compile.exitCode, 0, reason: compile.stderr.toString());
-
-        final mismatch = await Process.run('node', [
-          output,
-          '--runtime=jit',
-          '--dialect=printf',
-          '--run=1',
-          '--samples=1',
-          '--smoke',
-        ]);
-        expect(mismatch.exitCode, isNonZero);
-
-        final run = await Process.run('node', [
-          output,
-          '--runtime=js',
-          '--dialect=printf',
-          '--run=1',
-          '--samples=1',
-          '--smoke',
-          '--output=${directory.path}/report.json',
-        ]);
-        expect(run.exitCode, 0, reason: run.stderr.toString());
-        final report = BenchmarkReport.fromJson(
-          jsonDecode(await File('${directory.path}/report.json').readAsString())
-              as Map<String, Object?>,
-        );
-        expect(report.runtime, 'js');
-        expect(report.detectedRuntime, 'js');
-        expect(
-          report.runtimeProvenance['detector'],
-          'dart2js.compile-time-define',
-        );
-        expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
-        expect(report.sourceRevision, _testSourceRevision);
-        expect(
-          report.scenarios
-              .where(
-                (scenario) =>
-                    scenario.comparisonKind ==
-                    BenchmarkComparisonKind.performance,
-              )
-              .map((scenario) => scenario.ratio),
-          everyElement(
-            isA<double>().having((ratio) => ratio.isFinite, 'finite', isTrue),
-          ),
-        );
-      } finally {
-        await directory.delete(recursive: true);
-      }
-    },
-    timeout: const Timeout.factor(4),
-  );
+      expect(report.runtime, 'js');
+      expect(report.detectedRuntime, 'js');
+      expect(
+        report.runtimeProvenance['detector'],
+        'dart2js.compile-time-define',
+      );
+      expect(
+        report.runtimeProvenance['dartCompilerVersion'],
+        _dartCompilerVersion,
+      );
+      expect(report.sourceRevision, _testSourceRevision);
+      expect(
+        report.scenarios
+            .where(
+              (scenario) =>
+                  scenario.comparisonKind ==
+                  BenchmarkComparisonKind.performance,
+            )
+            .map((scenario) => scenario.ratio),
+        everyElement(
+          isA<double>().having((ratio) => ratio.isFinite, 'finite', isTrue),
+        ),
+      );
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  }, timeout: const Timeout.factor(4));
 
   // The same for AOT, plus the refusal that matters most: an AOT run must not
   // be able to present itself as a JIT one. The two have different baselines,
@@ -763,7 +763,7 @@ void main() {
         'compile',
         'wasm',
         'benchmark/runner.dart',
-        '-Dformat.benchmark.dartCompilerVersion=3.12.2',
+        '-Dformat.benchmark.dartCompilerVersion=$_dartCompilerVersion',
         '-Dformat.benchmark.sourceRevision=$_testSourceRevision',
         '-O2',
         '-o',
@@ -807,7 +807,10 @@ void main() {
         report.runtimeProvenance['detector'],
         'dart2wasm.compile-time-define',
       );
-      expect(report.runtimeProvenance['dartCompilerVersion'], '3.12.2');
+      expect(
+        report.runtimeProvenance['dartCompilerVersion'],
+        _dartCompilerVersion,
+      );
       expect(report.sourceRevision, _testSourceRevision);
     } finally {
       await directory.delete(recursive: true);

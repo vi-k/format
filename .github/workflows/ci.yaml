@@ -30,7 +30,7 @@ permissions:
 jobs:
   checks:
     # Named explicitly because the matrix carries a flag as well as a version:
-    # left to GitHub the job would be "checks (3.12.2, true)", and the name is
+    # left to GitHub the job would be "checks (stable, true)", and the name is
     # what other places refer to this check by.
     name: checks (${{ matrix.sdk }})
     runs-on: ubuntu-latest
@@ -38,33 +38,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.7.2 is the minimum the pubspec claims; the second entry is what the
-        # repository is formatted and analyzed against. Steps that depend on
-        # the formatter or the linter run on that one only.
-        #
-        # Pinned to 3.12.2 rather than tracking `stable`. Dart 3.13.0 changed
-        # the dart2wasm loader — `instantiate` is now a method on what `compile`
-        # returns, not an export beside it. The `package:test` bootstrap first
-        # failed on that change, but after the local SDK was updated a full
-        # repeat on 2026-08-14 passed all 403 applicable tests with the same
-        # test 1.31.2: that external blocker is gone.
-        #
-        # The migration remains one atomic follow-up: accept the 3.13 formatter
-        # output, update both repository-owned wasm hosts to the new API, move
-        # every job pinned below, and rerun their tests and benchmarks. Keeping
-        # this version until that work is done preserves the only whole-tree
-        # run with real 64-bit integers on a web-shaped target.
+        # 3.7.2 is the minimum the pubspec claims; stable is what the repository
+        # is formatted, analyzed, and fully tested against.
         # Written as `include` with an explicit flag rather than as a list of
         # versions: nine steps below run on the primary entry only, and keying
-        # them on the version string meant that moving it — which this pin
-        # exists to do after the repository-owned hosts migrate — would
-        # silently switch off formatting, `--fatal-infos`, both web runs, the
-        # harness tests, the dependency floor, the archive check and
-        # `publish --dry-run`, on both legs, with the workflow still green.
+        # them on the version string would silently switch off formatting,
+        # `--fatal-infos`, both web runs, the harness tests, the dependency
+        # floor, the archive check and `publish --dry-run` when stable moves.
         include:
           - sdk: '3.7.2'
             primary: false
-          - sdk: '3.12.2'
+          - sdk: stable
             primary: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -151,7 +135,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: '3.12.2'
+          sdk: stable
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           # The generators require CPython 3.14: the fixtures record what that
@@ -178,7 +162,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: '3.12.2'
+          sdk: stable
       - name: Resolve dependencies
         run: dart pub get
       - name: Report self-test
@@ -213,7 +197,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: '3.12.2'
+          sdk: stable
       - name: Resolve root dependencies
         run: dart pub get
       - name: Materialize the format 1.6.0 baseline from pub
@@ -260,7 +244,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
-          sdk: '3.12.2'
+          sdk: stable
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           # Pinned because JavaScript performance moves between Node releases,
