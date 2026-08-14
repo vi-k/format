@@ -134,6 +134,21 @@ void main() {
     expect(debug, contains('item=4'));
   });
 
+  // Item keys made only of decimal digits are integer lookups, including an
+  // arbitrarily long spelling of zero. The parser must consume that spelling
+  // without changing its value; a lexical digit limit would make the memory
+  // fix observable as a language change. The nines control still has to name
+  // the whole invalid token in a typed parser failure.
+  test('long zero item indexes keep their value without retaining the run', () {
+    final zeros = '0' * 5000;
+
+    expect(format('{0[$zeros]}', ['value']), 'value');
+    expect(
+      () => format('{0[${'9' * 5000}]}', ['value']),
+      throwsA(isA<InvalidFormatException>()),
+    );
+  });
+
   // Inside `[...]` the grammar stops applying identifier rules: the key runs to
   // the closing bracket, spaces and all, because a map key is data and not a
   // name. Quoting it would be the mistake — `'any key'` would then include the

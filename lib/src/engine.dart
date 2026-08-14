@@ -21,6 +21,8 @@ library;
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:characters/characters.dart';
+
 import 'binary64.dart';
 import 'double_format.dart';
 import 'errors.dart';

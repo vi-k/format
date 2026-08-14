@@ -124,6 +124,67 @@ void main() {
     }
   });
 
+  // Width and precision are values, not lexical digit counts: any number of
+  // leading zeroes still means zero. The long forms force the general parser
+  // and keep that language contract beside the memory test which prevents it
+  // from materializing one list element per digit. The nines are the other
+  // branch: the complete token is consumed, then rejected with the same typed
+  // failure as its shorter out-of-range spelling.
+  test('long numeric options preserve zero and bounded failures', () {
+    final zeros = '0' * 5000;
+    final nines = '9' * 5000;
+
+    expect(format('{:${zeros}d}', 1), '1');
+    expect(format('{:.${zeros}s}', 'value'), '');
+    expect(
+      () => format('{:${nines}d}', 1),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+    expect(
+      () => format('{:.${nines}g}', 1.0),
+      throwsA(isA<InvalidSpecifierException>()),
+    );
+  });
+
+  // Ordinary specifications stay on the old index-based parser for measured
+  // speed, while long ones switch to a bounded-lookahead cursor. Both parse
+  // the same grammar, so force both implementations over valid, invalid,
+  // ASCII, scalar and grapheme cases instead of trusting the length dispatch.
+  test('materialized and streaming general parsers agree', () {
+    const prefixes = ['', '>', '*^', 'é<', '\r\n<'];
+    const signs = ['', '+', '-', ' '];
+    const flags = ['', 'z', '#', 'z#'];
+    const widths = ['', '0', '7', '100001'];
+    const tails = ['', 'd', ',d', '.2g', '.,f', '.x', 'custom:payload'];
+
+    for (final prefix in prefixes) {
+      for (final sign in signs) {
+        for (final flag in flags) {
+          for (final width in widths) {
+            for (final tail in tails) {
+              final source = '$prefix$sign$flag$width$tail';
+              expect(
+                engine.debugFormatSpecParsersAgree(source),
+                isTrue,
+                reason: source,
+              );
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // The type adds one code unit: 255 zeroes stay at the materialized limit of
+  // 256, while 256 zeroes cross it and force the streaming twin at 257.
+  test('length boundary does not change numeric option semantics', () {
+    final materializedZeros = '0' * 255;
+    final streamingZeros = '0' * 256;
+
+    expect(format('{:${materializedZeros}d}', 1), '1');
+    expect(format('{:${streamingZeros}d}', 1), '1');
+  });
+
   // The specification splitter has its own ASCII shortcut — one code unit per
   // unit — and CRLF is the single ASCII sequence that breaks it: two code
   // units, one grapheme cluster. Split by code unit, a CRLF fill stopped

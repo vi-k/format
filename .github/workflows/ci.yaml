@@ -42,24 +42,22 @@ jobs:
         # repository is formatted and analyzed against. Steps that depend on
         # the formatter or the linter run on that one only.
         #
-        # Pinned to 3.12.2 rather than tracking `stable`, and the reason is not
-        # caution about formatting. Dart 3.13.0 changed the dart2wasm loader —
-        # `instantiate` is now a method on what `compile` returns, not an
-        # export beside it — and the bootstrap `package:test` generates still
-        # calls the old one, so `dart test -c dart2wasm` fails to load on every
-        # file. 1.31.2 is the newest `test` published, so there is nothing to
-        # upgrade to yet.
+        # Pinned to 3.12.2 rather than tracking `stable`. Dart 3.13.0 changed
+        # the dart2wasm loader — `instantiate` is now a method on what `compile`
+        # returns, not an export beside it. The `package:test` bootstrap first
+        # failed on that change, but after the local SDK was updated a full
+        # repeat on 2026-08-14 passed all 403 applicable tests with the same
+        # test 1.31.2: that external blocker is gone.
         #
-        # Losing that run is not an option worth taking: it is the only place
-        # the whole test tree meets real 64-bit integers on a web-shaped
-        # target, and it is what caught `--9223372036854775808` when the other
-        # two backends could not. Unpin as soon as `package:test` speaks the
-        # new loader — the check is a one-line `dart test -c dart2wasm` on a
-        # 3.13 SDK.
+        # The migration remains one atomic follow-up: accept the 3.13 formatter
+        # output, update both repository-owned wasm hosts to the new API, move
+        # every job pinned below, and rerun their tests and benchmarks. Keeping
+        # this version until that work is done preserves the only whole-tree
+        # run with real 64-bit integers on a web-shaped target.
         # Written as `include` with an explicit flag rather than as a list of
         # versions: nine steps below run on the primary entry only, and keying
         # them on the version string meant that moving it — which this pin
-        # exists to do, as soon as `package:test` speaks the new loader — would
+        # exists to do after the repository-owned hosts migrate — would
         # silently switch off formatting, `--fatal-infos`, both web runs, the
         # harness tests, the dependency floor, the archive check and
         # `publish --dry-run`, on both legs, with the workflow still green.

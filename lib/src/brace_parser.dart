@@ -356,8 +356,8 @@ final class _BraceParser {
         'Expected a closing bracket for item lookup.',
       );
     }
-    final key = template.substring(start, _index);
-    if (key.isEmpty) {
+    final end = _index;
+    if (start == end) {
       throw _invalid(
         openOffset,
         _index + 1,
@@ -365,13 +365,11 @@ final class _BraceParser {
       );
     }
     _index++;
-    final decimalDigits = _decimalDigits(key);
+    final decimalDigits = _decimalDigits(template, start, end);
     if (decimalDigits != null) {
-      return _IntegerItemAccess(
-        _decimalIndex(decimalDigits, start, start + key.length),
-      );
+      return _IntegerItemAccess(_decimalIndex(decimalDigits, start, end));
     }
-    return _StringItemAccess(key);
+    return _StringItemAccess(template.substring(start, end));
   }
 
   /// Reads a run of decimal digits, keeping only as much of it as an index
@@ -411,18 +409,30 @@ final class _BraceParser {
     return digits;
   }
 
-  List<int>? _decimalDigits(String text) {
-    if (text.isEmpty) return null;
+  /// The decimal digits in [text] between [start] and [end], retaining only
+  /// enough to resolve or reject an integer item key.
+  ///
+  /// A non-decimal scalar makes the key textual. A decimal run follows the
+  /// same bounded policy as [_readDecimalDigits]: leading zeroes need no
+  /// storage, and one digit past the signed 64-bit width is enough for
+  /// [_decimalIndex] to reject the value. The scan still reaches [end], so the
+  /// diagnostic continues to cover the complete key.
+  static List<int>? _decimalDigits(String text, int start, int end) {
     final digits = <int>[];
-    var offset = 0;
-    while (offset < text.length) {
+    var significant = 0;
+    var offset = start;
+    while (offset < end) {
       final scalar = _readScalarFrom(text, offset);
       if (scalar == null) return null;
       final digit = pythonDecimalDigitValue(scalar.value);
       if (digit == null) return null;
-      digits.add(digit);
       offset = scalar.end;
+      if (digits.isEmpty && digit == 0) continue;
+      significant++;
+      if (significant <= _maximumIndexDigits + 1) digits.add(digit);
     }
+    if (digits.isEmpty) digits.add(0);
+
     return digits;
   }
 
