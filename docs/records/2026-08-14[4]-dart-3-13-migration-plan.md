@@ -1,8 +1,8 @@
 # Dart 3.13 Migration Implementation Plan
 
-Статус: исполняется 2026-08-14 через `superpowers:executing-plans`. Красная
-фаза, Task 2 и первый полный stable-прогон завершены; миграционный commit/CI,
-AMD-эталон и baseline-коммит ещё открыты.
+Статус: исполняется 2026-08-14 через `superpowers:executing-plans`. Tasks 1–5
+завершены: миграционный commit/CI зелёные, проверенный AMD-эталон записан;
+Task 6 — полный прогон, baseline-коммит и его push-CI — ещё открыт.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
@@ -298,7 +298,7 @@ Expected: `docs/backlog.md` без изменений; старый loader-пр�
 - Commit: все файлы Tasks 2–3 и этот план.
 - Exclude: `docs/backlog.md`.
 
-- [ ] **Step 1: Проиндексировать только миграцию**
+- [x] **Step 1: Проиндексировать только миграцию**
 
 Run from the repository root:
 
@@ -312,7 +312,7 @@ rtk git diff --cached -- docs/backlog.md
 Expected: последний diff пуст; staged-набор состоит только из host'ов, CI,
 compile-тестов, stable-форматирования, handoff, design и плана.
 
-- [ ] **Step 2: Создать миграционный коммит**
+- [x] **Step 2: Создать миграционный коммит**
 
 Run:
 
@@ -326,7 +326,7 @@ Expected: коммит создан в `main`; рабочее дерево чи�
 `origin/main`. Записать полученный SHA в design и handoff можно только новым
 follow-up-коммитом вместе с эталоном — уже созданный коммит не переписывать.
 
-- [ ] **Step 3: Push напрямую в main и проверить обычный CI**
+- [x] **Step 3: Push напрямую в main и проверить обычный CI**
 
 Run:
 
@@ -358,7 +358,7 @@ Expected: `checks (3.7.2)`, `checks (stable)`, `generated-artifacts`,
 - Produces: baseline с Dart 3.13.0, Node.js 24.8.0 и AMD EPYC, после которого
   gate снова выдаёт сопоставимый вердикт.
 
-- [ ] **Step 1: Запустить performance workflow из миграционной ревизии**
+- [x] **Step 1: Запустить performance workflow из миграционной ревизии**
 
 Run на чистом дереве после push:
 
@@ -374,7 +374,7 @@ Expected: все обязательные jobs зелёные. Для `performan
 эталон может дать `comparable: false` из-за смены Dart 3.12.2 на 3.13.0; это
 ожидаемо и не является завершением follow-up.
 
-- [ ] **Step 2: Скачать artifact в отдельный временный каталог**
+- [x] **Step 2: Скачать artifact в отдельный временный каталог**
 
 Создать каталог и скачать artifact именно найденного запуска:
 
@@ -386,7 +386,7 @@ rtk find "$gate_dir" -maxdepth 1 -type f
 
 Expected: `gate-report.json` и восемь runtime reports.
 
-- [ ] **Step 3: Проверить происхождение каждого отчёта до записи**
+- [x] **Step 3: Проверить происхождение каждого отчёта до записи**
 
 Run с переменными из предыдущих шагов:
 
@@ -409,7 +409,7 @@ rtk jq -r '[.runtime, .sourceRevision, .versions.cpu, .versions.dartVersion, .ru
 Если runner Intel или provenance/revision расходятся, baseline не менять:
 задиспетчить новый запуск и повторить шаги 1–3.
 
-- [ ] **Step 4: Записать baseline из точного списка восьми файлов**
+- [x] **Step 4: Записать baseline из точного списка восьми файлов**
 
 Run с проверенной переменной `reports`:
 
@@ -428,7 +428,7 @@ revision равен
 миграционному SHA, Dart 3.13.0, Node v24.8.0, CPU AMD EPYC, восемь наборов
 измерений присутствуют.
 
-- [ ] **Step 5: Завершить документацию follow-up**
+- [x] **Step 5: Завершить документацию follow-up**
 
 В `docs/handoff.md` записать run URL/ID, точную ревизию отчётов, CPU, Dart,
 Node и сопоставимый итог. Убрать AMD-эталон из `## Что открыто`; первым
