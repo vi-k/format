@@ -5,6 +5,17 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      capture_baseline:
+        description: Produce raw reports for a CPU baseline without evaluating.
+        required: false
+        default: false
+        type: boolean
+      baseline_revision:
+        description: Immutable source revision to measure during a capture.
+        required: false
+        default: ''
+        type: string
   schedule:
     # The reference is recorded on this hardware, so the nightly gate compares
     # like with like. Measured drift between a laptop and a runner reached
@@ -241,7 +252,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      - name: Reject an incomplete controlled capture
+        if: inputs.capture_baseline == true && inputs.baseline_revision == ''
+        run: |
+          echo 'capture_baseline requires baseline_revision' >&2
+          exit 1
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.capture_baseline && inputs.baseline_revision || github.sha }}
       - uses: dart-lang/setup-dart@7654d458321ee25acccccfdb86cd48bd95768ff1 # v1.8.0
         with:
           sdk: stable
@@ -284,6 +302,7 @@ jobs:
               --runtime=wasm --run="$run" --output="wasm-$run.json"
           done
       - name: Evaluate against the recorded reference
+        if: inputs.capture_baseline != true
         run: >-
           dart run benchmark/gates.dart
           --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json
@@ -299,7 +318,7 @@ jobs:
       # it. Still not a failure: nothing is wrong, the night simply proved
       # nothing.
       - name: Report whether the run decided anything
-        if: always()
+        if: always() && inputs.capture_baseline != true
         run: |
           if [ ! -f gate-report.json ]; then
             echo "::warning::the gate produced no report"

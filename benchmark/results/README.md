@@ -101,10 +101,44 @@ reference:
 dart run benchmark/gates.dart --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json --baseline=benchmark/results/gate-baseline.json --output=gate-report.json
 ```
 
-The easier route is the workflow: `gh workflow run ci.yaml --ref main` runs
-exactly the commands above on CI hardware, and `gh run download <id> -n
-performance-gate` brings back the eight reports along with the gate's own
-verdict.
+The ordinary workflow route evaluates the current `main` revision on CI
+hardware:
+
+```sh
+gh workflow run CI --ref main
+```
+
+Its `performance-gate` artifact contains the eight reports and the gate's
+verdict. A green job with `"comparable": false` is **not** a successful
+comparison: the numbers are diagnostic only and the job exited zero because
+the runner CPU has no exact reference.
+
+To collect a CPU-specific reference, request an opt-in controlled capture of
+the immutable revision the baseline names. It only uploads eight raw reports;
+it neither evaluates them nor writes to git.
+
+```sh
+gh workflow run CI --ref main \
+  -f capture_baseline=true \
+  -f baseline_revision=9143e7407e162a1fdc6b11d57515143390a04c53
+```
+
+Download and inspect that `performance-gate` artifact before changing the
+baseline. Only after all eight reports have the requested source revision and
+one CPU string, add that CPU explicitly with the checked-out CLI:
+
+```sh
+dart run benchmark/gates.dart \
+  --reports=jit-1.json,jit-2.json,aot-1.json,aot-2.json,js-1.json,js-2.json,wasm-1.json,wasm-2.json \
+  --baseline=benchmark/results/gate-baseline.json \
+  --add-reference=2026-08-15 \
+  --output=benchmark/results/gate-baseline.json \
+  --allow-unverified-revision
+```
+
+The command rejects another source revision and a duplicate exact CPU without
+changing `--output`. `--record` creates a new one-CPU baseline; it is not the
+way to append a CPU to this committed reference book.
 
 ## The recorded reference
 
@@ -159,7 +193,8 @@ processor, the operating system, the Dart version and the Node version it was
 measured on, and a run whose processor, Dart or Node differs decides nothing:
 the report says `"comparable": false`, lists what moved, and the command
 still exits zero. The ratios are computed and kept, so they can be read as
-information — they are simply not a verdict about the code.
+information — they are simply not a verdict about the code or a successful
+comparison.
 
 That is not a hypothetical. Three consecutive nightly runs landed on an Intel
 Xeon 8573C, an EPYC 7763 and an EPYC 9V74, because a hosted pool hands out
