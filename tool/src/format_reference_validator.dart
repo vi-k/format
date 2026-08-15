@@ -112,6 +112,39 @@ List<String> validateFormatReferenceContract(FormatReferenceContract contract) {
           }
         }
       }
+      for (final applicability in type.optionAppliesTo.entries) {
+        final option = dialectOptionsById[applicability.key];
+        if (option == null || !type.optionIds.contains(applicability.key)) {
+          issues.add(
+            '${type.id}: unknown applicability option: ${applicability.key}',
+          );
+          continue;
+        }
+        _checkApplicabilityCategories(
+          issues,
+          type,
+          applicability.key,
+          applicability.value,
+        );
+      }
+      final availableTokens = <String>{
+        for (final optionId in type.optionIds)
+          ...?dialectOptionsById[optionId]?.tokens,
+      };
+      for (final applicability in type.tokenAppliesTo.entries) {
+        if (!availableTokens.contains(applicability.key)) {
+          issues.add(
+            '${type.id}: unknown applicability token: ${applicability.key}',
+          );
+          continue;
+        }
+        _checkApplicabilityCategories(
+          issues,
+          type,
+          applicability.key,
+          applicability.value,
+        );
+      }
       checkEvidence(type.id, type.evidence);
     }
   }
@@ -127,6 +160,33 @@ List<String> validateFormatReferenceContract(FormatReferenceContract contract) {
   issues.addAll(caseIssues);
 
   return issues;
+}
+
+void _checkApplicabilityCategories(
+  List<String> issues,
+  TypeContract type,
+  String owner,
+  List<ValueCategory> categories,
+) {
+  final seen = <ValueCategory>{};
+  for (final category in categories) {
+    if (!seen.add(category)) {
+      issues.add(
+        '${type.id}: duplicate applicability category: $category for $owner',
+      );
+    }
+    if (category == ValueCategory.any || category == ValueCategory.none) {
+      issues.add(
+        '${type.id}: non-concrete applicability category: $category for $owner',
+      );
+    } else if (!type.accepts.contains(ValueCategory.any) &&
+        !type.accepts.contains(category)) {
+      issues.add(
+        '${type.id}: applicability category is not accepted: '
+        '$category for $owner',
+      );
+    }
+  }
 }
 
 void _checkText(List<String> issues, String owner, LocalizedText text) {

@@ -49,54 +49,157 @@ forms must balance: `{{` requires a later `}}`, because the first unescaped
 `}` is what ends the specification. In ordinary text they are independent, so
 a lone `{{` is fine there and a lone `{` is not.
 
-## Presentation types
+<!-- BEGIN GENERATED FORMAT REFERENCE -->
+## Format reference
 
-The letter that ends a brace specification chooses the presentation. Which
-letters a value accepts follows from its own type, so a specification meant for
-another type raises `InvalidSpecifierException` rather than converting
-silently:
+### Brace template grammar
 
-| type | accepts | produces |
-|---|---|---|
-| none | any value | `42`, `2.5`, `hi`, `true`, `null` — the value's own text |
-| `s` | text | the text, precision truncating rather than rounding |
-| `d` | `int`, `BigInt` | decimal: `42` |
-| `b` | `int`, `BigInt` | binary: `101010` |
-| `o` | `int`, `BigInt` | octal: `52` |
-| `x`, `X` | `int`, `BigInt` | hexadecimal, lower or upper: `2a`, `2A` |
-| `c` | `int`, `BigInt` | the character that code point encodes |
-| `n` | `int`, `BigInt`, `double` | decimal in the configured locale |
-| `f`, `F` | `int`, `BigInt`, `double` | fixed point: `2.500000` |
-| `e`, `E` | `int`, `BigInt`, `double` | scientific: `2.5e+0`, `2.5E+0` |
-| `g`, `G` | `int`, `BigInt`, `double` | general: `2.5` |
-| `%` | `int`, `BigInt`, `double` | the value times 100 with a percent sign |
+```text
+template = (literal | "{{" | "}}" | replacement_field)*
+replacement_field = "{" field_name? lookup* conversion? format_spec? "}"
+field_name = decimal_index | python_identifier
+lookup = "." python_identifier | "[" item_key "]"
+automatic xor manual positional numbering
+conversion = "!" ("s" | "r" | "a")
+format_spec may contain replacement_field at depth 1
+```
 
-A name that is not one of these is a custom formatter (see
-[Custom formatters](#custom-formatters)), and `bool` and `null` reach only the
-empty specification: no presentation type accepts them.
+| Syntax | Meaning |
+|---|---|
+| `template = (literal \| "{{" \| "}}" \| replacement_field)*` | Doubled braces emit literals. |
+| `replacement_field = "{" field_name? lookup* conversion? format_spec? "}"` | Field parts have this order. |
+| `field_name = decimal_index \| python_identifier` | Empty is automatic; Python Unicode decimal digits are positional; an identifier is named. |
+| `lookup = "." python_identifier \| "[" item_key "]"` | Unicode identifier attributes and non-empty unquoted item chains. |
+| `automatic xor manual positional numbering` | Automatic and numeric roots never mix. |
+| `conversion = "!" ("s" \| "r" \| "a")` | Conversion precedes the specification. |
+| `format_spec may contain replacement_field at depth 1` | One nested level; nested specifications cannot nest again. |
 
-`sprintf` uses conversion letters instead, and decides from the letter rather
-than from the value — so a value the conversion cannot render raises
-`UnsupportedFormatValueException`:
+### Brace format specification
 
-| conversion | accepts | produces |
-|---|---|---|
-| `%s` | any value | the value's own text |
-| `%c` | `int`, `BigInt` | the character that code point encodes |
-| `%d`, `%i` | `int`, `BigInt` | decimal, signed |
-| `%u` | `int`, `BigInt` ≥ 0 | decimal, unsigned: a negative value is rejected |
-| `%o` | `int`, `BigInt` ≥ 0 | octal |
-| `%x`, `%X` | `int`, `BigInt` ≥ 0 | hexadecimal, lower or upper |
-| `%f`, `%F` | `double` | fixed point |
-| `%e`, `%E` | `double` | scientific |
-| `%g`, `%G` | `double` | general |
-| `%a`, `%A` | `double` | hexadecimal floating point: `0x1.4p+1` |
-| `%%` | — | a literal percent sign; consumes no argument |
+```text
+[[fill]align][sign]["z"]["#"]["0"][width][grouping]["." (precision [grouping] | grouping)][type | custom_name [":" payload]]
+custom_name = ASCII_LETTER (ASCII_LETTER | ASCII_DIGIT | "_")*
+```
 
-Unlike the brace types, the numeric printf conversions do not accept the other
-numeric type: `%d` rejects a `double` and `%f` rejects an `int`, as in C.
+| Syntax | Meaning |
+|---|---|
+| `[[fill]align][sign]["z"]["#"]["0"][width][grouping]["." (precision [grouping] \| grouping)][type \| custom_name [":" payload]]` | Exact option order. |
+| `custom_name = ASCII_LETTER (ASCII_LETTER \| ASCII_DIGIT \| "_")*` | Built-ins reserved, payload follows colon. |
+
+### Brace options
+
+| Tokens | Meaning | Default | Applies to |
+|---|---|---|---|
+| `<`, `>`, `^`, `=` | Fill with one text unit and align left, right, center, or after the sign. | Text and custom output align left; numbers align right. Zero implies sign-aware alignment when align is absent. | `String`, `int`, `BigInt`, `double`, custom value |
+| `+`, `-`, ` ` | Select the sign for numeric output. | Minus only. | `int`, `BigInt`, `double`, custom value |
+| `z` | Remove the minus when rounding produces zero. | Off; clears a sign only after rounding to zero. | `double`, custom value |
+| `#` | Request a radix prefix or decimal point. | Off; a radix prefix or forced decimal point, with no visible prefix for decimal integers. | `int`, `BigInt`, `double`, custom value |
+| `0` | Request sign-aware numeric zero padding. | Off; numeric sign-aware zero padding, passed through to a custom formatter. | `int`, `BigInt`, `double`, custom value |
+| `ASCII_DIGIT+` | Set the minimum field width. | Absent; range 0…100000. | `String`, `int`, `BigInt`, `double`, custom value |
+| `,`, `_` | Group integer digits with comma or underscore. | Absent; comma is decimal-only, underscore supports every non-locale radix, and custom formatters receive only this separator. | `int`, `BigInt`, `double`, custom value |
+| `.ASCII_DIGIT+` | Truncate text or control numeric precision. | Absent; truncates text, controls numeric digits, and passes an integer value to a custom formatter. | `String`, `double`, custom value |
+| `.,`, `._`, `precision suffix ,`, `precision suffix _` | Group fractional digits after rounding. | Absent; accepted syntactically but not exposed to custom formatters. | `double` |
+| `built-in letter`, `custom_name` | Select a built-in presentation or custom formatter. | Inferred from the value when empty. | any value |
+| `:balanced specification text` | Pass resolved text after the custom formatter name. | Absent differs from empty; nested fields resolve before the callback. | custom value |
+
+### Brace presentation matrix
+
+| Type | Accepts | Allowed option tokens | Result | Default precision |
+|---|---|---|---|---|
+| *empty* | any value | `<`, `>`, `^` (`String`, `int`, `BigInt`, `double` only); `=` (`int`, `BigInt`, `double` only); `+`, `-`, ` ` (`int`, `BigInt`, `double` only); `z` (`double` only); `#` (`int`, `BigInt`, `double` only); `0` (`int`, `BigInt`, `double` only); `ASCII_DIGIT+` (`String`, `int`, `BigInt`, `double` only); `,`, `_` (`int`, `BigInt`, `double` only); `.ASCII_DIGIT+` (`String`, `double` only); `.,`, `._`, `precision suffix ,`, `precision suffix _` (`double` only); *empty* | Value-default text or one matching custom formatter. | Depends on the value type. |
+| `s` | `String` | `<`, `>`, `^`; `ASCII_DIGIT+`; `.ASCII_DIGIT+`; `s` | [Text, optionally truncated.](#text-formatting) | Not specified. |
+| `c` | `int`, `BigInt` | `<`, `>`, `^`; `ASCII_DIGIT+`; `c` | [One Unicode scalar.](#character-values) | Not specified. |
+| `d` | `int`, `BigInt` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `d` | Exact decimal integer. | Not specified. |
+| `b` | `int`, `BigInt` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `#`; `0`; `ASCII_DIGIT+`; `_`; `b` | Exact binary integer. | Not specified. |
+| `o` | `int`, `BigInt` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `#`; `0`; `ASCII_DIGIT+`; `_`; `o` | Exact octal integer. | Not specified. |
+| `x`, `X` | `int`, `BigInt` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `#`; `0`; `ASCII_DIGIT+`; `_`; `x`, `X` | Exact lower- or uppercase hexadecimal integer. | Not specified. |
+| `n` | `int`, `BigInt`, `double` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `z` (`double` only); `#`; `0`; `ASCII_DIGIT+`; `.ASCII_DIGIT+` (`double` only); `n` | [Locale-aware decimal or general number.](#number-locales) | Floating values use the general default. |
+| `f`, `F` | `int`, `BigInt`, `double` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `z`; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `.ASCII_DIGIT+`; `.,`, `._`, `precision suffix ,`, `precision suffix _`; `f`, `F` | [Fixed-point number.](#double-formatting-profiles) | 6 fractional digits |
+| `e`, `E` | `int`, `BigInt`, `double` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `z`; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `.ASCII_DIGIT+`; `.,`, `._`, `precision suffix ,`, `precision suffix _`; `e`, `E` | [Scientific notation.](#double-formatting-profiles) | SDK shortest exponent or compatible precision 6 |
+| `g`, `G` | `int`, `BigInt`, `double` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `z`; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `.ASCII_DIGIT+`; `.,`, `._`, `precision suffix ,`, `precision suffix _`; `g`, `G` | [General decimal notation.](#double-formatting-profiles) | SDK shortest or compatible significant precision 6 |
+| `%` | `int`, `BigInt`, `double` | `<`, `>`, `^`, `=`; `+`, `-`, ` `; `z`; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `.ASCII_DIGIT+`; `.,`, `._`, `precision suffix ,`, `precision suffix _`; `%` | [Value multiplied by 100 with a percent suffix.](#double-formatting-profiles) | 6 fractional digits |
+| `ASCII name` | custom value | `<`, `>`, `^`; `+`, `-`, ` `; `z`; `#`; `0`; `ASCII_DIGIT+`; `,`, `_`; `.ASCII_DIGIT+`; `ASCII name`; `:balanced specification text` | [Custom callback output with engine-applied layout.](#custom-formatters) | Not specified. |
+
+### Printf grammar and dynamic options
+
+```text
+template = (literal | conversion)*
+conversion = "%" flags width? precision? type
+flags = ("-" | "+" | " " | "#" | "0")*
+width = ASCII_DIGIT+ | "*"
+precision = "." (ASCII_DIGIT* | "*")
+no "$" positions; no h/l/j/z/t/L modifiers
+```
+
+| Syntax | Meaning |
+|---|---|
+| `template = (literal \| conversion)*` | Percent begins every conversion. |
+| `conversion = "%" flags width? precision? type` | Fixed order. |
+| `flags = ("-" \| "+" \| " " \| "#" \| "0")*` | Repeats collapse; `+` beats space, `-` beats zero. |
+| `width = ASCII_DIGIT+ \| "*"` | Dynamic width is consumed before precision and value. |
+| `precision = "." (ASCII_DIGIT* \| "*")` | Empty is zero; negative dynamic precision is absent. |
+| `no "$" positions; no h/l/j/z/t/L modifiers` | Unsupported C/POSIX syntax is rejected. |
+
+| Tokens | Meaning | Default | Applies to |
+|---|---|---|---|
+| `ASCII_DIGIT+`, `*` | Set literal or argument-supplied minimum width. | Absent for every value conversion; `%%` forbids it. | any value |
+| `.ASCII_DIGIT*`, `.*` | Set literal or argument-supplied precision. | Absent for text, integer, and floating conversions; `%c` and `%%` forbid it. | `String`, `int`, `BigInt`, `double` |
+
+### Printf flag matrix
+
+| Flag | Allowed conversions | Meaning | Default |
+|---|---|---|---|
+| `-` | `s`, `c`, `d`, `i`, `u`, `o`, `x`, `X`, `f`, `F`, `e`, `E`, `g`, `G`, `a`, `A` | Left-align the converted value. | Right alignment for every value conversion. |
+| `+` | `d`, `i`, `f`, `F`, `e`, `E`, `g`, `G`, `a`, `A` | Show a plus sign for a non-negative signed value. | Minus only. |
+| ` ` | `d`, `i`, `f`, `F`, `e`, `E`, `g`, `G`, `a`, `A` | Prefix a non-negative signed value with a space. | Off; ignored when `+` exists. |
+| `#` | `o`, `x`, `X`, `f`, `F`, `e`, `E`, `g`, `G`, `a`, `A` | Request the conversion's alternate form. | Off. |
+| `0` | `d`, `i`, `u`, `o`, `x`, `X`, `f`, `F`, `e`, `E`, `g`, `G`, `a`, `A` | Pad a numeric conversion with zeros. | Off; disabled by `-`, and for integers by precision. |
+
+### Printf conversion matrix
+
+| Type | Accepts | Allowed option tokens | Result | Default precision |
+|---|---|---|---|---|
+| `s` | any value | `-`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [`toString()` text, optionally truncated.](#unicode-text-units) | Not specified. |
+| `c` | `int`, `BigInt` | `-`; `ASCII_DIGIT+`, `*` | [One Unicode scalar.](#character-values) | Not specified. |
+| `d`, `i` | `int`, `BigInt` | `-`; `+`; ` `; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Signed decimal integer.](#sprintf) | No leading precision zeros. |
+| `u` | non-negative `int`, `BigInt` | `-`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Non-negative decimal integer.](#sprintf) | No leading precision zeros. |
+| `o` | non-negative `int`, `BigInt` | `-`; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Non-negative octal integer.](#sprintf) | No leading precision zeros. |
+| `x`, `X` | non-negative `int`, `BigInt` | `-`; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Non-negative hexadecimal integer.](#sprintf) | No leading precision zeros. |
+| `f`, `F` | `double` | `-`; `+`; ` `; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Fixed-point double.](#double-formatting-profiles) | 6 fractional digits |
+| `e`, `E` | `double` | `-`; `+`; ` `; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Scientific double.](#double-formatting-profiles) | SDK exponent spelling when absent, otherwise requested; compatible default 6 |
+| `g`, `G` | `double` | `-`; `+`; ` `; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [General decimal double.](#double-formatting-profiles) | SDK `toString` when absent; compatible significant precision 6 |
+| `a`, `A` | `double` | `-`; `+`; ` `; `#`; `0`; `ASCII_DIGIT+`, `*`; `.ASCII_DIGIT*`, `.*` | [Exact hexadecimal binary64 notation.](#double-formatting-profiles) | Exact trimmed notation |
+| `%` | — | — | [Literal percent; no value consumed.](#sprintf) | Not specified. |
+
+### Limits
+
+| Rule | Contract |
+|---|---|
+| Safe option size | `brace and printf literal width/precision ≤ 100000` |
+| Dynamic width | `printf dynamic width −100000…100000; negative means left alignment` |
+| Dynamic precision | `printf dynamic precision ≤ 100000; every negative value means absent` |
+| Fill expansion | `width * fill.length ≤ 200000 UTF-16 code units` |
+| Field indexes | `brace positional and numeric item index ≤ 9223372036854775807` |
+| Nesting depth | `one nested replacement-field level` |
+| Dart-profile precision | `` Dart profile: general/empty/`n` 1…21; `f`/`e`/`%` 0…20 `` |
+| Compatible-profile precision | `` compatible profile accepts 0…100000; `g` precision 0 behaves as 1 `` |
+
+### Error classes
+
+| Rule | Contract |
+|---|---|
+| Malformed template | `InvalidFormatException` |
+| Inapplicable options | `InvalidSpecifierException` |
+| Unsupported value | `UnsupportedFormatValueException` |
+| Unsupported brace conversion | `UnsupportedConversionException` |
+| Missing argument | `MissingFormatArgumentException` |
+
+<!-- END GENERATED FORMAT REFERENCE -->
 
 ## Text formatting
+
+The complete token set for text is in the
+[brace presentation matrix](#brace-presentation-matrix).
 
 Fill, alignment, and width apply to whatever the placeholder produced, and
 precision truncates text rather than rounding it:
@@ -124,6 +227,10 @@ formatWith('{٠}', positional: ['first']);  // first
 
 ## Character values
 
+The exact brace and printf option sets for characters are in the
+[brace presentation matrix](#brace-presentation-matrix) and
+[printf conversion matrix](#printf-conversion-matrix).
+
 The `c` conversion turns a number into the character it encodes, in both
 mini-languages:
 
@@ -143,6 +250,10 @@ format('{:05c}', 0x41);    // throws InvalidSpecifierException
 ```
 
 ## Unicode text units
+
+The [brace presentation matrix](#brace-presentation-matrix) and
+[printf conversion matrix](#printf-conversion-matrix) link text conversions
+back here because these units govern their width, precision, and fill behavior.
 
 Width and precision count Unicode scalar values by default. Configure grapheme
 clusters when emoji and combined characters should count as one visible
@@ -173,6 +284,10 @@ TextUnit.unicodeScalars.length('👩‍👩‍👧‍👦ab');    // 9
 ```
 
 ## Double formatting profiles
+
+The numeric rows and their default precisions are collected in the
+[brace presentation matrix](#brace-presentation-matrix) and
+[printf conversion matrix](#printf-conversion-matrix).
 
 Decimal `double` conversions use the Dart SDK by default. In particular, `f`,
 `e`, and `g` delegate to `toStringAsFixed`, `toStringAsExponential`, and
@@ -245,14 +360,14 @@ sprintf('%s: %#08x', 'answer', 42);       // answer: 0x00002a
 vsprintf('%*.*f', [8, 2, 1.5]);           //     1.50
 ```
 
-The C-style subset supports `%%`, `%c`, `%s`, signed and unsigned integer
-conversions, and decimal or hexadecimal floating-point conversions. Width and
-precision may be literals or `*` arguments. Decimal floating-point conversions
-use the selected double profile: Dart SDK semantics by default, or deterministic
+The complete set of letters, accepted values, and flags is in the
+[printf conversion matrix](#printf-conversion-matrix). Width and precision may
+be literals or `*` arguments. Decimal floating-point conversions use the
+selected double profile: Dart SDK semantics by default, or deterministic
 C++23-compatible nearest-even rounding and `inf`/`nan` spelling in compatible
-mode. In the default profile `sprintf('%e', 12.5)` returns `1.25e+1`, not the
-C `1.250000e+01`: select `DoubleFormatMode.compatible` when C-exact decimal
-output is required. Negative unsigned values are rejected instead of wrapped.
+mode. In the default profile `sprintf('%e', 12.5)` returns `1.25e+1`, not the C
+`1.250000e+01`: select `DoubleFormatMode.compatible` when C-exact decimal output
+is required. Negative unsigned values are rejected instead of wrapped.
 
 This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX
 `$` argument indexing, and C++26 `%b`/`%B`. String width and precision use the
@@ -263,6 +378,10 @@ to a C machine width. A configured `NumberLocale`, including one supplied by
 `LC_ALL=C` compatibility profile.
 
 ## Number locales
+
+The locale-aware brace and printf rows are indexed in the
+[brace presentation matrix](#brace-presentation-matrix) and
+[printf conversion matrix](#printf-conversion-matrix).
 
 The `n` presentation type reads a `NumberLocale`. The `,` and `_` grouping
 flags do not: they always write the separator they name, exactly as CPython
@@ -313,6 +432,9 @@ A locale may localize signs, separators, and digits beyond what the C locale
 core specifies; the compatibility fixtures pin only the C locale behavior.
 
 ## Custom formatters
+
+The accepted built-in layout tokens and callback-specific payload token are in
+the [brace presentation matrix](#brace-presentation-matrix).
 
 Implement `Formatter<T>`, then provide it to an immutable `Format` instance:
 

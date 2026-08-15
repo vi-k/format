@@ -88,6 +88,8 @@ final class TypeContract {
   final List<ValueCategory> accepts;
   final List<String> optionIds;
   final Map<String, List<String>> excludedOptionTokens;
+  final Map<String, List<ValueCategory>> optionAppliesTo;
+  final Map<String, List<ValueCategory>> tokenAppliesTo;
   final LocalizedText result;
   final LocalizedText defaultPrecision;
   final LocalizedText? deepLink;
@@ -99,6 +101,8 @@ final class TypeContract {
     required this.accepts,
     required this.optionIds,
     this.excludedOptionTokens = const {},
+    this.optionAppliesTo = const {},
+    this.tokenAppliesTo = const {},
     required this.result,
     required this.defaultPrecision,
     required this.evidence,

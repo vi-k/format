@@ -27,6 +27,21 @@ void main() {
     };
 
     expect(types['brace.none']!.optionIds, isNot(contains('brace.payload')));
+    expect(types['brace.none']!.tokenAppliesTo['='], const [
+      ValueCategory.integer,
+      ValueCategory.floating,
+    ]);
+    for (final id in [
+      'brace.fixed',
+      'brace.scientific',
+      'brace.general',
+      'brace.percent',
+    ]) {
+      expect(types[id]!.optionAppliesTo['brace.precision'], const [
+        ValueCategory.integer,
+        ValueCategory.floating,
+      ]);
+    }
     expect(types['brace.string']!.excludedOptionTokens, const {
       'brace.fill_align': ['='],
     });
@@ -132,6 +147,37 @@ void main() {
     expect(
       validateFormatReferenceContract(contract),
       contains(contains('duplicate excluded token: x')),
+    );
+  });
+
+  // Applicability overrides are semantic source data, so neither their option
+  // ids nor their individual token keys may point outside the type's options.
+  test('unknown applicability option ids and tokens are rejected', () {
+    final contract = fixtureContract(
+      options: [
+        _option('known', const ['x']),
+      ],
+      types: [
+        _type(
+          'type',
+          const ['t'],
+          optionIds: const ['known'],
+          optionAppliesTo: const {
+            'absent': [ValueCategory.text],
+          },
+          tokenAppliesTo: const {
+            'y': [ValueCategory.text],
+          },
+        ),
+      ],
+    );
+
+    expect(
+      validateFormatReferenceContract(contract),
+      containsAll([
+        contains('unknown applicability option: absent'),
+        contains('unknown applicability token: y'),
+      ]),
     );
   });
 
@@ -291,12 +337,16 @@ TypeContract _type(
   List<String> tokens, {
   List<String> optionIds = const [],
   Map<String, List<String>> excludedOptionTokens = const {},
+  Map<String, List<ValueCategory>> optionAppliesTo = const {},
+  Map<String, List<ValueCategory>> tokenAppliesTo = const {},
 }) => TypeContract(
   id: id,
   tokens: tokens,
   accepts: const [ValueCategory.any],
   optionIds: optionIds,
   excludedOptionTokens: excludedOptionTokens,
+  optionAppliesTo: optionAppliesTo,
+  tokenAppliesTo: tokenAppliesTo,
   result: const LocalizedText('Result', 'Результат'),
   defaultPrecision: const LocalizedText('None', 'Нет'),
   evidence: const RuleEvidence(successCaseIds: [], requiresSuccessCase: false),

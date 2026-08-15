@@ -425,6 +425,36 @@ const _excludeCommaGrouping = {
   'brace.integer_grouping': [','],
 };
 
+const _integerAndFloating = [ValueCategory.integer, ValueCategory.floating];
+
+const _emptyPresentationOptionAppliesTo = {
+  'brace.fill_align': [
+    ValueCategory.text,
+    ValueCategory.integer,
+    ValueCategory.floating,
+  ],
+  'brace.sign': _integerAndFloating,
+  'brace.negative_zero': [ValueCategory.floating],
+  'brace.alternate': _integerAndFloating,
+  'brace.zero': _integerAndFloating,
+  'brace.width': [
+    ValueCategory.text,
+    ValueCategory.integer,
+    ValueCategory.floating,
+  ],
+  'brace.integer_grouping': _integerAndFloating,
+  'brace.precision': [ValueCategory.text, ValueCategory.floating],
+  'brace.fraction_grouping': [ValueCategory.floating],
+};
+
+const _emptyPresentationTokenAppliesTo = {'=': _integerAndFloating};
+
+const _promotedFloatingOptionAppliesTo = {
+  'brace.negative_zero': _integerAndFloating,
+  'brace.precision': _integerAndFloating,
+  'brace.fraction_grouping': _integerAndFloating,
+};
+
 const _braceNumericOptions = [
   'brace.fill_align',
   'brace.sign',
@@ -465,6 +495,8 @@ const _braceTypes = <TypeContract>[
       'brace.fraction_grouping',
       'brace.type',
     ],
+    optionAppliesTo: _emptyPresentationOptionAppliesTo,
+    tokenAppliesTo: _emptyPresentationTokenAppliesTo,
     result: LocalizedText(
       'Value-default text or one matching custom formatter.',
       'Текст значения по умолчанию или единственный подходящий форматтер.',
@@ -605,6 +637,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['f', 'F'],
     accepts: [ValueCategory.integer, ValueCategory.floating],
     optionIds: _braceFloatingOptions,
+    optionAppliesTo: _promotedFloatingOptionAppliesTo,
     result: LocalizedText(
       'Fixed-point number.',
       'Число с фиксированной точкой.',
@@ -625,6 +658,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['e', 'E'],
     accepts: [ValueCategory.integer, ValueCategory.floating],
     optionIds: _braceFloatingOptions,
+    optionAppliesTo: _promotedFloatingOptionAppliesTo,
     result: LocalizedText('Scientific notation.', 'Научная запись.'),
     defaultPrecision: LocalizedText(
       'SDK shortest exponent or compatible precision 6',
@@ -645,6 +679,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['g', 'G'],
     accepts: [ValueCategory.integer, ValueCategory.floating],
     optionIds: _braceFloatingOptions,
+    optionAppliesTo: _promotedFloatingOptionAppliesTo,
     result: LocalizedText(
       'General decimal notation.',
       'Общая десятичная запись.',
@@ -668,6 +703,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['%'],
     accepts: [ValueCategory.integer, ValueCategory.floating],
     optionIds: _braceFloatingOptions,
+    optionAppliesTo: _promotedFloatingOptionAppliesTo,
     result: LocalizedText(
       'Value multiplied by 100 with a percent suffix.',
       'Значение, умноженное на 100, со знаком процента.',
@@ -986,7 +1022,10 @@ const _printfTypes = <TypeContract>[
       'Текст `toString()`, при необходимости обрезанный.',
     ),
     defaultPrecision: LocalizedText('Not specified.', 'не задана'),
-    deepLink: LocalizedText('#sprintf', '#sprintf'),
+    deepLink: LocalizedText(
+      '#unicode-text-units',
+      '#единицы-измерения-текста-в-unicode',
+    ),
     evidence: RuleEvidence(successCaseIds: ['printf.type.s.output']),
   ),
   TypeContract(
