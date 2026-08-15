@@ -309,6 +309,79 @@ void main() {
       );
     });
 
+    // A generated README changed by hand must be reported by both check
+    // entry points without overwriting any artifact that the developer needs
+    // to inspect before deciding whether to regenerate it.
+    test(
+      'check and the common verifier report a stale English README',
+      () async {
+        await generateFormatReferenceArtifacts(
+          root: root,
+          mode: FormatReferenceGenerationMode.write,
+        );
+        final english = File('${root.path}/README.md');
+        final russian = File('${root.path}/README.ru.md');
+        final cases = File(
+          '${root.path}/test/support/format_reference_cases.dart',
+        );
+        await english.writeAsString(
+          (await english.readAsString()).replaceFirst(
+            '## Brace template grammar',
+            '## stale',
+          ),
+        );
+        final englishBeforeCheck = await english.readAsString();
+        final russianBeforeCheck = await russian.readAsString();
+        final casesBeforeCheck = await cases.readAsString();
+
+        final stale = await generateFormatReferenceArtifacts(
+          root: root,
+          mode: FormatReferenceGenerationMode.check,
+        );
+
+        expect(stale, contains('README.md'));
+        expect(await english.readAsString(), englishBeforeCheck);
+        expect(await russian.readAsString(), russianBeforeCheck);
+        expect(await cases.readAsString(), casesBeforeCheck);
+
+        final verifier =
+            File('tool/verify_generated_artifacts.dart').absolute.path;
+        final result = await Process.run(Platform.resolvedExecutable, [
+          'run',
+          verifier,
+        ], workingDirectory: root.path);
+        expect(result.exitCode, isNot(0));
+        expect(
+          '${result.stdout}${result.stderr}',
+          contains(
+            'README.md is out of date: run '
+            '`dart run tool/generate_format_reference.dart --write`.',
+          ),
+        );
+      },
+    );
+
+    // The Dart bridge reaches package-archive tests, so a stale projection
+    // needs its own repair report even when both README files still match.
+    test('check reports a stale conformance projection', () async {
+      await generateFormatReferenceArtifacts(
+        root: root,
+        mode: FormatReferenceGenerationMode.write,
+      );
+      final cases = File(
+        '${root.path}/test/support/format_reference_cases.dart',
+      );
+      await cases.writeAsString('stale\n');
+
+      expect(
+        await generateFormatReferenceArtifacts(
+          root: root,
+          mode: FormatReferenceGenerationMode.check,
+        ),
+        contains('test/support/format_reference_cases.dart'),
+      );
+    });
+
     // Generator escaping is only valid if the Dart formatter parses the
     // complete emitted bridge and leaves its bytes unchanged.
     test('generated Dart is already formatter-stable', () async {

@@ -1,9 +1,10 @@
 # Единый источник справочника форматов
 
-Статус: согласован в диалоге, прошёл self-review и одобрен владельцем
-2026-08-14; implementation plan принят к исполнению. Задача 1 из четырёх
-исполнена 2026-08-15: каталог и validator записаны, генерация начнётся
-с задачи 2.
+Статус: реализован 2026-08-15. Источник истины —
+`tool/src/format_reference_contract.dart`; генератор, архивная проекция и
+обязательная сверка — `tool/src/format_reference_generator.dart`,
+`tool/generate_format_reference.dart` и
+`tool/verify_generated_artifacts.dart`.
 
 ## Контекст
 

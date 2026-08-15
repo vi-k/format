@@ -1,11 +1,11 @@
 // Checks that every committed generated artifact still matches its generator.
 //
-// Three files in this repository are produced by tools rather than written:
-// the Python reference fixtures, the Python identifier tables, and the C++
-// sprintf reference. Nothing about them announces that they are stale — a
-// generator edited without regenerating, or an artifact edited by hand, leaves
-// a repository where the tests pass and the fixtures no longer describe what
-// the generator produces.
+// Generated artifacts in this repository include the Python reference fixtures,
+// the Python identifier tables, the C++ sprintf reference, two README reference
+// blocks, and the Dart conformance projection. Nothing about them announces
+// that they are stale — a generator edited without regenerating, or an artifact
+// edited by hand, leaves a repository where the tests pass and the fixtures no
+// longer describe what the generator produces.
 //
 // So this tool regenerates each one into a scratch directory and compares. The
 // artifacts are never overwritten: a checker that writes to the working tree
@@ -21,6 +21,8 @@
 //   dart run tool/verify_generated_artifacts.dart --self-test
 
 import 'dart:io';
+
+import 'src/format_reference_generator.dart';
 
 Future<void> main(List<String> arguments) async {
   var python = 'python3.14';
@@ -53,7 +55,18 @@ Future<void> main(List<String> arguments) async {
   final scratch = await Directory.systemTemp.createTemp('format-artifacts-');
   final failures = <String>[];
   try {
+    final staleReference = await generateFormatReferenceArtifacts(
+      root: Directory.current,
+      mode: FormatReferenceGenerationMode.check,
+    );
     failures
+      ..addAll(
+        staleReference.map(
+          (path) =>
+              '$path is out of date: run '
+              '`dart run tool/generate_format_reference.dart --write`.',
+        ),
+      )
       ..addAll(await _checkPythonFixtures(python, scratch))
       ..addAll(await _checkPythonIdentifiers(python, scratch))
       ..addAll(await _checkSprintfFixtures(cxx, scratch));

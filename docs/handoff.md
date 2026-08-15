@@ -1,9 +1,8 @@
 # Handoff для новой сессии
 
 Статус: живой документ, обновляется каждую сессию. Обновлён 2026-08-15: Task
-1–2 справочника закоммичены и прошли независимые review; Task 3 завершена и
-закоммичена как `eedbe74` и ожидает независимого review. Исторически она была
-прервана до commit и полного gate; partial diff сохранён отдельно.
+1–3 справочника закоммичены и прошли независимые review; Task 4 подключает
+non-writing reference check к обязательному verifier и завершает весь план.
 Состояние: цифры `g`/`e`/пустого типа и фиксированная точка за точной
 шкалой берутся у платформы, `BigInt` остался откатом; кэш шаблонов
 перестаёт себя опрашивать при пробуксовке, и холодные брейсы под dart2js
@@ -1397,17 +1396,34 @@ brace parser и printf parser прошла 254 проверки. Изменен�
 Owner-diff `docs/backlog.md` сохранён без staging: его второй пункт удаляется
 только Task 4 после завершения общего generated-artifacts gate.
 
+## Что сделано 2026-08-15 (справочник форматов, Task 4)
+
+Обязательный `tool/verify_generated_artifacts.dart` теперь до внешних
+Python/C++ генераторов запускает non-writing
+`generateFormatReferenceArtifacts(...check)`. Он сообщает каждый stale путь
+README или `test/support/format_reference_cases.dart` с точной командой
+восстановления и не меняет checkout; `--self-test` по-прежнему не требует
+внешних инструментов. Scratch-интеграция намеренно портит только английский
+generated-блок, сохраняет снимки всех трёх артефактов, проверяет отсутствие
+записи library check и требует от общего verifier тот же repair path; отдельно
+закреплён stale Dart projection. RED общего entry point не содержал repair
+path, GREEN — 17 generator-тестов.
+
+Каталог содержит 70 semantic rows и 153 именованных conformance-case;
+сгенерированы `README.md`, `README.ru.md` и
+`test/support/format_reference_cases.dart`. Публичное поведение, exports,
+версия `3.0.0`, зависимости и performance baseline не менялись. Полный gate
+на документированном дереве: format — 126 файлов, analyzer чистый; VM — 616
+тестов, dart2js — 433 плюс 4 skip, dart2wasm — 570 плюс 1 skip; auxiliary —
+70, `format_intl` — 7, автономный pub-архив — 616; generated artifacts
+совпадают; покрытие — 96,04% (3156/3286) при полу 94%; benchmark suite — 15;
+quick-матрицы VM, JS и Wasm завершились с exit 0.
+
 ## Что открыто
 
-**Активная следующая работа — Task 4 единого справочника форматов:** подключить
-проверку README и generated conformance-проекции к общему
-generated-artifacts gate, затем удалить выполненный второй пункт owner backlog
-отдельным staging и завершить весь implementation plan. Основание —
-`docs/records/2026-08-15[1]-format-reference-source-plan.md`. Task 1
-(типизированный catalog/validator), Task 2 (генератор, обе README-секции и
-архивная проекция) и Task 3 (исполняемый conformance-тест и inventory seams)
-завершены. Предложение про эталоны по процессорам ниже по-прежнему ждёт решения
-владельца и не становится активной задачей автоматически.
+Активной implementation-работы после завершённого справочника нет. Следующее
+действие требует решения владельца: эталоны по процессорам ниже; оно не
+становится задачей автоматически.
 
 **Находки ревью и инфраструктурный follow-up закрыты.** Реестры
 `2026-08-05[5]` (30 из 30), `2026-08-13[1]` (4 High, 17 Medium, 22 Low) и
