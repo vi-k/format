@@ -60,6 +60,7 @@ List<String> validateFormatReferenceContract(FormatReferenceContract contract) {
 
   void checkDialect(DialectContract dialect) {
     final dialectOptionIds = <String>{};
+    final dialectOptionsById = <String, OptionContract>{};
     final optionTokens = <String, String>{};
     final typeTokens = <String, String>{};
 
@@ -69,6 +70,7 @@ List<String> validateFormatReferenceContract(FormatReferenceContract contract) {
     for (final option in dialect.options) {
       checkId(option.id, optionIds);
       dialectOptionIds.add(option.id);
+      dialectOptionsById.putIfAbsent(option.id, () => option);
       _checkText(issues, '${option.id}.meaning', option.meaning);
       _checkText(issues, '${option.id}.default', option.defaultValue);
       _checkTokens(issues, option.id, option.tokens, optionTokens);
@@ -86,6 +88,28 @@ List<String> validateFormatReferenceContract(FormatReferenceContract contract) {
       for (final optionId in type.optionIds) {
         if (!dialectOptionIds.contains(optionId)) {
           issues.add('${type.id}: unknown option: $optionId');
+        }
+      }
+      for (final exclusion in type.excludedOptionTokens.entries) {
+        final option = dialectOptionsById[exclusion.key];
+        if (option == null || !type.optionIds.contains(exclusion.key)) {
+          issues.add('${type.id}: unknown exclusion option: ${exclusion.key}');
+          continue;
+        }
+        final excludedTokens = <String>{};
+        for (final token in exclusion.value) {
+          if (!excludedTokens.add(token)) {
+            issues.add(
+              '${type.id}: duplicate excluded token: $token for '
+              '${exclusion.key}',
+            );
+          }
+          if (!option.tokens.contains(token)) {
+            issues.add(
+              '${type.id}: unknown excluded token: $token for '
+              '${exclusion.key}',
+            );
+          }
         }
       }
       checkEvidence(type.id, type.evidence);

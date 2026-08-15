@@ -18,6 +18,31 @@ void main() {
     expect(validateFormatReferenceContract(formatReferenceContract), isEmpty);
   });
 
+  // Adding payload to the empty presentation, or dropping one of the literal
+  // token exclusions below, would make a typed renderer advertise a
+  // specification that the corresponding brace presentation rejects.
+  test('brace type restrictions preserve the exact option-token matrix', () {
+    final types = {
+      for (final type in formatReferenceContract.brace.types) type.id: type,
+    };
+
+    expect(types['brace.none']!.optionIds, isNot(contains('brace.payload')));
+    expect(types['brace.string']!.excludedOptionTokens, const {
+      'brace.fill_align': ['='],
+    });
+    expect(types['brace.character']!.excludedOptionTokens, const {
+      'brace.fill_align': ['='],
+    });
+    for (final id in ['brace.binary', 'brace.octal', 'brace.hex']) {
+      expect(types[id]!.excludedOptionTokens, const {
+        'brace.integer_grouping': [','],
+      });
+    }
+    expect(types['brace.custom_type']!.excludedOptionTokens, const {
+      'brace.fill_align': ['='],
+    });
+  });
+
   // Reusing one semantic id within a semantic category would make generated
   // anchors and evidence ownership ambiguous.
   test('duplicate semantic ids are rejected', () {
@@ -30,6 +55,83 @@ void main() {
     expect(
       validateFormatReferenceContract(contract),
       contains(contains('duplicate semantic id: same')),
+    );
+  });
+
+  // Deleting exclusion-option validation would let a typo point outside the
+  // options actually exposed by this type and leave consumers unable to
+  // resolve the restriction.
+  test('unknown token-exclusion option ids are rejected', () {
+    final contract = fixtureContract(
+      options: [
+        _option('known', const ['x']),
+      ],
+      types: [
+        _type(
+          'type',
+          const ['t'],
+          optionIds: const ['known'],
+          excludedOptionTokens: const {
+            'absent': ['x'],
+          },
+        ),
+      ],
+    );
+
+    expect(
+      validateFormatReferenceContract(contract),
+      contains(contains('unknown exclusion option: absent')),
+    );
+  });
+
+  // Deleting excluded-token membership validation would allow a restriction
+  // that names no token in the referenced option, so it could never affect a
+  // generated matrix.
+  test('unknown excluded option tokens are rejected', () {
+    final contract = fixtureContract(
+      options: [
+        _option('known', const ['x']),
+      ],
+      types: [
+        _type(
+          'type',
+          const ['t'],
+          optionIds: const ['known'],
+          excludedOptionTokens: const {
+            'known': ['y'],
+          },
+        ),
+      ],
+    );
+
+    expect(
+      validateFormatReferenceContract(contract),
+      contains(contains('unknown excluded token: y')),
+    );
+  });
+
+  // Deleting per-exclusion duplicate tracking would let a renderer receive
+  // the same subtraction twice and produce duplicate constraint output.
+  test('duplicate excluded option tokens are rejected', () {
+    final contract = fixtureContract(
+      options: [
+        _option('known', const ['x']),
+      ],
+      types: [
+        _type(
+          'type',
+          const ['t'],
+          optionIds: const ['known'],
+          excludedOptionTokens: const {
+            'known': ['x', 'x'],
+          },
+        ),
+      ],
+    );
+
+    expect(
+      validateFormatReferenceContract(contract),
+      contains(contains('duplicate excluded token: x')),
     );
   });
 
@@ -188,11 +290,13 @@ TypeContract _type(
   String id,
   List<String> tokens, {
   List<String> optionIds = const [],
+  Map<String, List<String>> excludedOptionTokens = const {},
 }) => TypeContract(
   id: id,
   tokens: tokens,
   accepts: const [ValueCategory.any],
   optionIds: optionIds,
+  excludedOptionTokens: excludedOptionTokens,
   result: const LocalizedText('Result', 'Результат'),
   defaultPrecision: const LocalizedText('None', 'Нет'),
   evidence: const RuleEvidence(successCaseIds: [], requiresSuccessCase: false),

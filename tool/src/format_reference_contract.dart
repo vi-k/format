@@ -417,6 +417,14 @@ const formatReferenceContract = FormatReferenceContract(
 
 const _braceLayoutOptions = ['brace.fill_align', 'brace.width', 'brace.type'];
 
+const _excludeSignAlignment = {
+  'brace.fill_align': ['='],
+};
+
+const _excludeCommaGrouping = {
+  'brace.integer_grouping': [','],
+};
+
 const _braceNumericOptions = [
   'brace.fill_align',
   'brace.sign',
@@ -456,7 +464,6 @@ const _braceTypes = <TypeContract>[
       'brace.precision',
       'brace.fraction_grouping',
       'brace.type',
-      'brace.payload',
     ],
     result: LocalizedText(
       'Value-default text or one matching custom formatter.',
@@ -478,6 +485,7 @@ const _braceTypes = <TypeContract>[
       'brace.precision',
       'brace.type',
     ],
+    excludedOptionTokens: _excludeSignAlignment,
     result: LocalizedText(
       'Text, optionally truncated.',
       'Текст, при необходимости обрезанный.',
@@ -495,6 +503,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['c'],
     accepts: [ValueCategory.integer],
     optionIds: _braceLayoutOptions,
+    excludedOptionTokens: _excludeSignAlignment,
     result: LocalizedText('One Unicode scalar.', 'Один скаляр Unicode.'),
     defaultPrecision: LocalizedText('Not specified.', 'не задана'),
     deepLink: LocalizedText('#character-values', '#символьные-значения'),
@@ -522,6 +531,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['b'],
     accepts: [ValueCategory.integer],
     optionIds: _braceNumericOptions,
+    excludedOptionTokens: _excludeCommaGrouping,
     result: LocalizedText('Exact binary integer.', 'Точное двоичное целое.'),
     defaultPrecision: LocalizedText('Not specified.', 'не задана'),
     evidence: RuleEvidence(
@@ -535,6 +545,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['o'],
     accepts: [ValueCategory.integer],
     optionIds: _braceNumericOptions,
+    excludedOptionTokens: _excludeCommaGrouping,
     result: LocalizedText('Exact octal integer.', 'Точное восьмеричное целое.'),
     defaultPrecision: LocalizedText('Not specified.', 'не задана'),
     evidence: RuleEvidence(
@@ -548,6 +559,7 @@ const _braceTypes = <TypeContract>[
     tokens: ['x', 'X'],
     accepts: [ValueCategory.integer],
     optionIds: _braceNumericOptions,
+    excludedOptionTokens: _excludeCommaGrouping,
     result: LocalizedText(
       'Exact lower- or uppercase hexadecimal integer.',
       'Точное шестнадцатеричное целое в нижнем или верхнем регистре.',
@@ -687,6 +699,7 @@ const _braceTypes = <TypeContract>[
       'brace.type',
       'brace.payload',
     ],
+    excludedOptionTokens: _excludeSignAlignment,
     result: LocalizedText(
       'Custom callback output with engine-applied layout.',
       'Результат callback с раскладкой, применённой движком.',

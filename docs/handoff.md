@@ -1315,14 +1315,22 @@ token'ов и case ids, ссылки на существующие случаи,
 `dart analyze --fatal-infos tool/src tool/test/format_reference_contract_test.dart`
 чистый.
 
-Полный gate на дереве реализации перед итоговым обновлением handoff зелёный:
-format — 120 файлов, 0 изменений; analyzer чистый; VM — 616 тестов, dart2js —
-433 плюс 4 skip, dart2wasm — 415 плюс 1 skip; auxiliary — 48,
-`format_intl` — 7, автономный pub-архив — 616; generated artifacts совпадают;
-покрытие — 96,00% (3146/3277) при полу 94%; benchmark suite — 15 тестов,
-quick-матрицы VM/JS/Wasm — 62,7/72,2/65,4 секунды. Изменения не заявлены как
-ускорение, поэтому отдельный performance A/B не требовался. После этой записи
-полный gate повторяется на окончательном дереве перед коммитом.
+Первый review-раунд расширил модель без prose-обхода:
+`TypeContract.excludedOptionTokens` типизированно вычитает отдельные token из
+разрешённой type-опции. Пустой brace-тип больше не объявляет payload;
+нечисловые `s`, `c` и custom исключают sign-aware `=`, а `b`, `o`, `x`/`X` —
+десятичную запятую grouping. Validator отвергает неизвестную type-опцию,
+неизвестный token и повтор token в таком исключении. Targeted TDD после
+добавления только поля дал четыре ожидаемых поведенческих отказа; окончательный
+прогон — 7 тестов из 7, узкий analyzer чистый.
+
+Полный gate выполнен на окончательном post-handoff дереве: format — 120 файлов,
+0 изменений; analyzer чистый; VM — 616 тестов, dart2js — 433 плюс 4 skip,
+dart2wasm — 415 плюс 1 skip; auxiliary — 52, `format_intl` — 7, автономный
+pub-архив — 616; generated artifacts совпадают; покрытие — 96,00%
+(3146/3277) при полу 94%; benchmark suite — 15 тестов; quick-матрицы VM, JS и
+Wasm завершились с exit 0. Изменения не заявлены как ускорение, поэтому
+отдельный performance A/B не требовался.
 
 ## Что открыто
 
