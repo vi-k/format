@@ -252,11 +252,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - name: Reject an incomplete controlled capture
-        if: inputs.capture_baseline == true && inputs.baseline_revision == ''
+      - name: Validate the controlled capture revision
+        if: inputs.capture_baseline == true
+        env:
+          BASELINE_REVISION: ${{ inputs.baseline_revision }}
         run: |
-          echo 'capture_baseline requires baseline_revision' >&2
-          exit 1
+          if [[ ! "$BASELINE_REVISION" =~ ^[0-9A-Fa-f]{40}$ ]]; then
+            echo 'capture_baseline requires a full 40-hex baseline_revision' >&2
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.capture_baseline && inputs.baseline_revision || github.sha }}

@@ -15,9 +15,15 @@ void main() {
 
     expect(workflow, contains('capture_baseline:'));
     expect(workflow, contains('baseline_revision:'));
+    expect(workflow, contains('contents: read'));
+    expect(workflow, contains('if: inputs.capture_baseline == true'));
+    expect(workflow, contains(r'^[0-9A-Fa-f]{40}$'));
     expect(
       workflow,
-      contains(r'ref: ${{ inputs.capture_baseline && inputs.baseline_revision'),
+      contains(
+        r'ref: ${{ inputs.capture_baseline && '
+        'inputs.baseline_revision || github.sha }}',
+      ),
     );
     expect(workflow, contains('if: inputs.capture_baseline != true'));
     expect(workflow, contains('jit-*.json'));
