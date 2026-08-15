@@ -119,8 +119,12 @@ final class GateEnvironment {
 
   /// How this environment differs from [other] where it matters, most
   /// significant first. Empty when the two are comparable.
-  List<String> differencesFrom(GateEnvironment other) => [
-    if (cpu != other.cpu) 'cpu: recorded on ${other.cpu}, measured on $cpu',
+  List<String> differencesFrom(
+    GateEnvironment other, {
+    bool includeCpu = true,
+  }) => [
+    if (includeCpu && cpu != other.cpu)
+      'cpu: recorded on ${other.cpu}, measured on $cpu',
     if (nodeVersion != other.nodeVersion)
       'node: recorded on ${other.nodeVersion}, measured on $nodeVersion',
     if (dartVersion != other.dartVersion)
@@ -128,40 +132,30 @@ final class GateEnvironment {
   ];
 }
 
-/// The recorded per-scenario and per-phase ratios an evaluation compares
-/// against, keyed `runtime/dialect` and, within that, by phase name and by
-/// scenario id.
-final class GateBaseline {
-  final String sourceRevision;
+/// One CPU-specific collection of ratios an evaluation compares against,
+/// keyed `runtime/dialect` and, within that, by phase name and scenario id.
+final class GateReference {
   final String recordedAt;
-
-  /// The machine the reference was measured on, or null for a reference
-  /// recorded before this was written down.
-  ///
-  /// A ratio is only a number about the code when both sides of it ran in the
-  /// same place. Without this, a comparison across machines is
-  /// indistinguishable from a regression — which is not hypothetical: three
-  /// consecutive nightly runs landed on an Intel Xeon 8573C, an EPYC 7763 and
-  /// an EPYC 9V74, and the gate reported the two hardware changes as failures.
-  final GateEnvironment? environment;
+  final GateEnvironment environment;
   final Map<String, Map<String, double>> phaseMeans;
   final Map<String, Map<String, double>> scenarioRatios;
 
-  const GateBaseline({
-    required this.sourceRevision,
+  GateReference({
     required this.recordedAt,
     required this.environment,
-    required this.phaseMeans,
-    required this.scenarioRatios,
+    required Map<String, Map<String, double>> phaseMeans,
+    required Map<String, Map<String, double>> scenarioRatios,
+  }) : phaseMeans = _freeze(phaseMeans),
+       scenarioRatios = _freeze(scenarioRatios);
+
+  static Map<String, Map<String, double>> _freeze(
+    Map<String, Map<String, double>> values,
+  ) => Map<String, Map<String, double>>.unmodifiable({
+    for (final entry in values.entries)
+      entry.key: Map<String, double>.unmodifiable(entry.value),
   });
 
-  static String keyFor(String runtime, BenchmarkDialect dialect) =>
-      '$runtime/${dialect.name}';
-
-  factory GateBaseline.fromJson(Map<String, Object?> json) {
-    if (json['schemaVersion'] != 1) {
-      throw const FormatException('Unsupported gate baseline schema.');
-    }
+  factory GateReference.fromJson(Map<String, Object?> json) {
     Map<String, Map<String, double>> read(String field) => {
       for (final entry in (json[field]! as Map).entries)
         entry.key as String: {
@@ -171,25 +165,22 @@ final class GateBaseline {
     };
 
     final environment = json['environment'];
-    return GateBaseline(
-      sourceRevision: json['sourceRevision']! as String,
+    if (environment is! Map) {
+      throw const FormatException('A gate reference requires an environment.');
+    }
+    return GateReference(
       recordedAt: json['recordedAt']! as String,
-      environment:
-          environment == null
-              ? null
-              : GateEnvironment.fromJson(
-                Map<String, Object?>.from(environment as Map),
-              ),
+      environment: GateEnvironment.fromJson(
+        Map<String, Object?>.from(environment),
+      ),
       phaseMeans: read('phaseMeans'),
       scenarioRatios: read('scenarioRatios'),
     );
   }
 
   Map<String, Object?> toJson() => {
-    'schemaVersion': 1,
-    'sourceRevision': sourceRevision,
     'recordedAt': recordedAt,
-    if (environment != null) 'environment': environment!.toJson(),
+    'environment': environment.toJson(),
     'phaseMeans': phaseMeans,
     'scenarioRatios': scenarioRatios,
   };
@@ -214,6 +205,104 @@ final class GateBaseline {
     }
 
     return value;
+  }
+}
+
+/// The selected CPU reference and whether it is safe to use as a verdict.
+final class GateSelection {
+  final GateReference reference;
+  final bool exactCpuMatch;
+  final String measuredCpu;
+  final String primaryCpu;
+
+  const GateSelection({
+    required this.reference,
+    required this.exactCpuMatch,
+    required this.measuredCpu,
+    required this.primaryCpu,
+  });
+
+  List<String> differencesFrom(GateEnvironment measured) => [
+    if (!exactCpuMatch) _unknownCpuDifference(measuredCpu, primaryCpu),
+    ...measured.differencesFrom(reference.environment, includeCpu: false),
+  ];
+}
+
+String _unknownCpuDifference(String measuredCpu, String primaryCpu) =>
+    'cpu: no reference for $measuredCpu; diagnostic ratios use the primary '
+    '$primaryCpu reference';
+
+/// The CPU-keyed references recorded for one source revision.
+final class GateBaseline {
+  final String sourceRevision;
+  final String primaryCpu;
+  final Map<String, GateReference> references;
+
+  GateBaseline({
+    required this.sourceRevision,
+    required this.primaryCpu,
+    required Map<String, GateReference> references,
+  }) : references = Map.unmodifiable(references);
+
+  static String keyFor(String runtime, BenchmarkDialect dialect) =>
+      '$runtime/${dialect.name}';
+
+  factory GateBaseline.fromJson(Map<String, Object?> json) {
+    if (json['schemaVersion'] != 2) {
+      throw const FormatException('Unsupported gate baseline schema.');
+    }
+    final referencesJson = json['references'];
+    if (referencesJson is! Map || referencesJson.isEmpty) {
+      throw const FormatException('A gate baseline requires CPU references.');
+    }
+    final references = <String, GateReference>{};
+    for (final entry in referencesJson.entries) {
+      if (entry.key is! String || entry.value is! Map) {
+        throw const FormatException(
+          'A gate baseline has an invalid CPU reference.',
+        );
+      }
+      final cpu = entry.key as String;
+      final reference = GateReference.fromJson(
+        Map<String, Object?>.from(entry.value as Map),
+      );
+      if (reference.environment.cpu != cpu) {
+        throw FormatException(
+          'CPU reference key $cpu does not match ${reference.environment.cpu}.',
+        );
+      }
+      references[cpu] = reference;
+    }
+    final primaryCpu = json['primaryCpu'];
+    if (primaryCpu is! String || !references.containsKey(primaryCpu)) {
+      throw const FormatException(
+        'A gate baseline primary CPU must name a recorded reference.',
+      );
+    }
+    return GateBaseline(
+      sourceRevision: json['sourceRevision']! as String,
+      primaryCpu: primaryCpu,
+      references: Map.unmodifiable(references),
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'schemaVersion': 2,
+    'sourceRevision': sourceRevision,
+    'primaryCpu': primaryCpu,
+    'references': {
+      for (final entry in references.entries) entry.key: entry.value.toJson(),
+    },
+  };
+
+  GateSelection select(GateEnvironment measured) {
+    final exact = references[measured.cpu];
+    return GateSelection(
+      reference: exact ?? references[primaryCpu]!,
+      exactCpuMatch: exact != null,
+      measuredCpu: measured.cpu,
+      primaryCpu: primaryCpu,
+    );
   }
 }
 
@@ -319,6 +408,8 @@ GateReport evaluateGateReports(
 
   final gates = <DialectGate>[];
   final sourceRevision = _sourceRevisionFor(reports);
+  final measured = GateEnvironment.of(reports);
+  final selection = baseline.select(measured);
   int? aotSize;
   for (final entry in _requiredRuntimeDialects.entries) {
     final pair = _validatePair(entry.key, byRuntime[entry.key]!, entry.value);
@@ -333,31 +424,21 @@ GateReport evaluateGateReports(
     }
     for (final dialect in entry.value) {
       gates.add(
-        _evaluateDialect(entry.key, dialect, pair[0], pair[1], baseline),
+        _evaluateDialect(
+          entry.key,
+          dialect,
+          pair[0],
+          pair[1],
+          selection.reference,
+        ),
       );
     }
   }
-  // A reference that does not say where it was recorded cannot be held to
-  // anything: the processor it ran on decides these numbers, and a reference
-  // silently treated as comparable would let the gate pass verdicts on two
-  // different computers. Refused rather than downgraded to "not comparable",
-  // for the same reason an unknown scenario id is refused — a gate that
-  // quietly decides nothing, run after run, is indistinguishable from one
-  // that works.
-  final recorded =
-      baseline.environment ??
-      (throw const FormatException(
-        'The reference carries no environment, so nothing can be compared '
-        'with it. Re-record it from a run of this revision: '
-        'dart run benchmark/gates.dart --reports=... --record=<date> '
-        '--output=benchmark/results/gate-baseline.json',
-      ));
-  final measured = GateEnvironment.of(reports);
-  final differences = measured.differencesFrom(recorded);
+  final differences = selection.differencesFrom(measured);
 
   return GateReport(
     passed: gates.every((gate) => gate.passed),
-    comparable: differences.isEmpty,
+    comparable: selection.exactCpuMatch && differences.isEmpty,
     environmentDifferences: List.unmodifiable(differences),
     sourceRevision: sourceRevision,
     aotExecutableSizeBytes: aotSize!,
@@ -634,7 +715,7 @@ DialectGate _evaluateDialect(
   BenchmarkDialect dialect,
   BenchmarkReport first,
   BenchmarkReport second,
-  GateBaseline baseline,
+  GateReference reference,
 ) {
   final one = _performanceById(first, dialect);
   final two = _performanceById(second, dialect);
@@ -644,7 +725,7 @@ DialectGate _evaluateDialect(
     );
   }
 
-  return _evaluateDialectAgainst(runtime, dialect, one, two, baseline);
+  return _evaluateDialectAgainst(runtime, dialect, one, two, reference);
 }
 
 DialectGate _evaluateDialectAgainst(
@@ -652,7 +733,7 @@ DialectGate _evaluateDialectAgainst(
   BenchmarkDialect dialect,
   Map<String, BenchmarkScenarioResult> first,
   Map<String, BenchmarkScenarioResult> second,
-  GateBaseline baseline,
+  GateReference reference,
 ) {
   final key = GateBaseline.keyFor(runtime, dialect);
   // A scenario the reference does not know is a hard error further down, where
@@ -661,7 +742,7 @@ DialectGate _evaluateDialectAgainst(
   // narrowed what the gate covers while every remaining check still passed.
   // Both are the same event — the matrix moved and the reference is stale —
   // and both now say so.
-  final missing = baseline
+  final missing = reference
       .recordedScenarios(key)
       .difference(first.keys.toSet());
   if (missing.isNotEmpty) {
@@ -690,7 +771,7 @@ DialectGate _evaluateDialectAgainst(
     if (ids.isEmpty) continue;
     final run1 = geometricMean(_valuesFor(_ratios(first), ids));
     final run2 = geometricMean(_valuesFor(_ratios(second), ids));
-    final recorded = baseline.phaseMean(key, phase);
+    final recorded = reference.phaseMean(key, phase);
     final limit = gateMeanLimitFor(recorded);
     metrics['${phase.name}GeometricMean'] = {
       'baseline': recorded,
@@ -714,7 +795,7 @@ DialectGate _evaluateDialectAgainst(
   for (final id in first.keys.toList()..sort()) {
     final scenario = first[id]!;
     final limit = gateLimitFor(
-      baseline.scenarioRatio(key, id),
+      reference.scenarioRatio(key, id),
       keyScenario: scenario.keyScenario,
     );
     final run1 = scenario.ratio!;
@@ -917,12 +998,18 @@ GateBaseline recordGateBaseline(
     }
   }
 
+  final environment = GateEnvironment.of(reports);
   return GateBaseline(
     sourceRevision: _sourceRevisionFor(reports),
-    recordedAt: recordedAt,
-    environment: GateEnvironment.of(reports),
-    phaseMeans: phaseMeans,
-    scenarioRatios: scenarioRatios,
+    primaryCpu: environment.cpu,
+    references: {
+      environment.cpu: GateReference(
+        recordedAt: recordedAt,
+        environment: environment,
+        phaseMeans: phaseMeans,
+        scenarioRatios: scenarioRatios,
+      ),
+    },
   );
 }
 

@@ -77,14 +77,15 @@ void main() {
       ),
     );
 
-    expect(restored.recordedAt, '2026-01-01');
     expect(restored.sourceRevision, baseline.sourceRevision);
+    final reference = restored.references['test']!;
+    expect(reference.recordedAt, '2026-01-01');
     final key = GateBaseline.keyFor('jit', BenchmarkDialect.braces);
-    expect(restored.phaseMean(key, BenchmarkPhase.hot), closeTo(1.0, 1e-12));
+    expect(reference.phaseMean(key, BenchmarkPhase.hot), closeTo(1.0, 1e-12));
     // A matrix that grew since the reference was taken must say so instead
     // of silently gating nothing.
     expect(
-      () => restored.scenarioRatio(key, 'brace.invented.hot'),
+      () => reference.scenarioRatio(key, 'brace.invented.hot'),
       throwsFormatException,
     );
   });
@@ -281,6 +282,105 @@ void main() {
   // than failing: the hosted pool hands out a different processor most nights,
   // and a gate that went red for each of them would teach its reader to stop
   // looking.
+  test('a matching CPU selects its own reference before provenance checks', () {
+    // An Intel report must use its Intel record rather than be rejected against
+    // the primary synthetic CPU merely because the map holds more than one.
+    final baseline = GateBaseline.fromJson(
+      _schema2Baseline(secondaryCpu: 'Intel Xeon test'),
+    );
+
+    final result = evaluateGateReports(
+      _reportsForCpu('Intel Xeon test'),
+      baseline,
+    );
+
+    expect(result.comparable, isTrue);
+    expect(result.environmentDifferences, isEmpty);
+  });
+
+  test('an unknown CPU keeps diagnostic ratios without deciding the gate', () {
+    // Falling back to the primary ratios keeps the report useful, but treating
+    // an unrecorded processor as comparable would let different hardware pass
+    // a regression verdict.
+    final baseline = GateBaseline.fromJson(_schema2Baseline());
+
+    final result = evaluateGateReports(
+      _reportsForCpu('unrecorded CPU'),
+      baseline,
+    );
+
+    expect(result.gates, hasLength(8));
+    expect(result.comparable, isFalse);
+    expect(result.decisive, isFalse);
+    expect(result.environmentDifferences.single, contains('unrecorded CPU'));
+  });
+
+  test('schema 2 rejects an empty CPU reference map', () {
+    // A baseline with no reference would make every unknown CPU silently
+    // diagnostic, which looks like a working gate while deciding nothing.
+    final malformed = _schema2Baseline()..['references'] = <String, Object?>{};
+
+    expect(() => GateBaseline.fromJson(malformed), throwsFormatException);
+  });
+
+  test('a CPU reference does not expose mutable timing maps', () {
+    final reference =
+        recordGateBaseline(
+          _completeReports(),
+          '2026-01-01',
+        ).references['test']!;
+    final phaseMeans =
+        reference.phaseMeans[GateBaseline.keyFor(
+          'jit',
+          BenchmarkDialect.braces,
+        )]!;
+
+    expect(
+      () => phaseMeans[BenchmarkPhase.hot.name] = 2,
+      throwsUnsupportedError,
+    );
+  });
+
+  test('schema 2 rejects a missing primary and inconsistent CPU key', () {
+    // The primary is the only permitted fallback, and each key is an exact CPU
+    // identity. Accepting either malformed shape would make that policy lie.
+    final missingPrimary = _schema2Baseline()..remove('primaryCpu');
+    expect(() => GateBaseline.fromJson(missingPrimary), throwsFormatException);
+
+    final mismatchedKey = _schema2Baseline();
+    final references = Map<String, Object?>.from(
+      mismatchedKey['references']! as Map,
+    );
+    final reference = references.remove('test')!;
+    references['different CPU'] = reference;
+    mismatchedKey['references'] = references;
+    expect(() => GateBaseline.fromJson(mismatchedKey), throwsFormatException);
+  });
+
+  test(
+    'the committed baseline names its primary CPU as a schema 2 reference',
+    () {
+      // This pins the data migration to the parser change: a committed
+      // evaluator must always read the reference it is invoked with.
+      final json = Map<String, Object?>.from(
+        jsonDecode(
+              File('benchmark/results/gate-baseline.json').readAsStringSync(),
+            )
+            as Map,
+      );
+      expect(json['schemaVersion'], 2);
+
+      final references = Map<String, Object?>.from(json['references']! as Map);
+      final primary = json['primaryCpu']! as String;
+      final reference = Map<String, Object?>.from(references[primary]! as Map);
+      final environment = Map<String, Object?>.from(
+        reference['environment']! as Map,
+      );
+
+      expect(environment['cpu'], primary);
+    },
+  );
+
   test('a reference from another machine decides nothing', () {
     final baseline = _baseline();
     expect(
@@ -384,27 +484,17 @@ void main() {
     expect(result.toJson()['gates'], hasLength(8));
   });
 
-  // A reference recorded before environments were written down cannot say
-  // which processor produced it, and the processor is what decides these
-  // numbers. Until 2026-08-12 such a reference was bridged: the gate held it
-  // to the Node pin that used to live in its source and treated everything
-  // else as comparable, which meant deciding across two unknown machines.
-  //
-  // Refused now, rather than downgraded to "not comparable", because the
-  // quiet option is the worse failure: a gate that decides nothing, run after
-  // run, reads exactly like one that keeps passing. The same reasoning as for
-  // an unknown scenario id, which this file pins two tests below.
+  // A CPU-keyed reference without its environment cannot name the CPU that
+  // produced it, so it must be rejected while parsing rather than becoming a
+  // reference that quietly decides nothing on every machine.
   test('a reference without an environment is refused, not assumed', () {
     expect(
-      () => evaluateGateReports(
-        _completeReports(),
-        _baselineWithoutEnvironment(),
-      ),
+      () => GateBaseline.fromJson(_schema2BaselineWithoutEnvironment()),
       throwsA(
         isA<FormatException>().having(
           (error) => error.message,
           'message',
-          allOf(contains('no environment'), contains('--record')),
+          contains('environment'),
         ),
       ),
     );
@@ -438,11 +528,17 @@ void main() {
   // and leave every remaining check passing.
   test('a reference that outlives its scenario is refused, not skipped', () {
     final json = _baseline().toJson();
-    final ratios = json['scenarioRatios']! as Map<String, Map<String, double>>;
+    final references = Map<String, Object?>.from(json['references']! as Map);
+    final reference = Map<String, Object?>.from(references['test']! as Map);
+    final ratios = Map<String, Map<String, double>>.from(
+      reference['scenarioRatios']! as Map,
+    );
     ratios['jit/braces'] = {
       ...ratios['jit/braces']!,
       'brace.since.removed.hot': 1.0,
     };
+    references['test'] = {...reference, 'scenarioRatios': ratios};
+    json['references'] = references;
 
     expect(
       () =>
@@ -762,17 +858,40 @@ List<BenchmarkReport> _reportsWithWebVersions() => [
       report,
 ];
 
+List<BenchmarkReport> _reportsForCpu(String cpu) => [
+  for (final report in _completeReports())
+    _copyReport(
+      report,
+      versions: {'dartVersion': 'test', 'os': 'test', 'cpu': cpu},
+    ),
+];
+
+Map<String, Object?> _schema2Baseline({String? secondaryCpu}) {
+  final json = _baseline().toJson();
+  final references = Map<String, Object?>.from(json['references']! as Map);
+  if (secondaryCpu != null) {
+    final reference = Map<String, Object?>.from(references['test']! as Map);
+    final environment = Map<String, Object?>.from(
+      reference['environment']! as Map,
+    )..['cpu'] = secondaryCpu;
+    references[secondaryCpu] = {...reference, 'environment': environment};
+  }
+  json['references'] = references;
+  return json;
+}
+
 /// A reference recorded from the same synthetic reports the tests evaluate,
 /// so an unchanged build sits exactly on its own recorded numbers.
 GateBaseline _baseline() =>
     recordGateBaseline(_completeReports(), '2026-01-01');
 
-/// A reference in the shape the committed one still has: recorded before the
-/// environment was written down, so the field is absent rather than empty.
-GateBaseline _baselineWithoutEnvironment() {
-  final json = _baseline().toJson()..remove('environment');
-
-  return GateBaseline.fromJson(json);
+Map<String, Object?> _schema2BaselineWithoutEnvironment() {
+  final json = _schema2Baseline();
+  final references = Map<String, Object?>.from(json['references']! as Map);
+  final reference = Map<String, Object?>.from(references['test']! as Map)
+    ..remove('environment');
+  json['references'] = {...references, 'test': reference};
+  return json;
 }
 
 BenchmarkScenarioResult _scenarioFor(BenchmarkScenario scenario) {

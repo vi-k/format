@@ -1,6 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "sourceRevision": "9143e7407e162a1fdc6b11d57515143390a04c53",
+  "primaryCpu": "AMD EPYC 7763 64-Core Processor",
+  "references": {
+    "AMD EPYC 7763 64-Core Processor": {
   "recordedAt": "2026-08-14",
   "environment": {
     "cpu": "AMD EPYC 7763 64-Core Processor",
@@ -279,5 +282,7 @@
       "printf.uppercase_general.hot": 0.11403236426461939,
       "printf.vsprintf.hot": 0.046738368237554555
     }
+  }
+  }
   }
 }
