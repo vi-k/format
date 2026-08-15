@@ -49,6 +49,96 @@ forms must balance: `{{` requires a later `}}`, because the first unescaped
 `}` is what ends the specification. In ordinary text they are independent, so
 a lone `{{` is fine there and a lone `{` is not.
 
+## Key differences from 1.6.0
+
+Version 2.0.0 was never published, so upgrading from 1.6.0 takes the 2.0 and
+3.0 changes together. The CHANGELOG lists them in full, and
+[Format 3.0 migration](#format-30-migration) describes what an upgrade has to
+change in calling code.
+
+- **Two mini-languages on one engine.** Braces stay in `format` and
+  `formatWith`; the printf dialect arrives as [`sprintf` and
+  `vsprintf`](#sprintf), with C-style conversions for text, integers, and
+  floating point.
+- **Configuration is an object, not a global.** A `Format` instance carries the
+  number locale, the text unit, the `double` profile, and the registered
+  [custom formatters](#custom-formatters), attribute lookups, and
+  representations. Instances are immutable and there is no global registry to
+  mutate.
+- **The `String` extension is gone.** 1.6.0 formatted through `'{}'.format(x)`
+  as well; 3.0 exports top-level functions only.
+- **Failures are typed.** Every one of them is a `FormattingException` subclass
+  that carries the position in the template — see [Error
+  classes](#error-classes). The hierarchy is separate from `dart:core`'s
+  `FormatException` and does not extend it, so `on FormatException` catches
+  nothing this package throws.
+- **`double` conversion follows the Dart SDK by default.** [Double formatting
+  profiles](#double-formatting-profiles) switches to the Python/C++ compatible
+  profile where its rounding, exponent layout, extended precision, and
+  `inf`/`nan` spellings are wanted.
+- **`intl` is no longer a dependency.** [Number locales](#number-locales)
+  define the separators, digits, and grouping, the C locale is the default, and
+  `package:format_intl` supplies an `intl`-backed locale for applications that
+  want one. Code that relied on 1.6.0 reading the ambient `intl` locale for `n`
+  has to pass a locale explicitly.
+- **Width counts what you choose.** [Unicode text units](#unicode-text-units)
+  align by grapheme clusters, Unicode scalars, or UTF-16 code units.
+- **Templates are compiled and cached.** 1.6.0 parsed the template with regular
+  expressions on every call. 3.0 compiles it into a program of typed operations
+  and keeps that program in a [template cache](#template-cache) bounded by
+  entry count and by memory. This is where most of the difference measured
+  below comes from.
+
+### Performance against 1.6.0
+
+Each figure below is a ratio: how many times faster 3.0 formats the same
+template and the same values than 1.6.0 does. Both versions run in one process
+against the same values, so the machine cancels out of the comparison.
+
+| template | values | Dart VM | dart2js | dart2wasm |
+|---|---|---|---|---|
+| `{}` | `'hello world'` | 17.8× | 3.0× | 22.5× |
+| `{:d}` | `-12345` | 9.3× | 2.0× | 11.5× |
+| `{:d}` | the runtime's largest exact integer | 2.5× | 1.2× | 7.5× |
+| `{:10d}` | `1` | 10.8× | 3.0× | 9.4× |
+| `{:,d}` | `1234567` | 16.1× | 4.1× | 19.4× |
+| `{:010,d}` | `1234` | 28.1× | 6.5× | 19.9× |
+| `{:.2f}` | `0.1` | 8.8× | 2.7× | 7.9× |
+| fifty `{}` fields | `0`…`49` | 11.7× | 2.8× | 25.4× |
+
+Over the whole matrix of thirty-one cases the gain is 2.4× to 28.1× on the VM,
+6.5× to 25.4× under dart2wasm, and 1.1× to 6.4× under dart2js. The narrowest
+gains are on integers at the platform's exact limit, where writing nineteen or
+twenty digits is most of the call and 1.6.0's per-call overhead weighs least;
+the widest are on grouped or zero-padded integers and on long templates, where
+1.6.0 pays for a regular expression per call and 3.0 pays for nothing it has
+already compiled.
+
+The cache is most of that difference, and it is the part a workload can lose.
+With it off, the VM keeps 1.7× to 8.9× and dart2wasm 1.5× to 7.6×, but dart2js
+falls behind 1.6.0 on twenty-six of the thirty-one cases, between 0.46× and
+2.1×: 1.6.0's regular expressions run on the JavaScript engine's own regex
+implementation, while the 3.0 scanner is compiled JavaScript. [When to turn it
+off](#when-to-turn-it-off) describes the workloads where the cache does not pay
+for itself.
+
+`sprintf` has no counterpart here — 1.6.0 had no printf dialect — so the table
+has no row for it; the benchmark compares it against `package:sprintf` instead.
+
+Measured on an Apple M3 Max (macOS 26.5.2, Dart 3.13.0, Node v26.5.0) as the
+minimum over the measured rounds, against a vendored copy of 1.6.0, from a
+clone of the repository rather than the published package:
+
+```console
+cd benchmark/suite
+dart run tool/run.dart --runtime=vm   -- --full
+dart run tool/run.dart --runtime=js   -- --full
+dart run tool/run.dart --runtime=wasm -- --full
+```
+
+Another machine will print other numbers. What carries over is the ordering
+between templates and between runtimes, not the ratios themselves.
+
 <!-- BEGIN GENERATED FORMAT REFERENCE -->
 ## Format reference
 
@@ -784,7 +874,8 @@ would print multiples of 50 ns and nothing between them.
 
 Version 2.0.0 was never published to pub.dev, so migrating from the published
 1.6.0 means adopting the 2.0 and 3.0 changes together; both are described in
-the CHANGELOG.
+the CHANGELOG. What the two of them add, and how the result measures against
+1.6.0, is in [Key differences from 1.6.0](#key-differences-from-160).
 
 Version 3.0 removes `formatNamed` and treats a `List` passed to `format` as one
 value. Pass direct values separately, or use `formatWith` for positional and
