@@ -210,10 +210,10 @@ CPython 3.14 и компилятор C++23; на машине без них за
 
 ```sh
 dart format . && dart analyze --fatal-infos lib test example tool
-dart test                                    # VM, 604 теста
-dart test -p node                            # dart2js, 421 + 4 пропущено
-dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 403 + 1 пропущен
-dart test benchmark/test tool/test           # 45 тестов, ~70 с
+dart test                                    # VM, 771 тест
+dart test -p node                            # dart2js, 588 + 4 пропущено
+dart test -p node -c dart2wasm -x no-dart2wasm  # dart2wasm, 570 + 1 пропущен
+dart test benchmark/test tool/test           # 82 теста, ~70 с
 (cd packages/format_intl && dart test)       # 7 тестов
 dart run tool/verify_package_archive.dart    # архив pub стоит сам по себе
 dart run tool/verify_generated_artifacts.dart  # нужны CPython 3.14 и C++23
@@ -221,13 +221,19 @@ dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
   && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
-# покрытие 95.98%, пол 94%
+# покрытие 96.04% (3156/3286), пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run tool/run.dart --runtime=vm)   # матрица, ~60 с
 (cd benchmark/suite && dart run tool/run.dart --runtime=js)   # ~70 с
 (cd benchmark/suite && dart run tool/run.dart --runtime=wasm) # ~70 с
 # У tool/run.dart есть --bin=comparison|template_ir|double_modes|list_snapshot
 ```
+
+Числа в комментариях сверены полным прогоном всего списка 2026-08-15 на
+Dart 3.13.0 и ревизии `2e438db`; расходившиеся с реальностью счётчики
+(604/421/403/45 и 95.98 %) тогда же исправлены. Счётчик обновляется
+вместе с тестами, а не при случае: устаревшее число здесь читается как
+разрешение не считать.
 
 У обоих новых инструментов есть `--self-test`: он проверяет саму сверку
 (что одинаковое не считается расхождением, что пустой отчёт не считается
@@ -1432,8 +1438,10 @@ read-only controlled capture в CI и потребовали для него п�
 
 После публикации реализации первый controlled capture
 ([run 31881207010](https://github.com/vi-k/format/actions/runs/31881207010))
-корректно вернул уже записанный `AMD EPYC 7763 64-Core Processor`; его
-временный artifact был удалён без правки baseline. Второй capture
+корректно вернул уже записанный `AMD EPYC 7763 64-Core Processor`;
+baseline по нему не правился. Удалена была только локальная копия
+отчётов: сам artifact остаётся в run'е, пока не истечёт срок хранения, —
+и позже это позволило перепроверить запись, см. ниже. Второй capture
 ([run 31881779749](https://github.com/vi-k/format/actions/runs/31881779749))
 завершился success и дал `Intel(R) Xeon(R) Platinum 8370C CPU @ 2.80GHz`.
 В artifact были ровно `jit-1/2.json`, `aot-1/2.json`, `js-1/2.json` и
@@ -1446,11 +1454,39 @@ phase means и восемь scenario-ratio наборов. После этого
 
 Полный предкоммитный gate на записи Intel: format — 127 файлов, 0 изменений;
 analyze чистый; VM — 771 тест; dart2js — 588 плюс 4 skip; dart2wasm — 570
-плюс 1 skip; auxiliary — 79; `format_intl` — 7; автономный pub-архив — 771;
+плюс 1 skip; auxiliary — 82; `format_intl` — 7; автономный pub-архив — 771;
 generated artifacts совпадают; покрытие — 96,04 % (3156/3286) при полу 94 %;
 benchmark suite test и quick-матрицы VM/JS/Wasm завершились с exit 0.
 Изменение записывает измерения с CI и не заявляет локального ускорения,
 поэтому отдельный performance A/B не требовался.
+
+## Что сделано 2026-08-15 (перепроверка всего после 3.0.0)
+
+Все 28 коммитов после `v3.0.0` (57 файлов, +12335/−874) перепроверены на
+`2e438db`. Полный список проверок зелёный: format — 127 файлов, 0
+изменений; analyze чистый; VM — 771; dart2js — 588 плюс 4 skip; dart2wasm
+— 570 плюс 1 skip; auxiliary — 82; `format_intl` — 7; автономный
+pub-архив — 771; generated artifacts совпадают; покрытие — 96,04 %
+(3156/3286); сьют — 15, quick-матрицы VM/JS/Wasm — exit 0.
+
+**Гейт проверен независимо от собственных тестов** — по artifact'ам
+capture-run'ов, и этот приём стоит помнить: пока artifact не истёк, любую
+запись эталона можно вывести заново и сверить с закоммиченной.
+
+- Закоммиченный `gate-baseline.json` воспроизведён точно: `--add-reference`
+  с отчётами run 31881779749 поверх версии файла из `8cc57c1^` дал документ,
+  идентичный закоммиченному.
+- Отказ от дубликата CPU подтверждён отчётами run 31881207010:
+  `FormatException`, выходной файл не создан — проверка идёт до записи.
+- Настоящие AMD-отчёты против закоммиченного эталона дают
+  `comparable: true`, `passed: true`, ноль различий окружения и ни одного
+  упавшего гейта.
+
+Расхождения нашлись только в этом файле и здесь же исправлены: счётчики
+проверок отстали на сотни тестов, раздел про эталон описывал заменённый
+`d2901ae`, а про artifact первого capture было сказано, что он удалён.
+Тем они и опасны: ни одно из трёх не роняет ни одной проверки, то есть
+разойтись с репозиторием такой текст может только молча.
 
 ## Что открыто
 
@@ -1486,16 +1522,17 @@ benchmark suite test и quick-матрицы VM/JS/Wasm завершились �
 
 ### Эталон гейта
 
-**`d2901ae`, EPYC 9V74, записан 2026-08-13.** Переснят по обязанности —
-вместе с подбитыми сценариями изменилась матрица; заодно догнал четыре
-ускорения, на которые отставал. Прежний `61cfb99` был на той же модели,
-так что непрерывность сравнения сохранилась.
+**Ревизия `9143e74`, schema 2, две записи CPU:** `AMD EPYC 7763 64-Core
+Processor` (primary, снят 2026-08-14) и `Intel(R) Xeon(R) Platinum 8370C
+CPU @ 2.80GHz` (2026-08-15). Обе — восемью отчётами на Dart 3.13.0 и
+Node.js v24.8.0. Прежний `d2901ae` на EPYC 9V74 заменён при миграции на
+stable (`2030d6b`), а не устарел: сравнивать записи с разных SDK нельзя.
 
-После записи легли правки обоих ревью, включая вечерний разбор 22 Low, но
-ни одна не заявлена ускорением — это корректность, диагностика и
-документация. Эталон поэтому годен: он односторонний, и устаревание в эту
-сторону безопасно. Матрица не менялась, так что немедленной пересъёмки не
-требуется.
+После записи в `lib/` легли две правки — ускорение `c` под JavaScript и
+типизированные предикаты расширений. Первая односторонняя, вторая матрицы
+не касается: расширений в сценариях нет. `benchmark/scenarios.dart` после
+`9143e74` не менялся, поэтому незнакомых id гейт не встретит и
+немедленной пересъёмки не требуется.
 
 ## Что сделано 2026-08-13 (остаток открытого списка)
 
