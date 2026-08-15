@@ -956,6 +956,54 @@ GateBaseline recordGateBaseline(
   String recordedAt,
 ) {
   final reports = input.toList(growable: false);
+  final reference = _recordGateReference(reports, recordedAt);
+  return GateBaseline(
+    sourceRevision: _sourceRevisionFor(reports),
+    primaryCpu: reference.environment.cpu,
+    references: {reference.environment.cpu: reference},
+  );
+}
+
+/// Adds one measured CPU to a baseline for the same source revision.
+///
+/// The old baseline is never mutated, so a caller can validate the returned
+/// value before choosing to replace a file that contains the original.
+GateBaseline addGateBaselineReference(
+  GateBaseline baseline,
+  Iterable<BenchmarkReport> input,
+  String recordedAt,
+) {
+  final reports = input.toList(growable: false);
+  final reference = _recordGateReference(reports, recordedAt);
+  final sourceRevision = _sourceRevisionFor(reports);
+  if (sourceRevision != baseline.sourceRevision) {
+    throw FormatException(
+      'Reports name source revision $sourceRevision, but the baseline names '
+      '${baseline.sourceRevision}.',
+    );
+  }
+  final cpu = reference.environment.cpu;
+  if (baseline.references.containsKey(cpu)) {
+    throw FormatException(
+      'The gate baseline already has a reference for CPU $cpu.',
+    );
+  }
+  return GateBaseline(
+    sourceRevision: baseline.sourceRevision,
+    primaryCpu: baseline.primaryCpu,
+    references: {...baseline.references, cpu: reference},
+  );
+}
+
+/// Derives one CPU-specific reference from a full, validated set of reports.
+///
+/// Each recorded value is the geometric mean of the two independent runs, so
+/// a single noisy run cannot set the reference on its own.
+GateReference _recordGateReference(
+  Iterable<BenchmarkReport> input,
+  String recordedAt,
+) {
+  final reports = input.toList(growable: false);
   final byRuntime = <String, List<BenchmarkReport>>{};
   for (final report in reports) {
     _validateReport(report);
@@ -999,17 +1047,11 @@ GateBaseline recordGateBaseline(
   }
 
   final environment = GateEnvironment.of(reports);
-  return GateBaseline(
-    sourceRevision: _sourceRevisionFor(reports),
-    primaryCpu: environment.cpu,
-    references: {
-      environment.cpu: GateReference(
-        recordedAt: recordedAt,
-        environment: environment,
-        phaseMeans: phaseMeans,
-        scenarioRatios: scenarioRatios,
-      ),
-    },
+  return GateReference(
+    recordedAt: recordedAt,
+    environment: environment,
+    phaseMeans: phaseMeans,
+    scenarioRatios: scenarioRatios,
   );
 }
 
@@ -1124,11 +1166,30 @@ void main(List<String> arguments) {
     final reports = _parseReports(arguments);
     final output = _outputPath(arguments);
     final record = _recordArgument(arguments);
+    final addReference = _addReferenceArgument(arguments);
+    if (record != null && addReference != null) {
+      throw const FormatException(
+        '--record and --add-reference are exclusive.',
+      );
+    }
+    if (record != null && _optional(arguments, '--baseline=').isNotEmpty) {
+      throw const FormatException('--record and --baseline are exclusive.');
+    }
     _verifyRevision(reports, arguments);
     final Map<String, Object?> json;
     var passed = true;
     if (record != null) {
       json = recordGateBaseline(reports, record).toJson();
+    } else if (addReference != null) {
+      if (output == null) {
+        throw const FormatException('--add-reference requires --output=PATH.');
+      }
+      json =
+          addGateBaselineReference(
+            _loadBaseline(_baselineArgument(arguments)),
+            reports,
+            addReference,
+          ).toJson();
     } else {
       final result = evaluateGateReports(
         reports,
@@ -1238,6 +1299,7 @@ String? _outputPath(List<String> arguments) {
     '--output=',
     '--baseline=',
     '--record=',
+    '--add-reference=',
     _allowUnverifiedRevision,
   ];
   if (!arguments.every((argument) => recognized.any(argument.startsWith))) {
@@ -1262,14 +1324,21 @@ String _baselineArgument(List<String> arguments) {
 ///
 /// The date is supplied rather than read from the clock so that recording is
 /// reproducible and the recorded file says when the measurement was taken.
-String? _recordArgument(List<String> arguments) {
-  final value = _optional(arguments, '--record=');
+String? _recordArgument(List<String> arguments) =>
+    _dateArgument(arguments, '--record=');
+
+/// The `--add-reference=DATE` value, or null outside add-reference mode.
+String? _addReferenceArgument(List<String> arguments) =>
+    _dateArgument(arguments, '--add-reference=');
+
+String? _dateArgument(List<String> arguments, String prefix) {
+  final value = _optional(arguments, prefix);
   if (value.length > 1) {
-    throw const FormatException('--record may be supplied once with a date.');
+    throw FormatException('$prefix may be supplied once with a date.');
   }
   if (value.isEmpty) return null;
   if (!RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(value.single)) {
-    throw const FormatException('--record expects an ISO YYYY-MM-DD date.');
+    throw FormatException('$prefix expects an ISO YYYY-MM-DD date.');
   }
 
   return value.single;

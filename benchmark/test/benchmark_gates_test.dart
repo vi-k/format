@@ -357,6 +357,46 @@ void main() {
     expect(() => GateBaseline.fromJson(mismatchedKey), throwsFormatException);
   });
 
+  test('adding a CPU reference preserves the existing reference', () {
+    final first = recordGateBaseline(_completeReports(), '2026-01-01');
+
+    final added = addGateBaselineReference(
+      first,
+      _reportsForCpu('Intel Xeon test'),
+      '2026-01-02',
+    );
+
+    expect(added.references.keys, unorderedEquals(['test', 'Intel Xeon test']));
+    expect(added.references['test']!.recordedAt, '2026-01-01');
+    expect(added.references['Intel Xeon test']!.recordedAt, '2026-01-02');
+  });
+
+  test('adding a CPU reference rejects an existing CPU', () {
+    final baseline = recordGateBaseline(_completeReports(), '2026-01-01');
+
+    expect(
+      () =>
+          addGateBaselineReference(baseline, _completeReports(), '2026-01-02'),
+      throwsFormatException,
+    );
+  });
+
+  test('adding a CPU reference rejects another source revision', () {
+    final baseline = recordGateBaseline(_completeReports(), '2026-01-01');
+    final reports = [
+      for (final report in _reportsForCpu('Intel Xeon test'))
+        _copyReport(
+          report,
+          sourceRevision: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        ),
+    ];
+
+    expect(
+      () => addGateBaselineReference(baseline, reports, '2026-01-02'),
+      throwsFormatException,
+    );
+  });
+
   test(
     'the committed baseline names its primary CPU as a schema 2 reference',
     () {
@@ -712,6 +752,73 @@ void main() {
     },
   );
 
+  test('gate command adds a CPU reference to its baseline', () async {
+    final directory = await Directory.systemTemp.createTemp('format-add-');
+    try {
+      final baseline = File('${directory.path}/baseline.json');
+      await baseline.writeAsString(jsonEncode(_baseline().toJson()));
+      final paths = await _writeReports(
+        directory,
+        _reportsForCpu('Intel Xeon test'),
+      );
+
+      final result = await Process.run(Platform.resolvedExecutable, [
+        'benchmark/gates.dart',
+        '--reports=${paths.join(',')}',
+        '--baseline=${baseline.path}',
+        '--add-reference=2026-01-02',
+        '--output=${baseline.path}',
+        '--allow-unverified-revision',
+      ]);
+
+      expect(result.exitCode, 0, reason: result.stderr.toString());
+      final added = GateBaseline.fromJson(
+        Map<String, Object?>.from(
+          jsonDecode(await baseline.readAsString()) as Map,
+        ),
+      );
+      expect(
+        added.references.keys,
+        unorderedEquals(['test', 'Intel Xeon test']),
+      );
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
+  test('a duplicate gate-command add leaves its output unchanged', () async {
+    final directory = await Directory.systemTemp.createTemp('format-add-');
+    try {
+      final baseline = File('${directory.path}/baseline.json');
+      await baseline.writeAsString(jsonEncode(_baseline().toJson()));
+      final paths = await _writeReports(
+        directory,
+        _reportsForCpu('Intel Xeon test'),
+      );
+      final arguments = [
+        'benchmark/gates.dart',
+        '--reports=${paths.join(',')}',
+        '--baseline=${baseline.path}',
+        '--add-reference=2026-01-02',
+        '--output=${baseline.path}',
+        '--allow-unverified-revision',
+      ];
+
+      final added = await Process.run(Platform.resolvedExecutable, arguments);
+      expect(added.exitCode, 0, reason: added.stderr.toString());
+      final beforeDuplicate = await baseline.readAsString();
+
+      final duplicate = await Process.run(
+        Platform.resolvedExecutable,
+        arguments,
+      );
+      expect(duplicate.exitCode, 1, reason: duplicate.stderr.toString());
+      expect(await baseline.readAsString(), beforeDuplicate);
+    } finally {
+      await directory.delete(recursive: true);
+    }
+  });
+
   // The exit code is where "decides nothing" has to be visible to CI, and it
   // is the one piece the unit tests above cannot reach: a regressed set of
   // reports measured on another processor must leave the command green, while
@@ -865,6 +972,19 @@ List<BenchmarkReport> _reportsForCpu(String cpu) => [
       versions: {'dartVersion': 'test', 'os': 'test', 'cpu': cpu},
     ),
 ];
+
+Future<List<String>> _writeReports(
+  Directory directory,
+  Iterable<BenchmarkReport> reports,
+) async {
+  final paths = <String>[];
+  for (final (index, report) in reports.indexed) {
+    final file = File('${directory.path}/report-$index.json');
+    await file.writeAsString(jsonEncode(report.toJson()));
+    paths.add(file.path);
+  }
+  return paths;
+}
 
 Map<String, Object?> _schema2Baseline({String? secondaryCpu}) {
   final json = _baseline().toJson();
