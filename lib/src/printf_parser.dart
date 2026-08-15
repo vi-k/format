@@ -124,29 +124,7 @@ final class _PrintfParser {
   }
 
   void _validate(_PrintfConversionNode node) {
-    final allowedFlags = switch (node.type) {
-      'c' || 's' => _PrintfFlags.left,
-      'd' || 'i' =>
-        _PrintfFlags.left |
-            _PrintfFlags.sign |
-            _PrintfFlags.space |
-            _PrintfFlags.zero,
-      'u' => _PrintfFlags.left | _PrintfFlags.zero,
-      'o' ||
-      'x' ||
-      'X' => _PrintfFlags.left | _PrintfFlags.alternate | _PrintfFlags.zero,
-      'a' || 'A' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' =>
-        _PrintfFlags.left |
-            _PrintfFlags.sign |
-            _PrintfFlags.space |
-            _PrintfFlags.alternate |
-            _PrintfFlags.zero,
-      '%' => 0,
-      // Unreachable, and not removable: a switch expression must be
-      // exhaustive, and a String cannot be. Every conversion the parser
-      // admits is named above.
-      _ => throw StateError('Unsupported printf conversion ${node.type}.'),
-    };
+    final allowedFlags = _allowedPrintfFlags(node.type);
 
     final hasInvalidFlag = (node.flags & ~allowedFlags) != 0;
     final invalidWidth = node.type == '%' && node.width != null;
@@ -280,6 +258,46 @@ const _supportedTypes = {
   'G',
   '%',
 };
+
+int _allowedPrintfFlags(String type) => switch (type) {
+  'c' || 's' => _PrintfFlags.left,
+  'd' || 'i' =>
+    _PrintfFlags.left |
+        _PrintfFlags.sign |
+        _PrintfFlags.space |
+        _PrintfFlags.zero,
+  'u' => _PrintfFlags.left | _PrintfFlags.zero,
+  'o' ||
+  'x' ||
+  'X' => _PrintfFlags.left | _PrintfFlags.alternate | _PrintfFlags.zero,
+  'a' || 'A' || 'e' || 'E' || 'f' || 'F' || 'g' || 'G' =>
+    _PrintfFlags.left |
+        _PrintfFlags.sign |
+        _PrintfFlags.space |
+        _PrintfFlags.alternate |
+        _PrintfFlags.zero,
+  '%' => 0,
+  _ => throw StateError('Unsupported printf conversion $type.'),
+};
+
+/// Test seam, deliberately not exported by `format.dart`.
+Set<String> debugPrintfConversionTypes() => _supportedTypes;
+
+/// Test seam, deliberately not exported by `format.dart`.
+Map<String, Set<String>> debugPrintfFlagTokensByConversion() =>
+    Map<String, Set<String>>.unmodifiable({
+      for (final type in _supportedTypes)
+        type: Set<String>.unmodifiable({
+          for (final entry in const [
+            (_PrintfFlags.left, '-'),
+            (_PrintfFlags.sign, '+'),
+            (_PrintfFlags.space, ' '),
+            (_PrintfFlags.alternate, '#'),
+            (_PrintfFlags.zero, '0'),
+          ])
+            if ((_allowedPrintfFlags(type) & entry.$1) != 0) entry.$2,
+        }),
+    });
 
 extension on _PrintfTemplate {
   String debugDescription() => nodes.map(_debugNode).join(' | ');

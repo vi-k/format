@@ -509,6 +509,9 @@ const _builtInTypes = {
   '%',
 };
 
+/// Test seam, deliberately not exported by `format.dart`.
+Set<String> debugBraceBuiltInTypes() => _builtInTypes;
+
 /// Test seam for the cold parser allocation fast path. It is deliberately not
 /// exported by `format.dart`.
 bool debugUsesSimpleBuiltinFormatSpec(String source) =>
