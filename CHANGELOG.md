@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## 4.0.0
 
 * **Breaking for code written against 3.0.0:** `canFormat`, `canLookup`, and
   `canRepresent` now receive the extension's `T`; the engine checks the

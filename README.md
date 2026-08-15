@@ -51,10 +51,10 @@ a lone `{{` is fine there and a lone `{` is not.
 
 ## Key differences from 1.6.0
 
-Version 2.0.0 was never published, so upgrading from 1.6.0 takes the 2.0 and
-3.0 changes together. The CHANGELOG lists them in full, and
-[Format 3.0 migration](#format-30-migration) describes what an upgrade has to
-change in calling code.
+Version 2.0.0 was never published, so upgrading from 1.6.0 takes the 2.0, 3.0,
+and 4.0 changes together. The CHANGELOG lists them in full, and [Migration from
+1.6.0](#migration-from-160) describes what an upgrade has to change in calling
+code.
 
 - **Two mini-languages on one engine.** Braces stay in `format` and
   `formatWith`; the printf dialect arrives as [`sprintf` and
@@ -870,14 +870,14 @@ The operations per round are calibrated to whichever clock the runtime has:
 under dart2js it advances in whole milliseconds, so a count tuned on the VM
 would print multiples of 50 ns and nothing between them.
 
-## Format 3.0 migration
+## Migration from 1.6.0
 
 Version 2.0.0 was never published to pub.dev, so migrating from the published
-1.6.0 means adopting the 2.0 and 3.0 changes together; both are described in
-the CHANGELOG. What the two of them add, and how the result measures against
+1.6.0 means adopting the 2.0, 3.0, and 4.0 changes together; all of them are
+described in the CHANGELOG. What they add, and how the result measures against
 1.6.0, is in [Key differences from 1.6.0](#key-differences-from-160).
 
-Version 3.0 removes `formatNamed` and treats a `List` passed to `format` as one
+Version 3.0 removed `formatNamed` and treats a `List` passed to `format` as one
 value. Pass direct values separately, or use `formatWith` for positional and
 named collections:
 
@@ -896,8 +896,13 @@ separate from `dart:core`'s `FormatException` and does not extend it, so
 locales, and text units by constructing a `Format` instance instead of mutating
 global registries.
 
-Version 3.0 uses Dart SDK decimal `double` conversion by default. Applications
+Dart SDK decimal `double` conversion is the default. Applications
 that depend on Python/C++ rounding, exponent layout, precision beyond the Dart
 SDK limits, or `inf`/`nan` spellings should construct a `Format` with
 `DoubleFormatMode.compatible`. This setting applies consistently to brace
 formatting, `sprintf`, and nested `!r`/`!a` representations.
+
+Code written against 3.0.0 rather than 1.6.0 has one thing to change: 4.0.0
+gives `canFormat`, `canLookup`, and `canRepresent` the extension's `T` and
+filters the runtime type before calling them, so an override that only
+repeated `value is T` can go, and any remaining filter takes a `T`.

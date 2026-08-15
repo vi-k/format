@@ -1,6 +1,6 @@
 name: format_intl
 description: Intl locale adapter for the format package.
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/vi-k/format
 repository: https://github.com/vi-k/format
 issue_tracker: https://github.com/vi-k/format/issues
@@ -14,7 +14,9 @@ environment:
   sdk: ^3.7.2
 resolution: workspace
 dependencies:
-  format: ^3.0.0
+  # Works with both majors: this package implements NumberLocale, which
+  # 4.0.0 did not change.
+  format: '>=3.0.0 <5.0.0'
   intl: ^0.20.2
 dev_dependencies:
   lints: ^4.0.0

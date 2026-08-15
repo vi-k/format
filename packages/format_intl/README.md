@@ -11,7 +11,7 @@ Add both packages to the application that creates the formatting engine:
 
 ```yaml
 dependencies:
-  format: ^3.0.0
+  format: ^4.0.0
   format_intl: ^1.0.0
 ```
 
