@@ -1,7 +1,8 @@
 # Единый справочник форматов — Implementation Plan
 
-Статус: утверждён владельцем 2026-08-15; выбран вариант 1 — исполнение через
-`superpowers:subagent-driven-development`. Реализация ещё не начиналась.
+Статус: исполнен и прошёл независимое review 2026-08-15. Реализация — commits
+`1172acb`, `3383adb`, `9cb664c`, `eedbe74`, `6cf6e85`; текущее состояние —
+`docs/handoff.md` и код.
 
 > **Для агентных исполнителей:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
