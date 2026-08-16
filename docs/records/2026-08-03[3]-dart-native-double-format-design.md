@@ -1,6 +1,11 @@
 # Dart-native форматирование `double` с совместимым профилем
 
-Статус: исполнен, вошло в 3.0.0.
+> **Состояние на 2026-08-16:** исполнен, вошло в 3.0.0.
+> **Что это:** дизайн профилей `double` (`DoubleFormatMode`) и Dart-native пути
+> форматирования.
+> **Связанные записи:** `2026-08-03[4]-dart-native-double-format-plan.md`,
+> `2026-08-03[7]-double-modes-benchmark-rename-design.md`,
+> `2026-08-05[1]-double-ops-design.md`.
 
 ## Контекст
 

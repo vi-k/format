@@ -11,7 +11,8 @@
 /// It lives apart from the rest of the parity suite because the literal does
 /// not compile under dart2js, where integers are doubles; on that platform the
 /// value simply does not exist. Same reason as `integer_format_test.dart` and
-/// `sprintf_integer_test.dart` — see the VM-only note in `docs/handoff.md`.
+/// `sprintf_integer_test.dart` — see the VM-only note in
+/// `docs/conventions.md`.
 @TestOn('vm')
 library;
 

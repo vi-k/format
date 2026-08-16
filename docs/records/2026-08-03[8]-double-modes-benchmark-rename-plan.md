@@ -1,6 +1,9 @@
 # План реализации переименования benchmark режимов `double`
 
-Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+> **Состояние на 2026-08-16:** исполнен, вошло в 3.0.0. Чекбоксы в теле не
+> проставлялись — открытым пунктом их читать нельзя.
+> **Что это:** план переименования режимов `double` в бенчмарке.
+> **Связанные записи:** `2026-08-03[7]-double-modes-benchmark-rename-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

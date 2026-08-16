@@ -1,13 +1,14 @@
 # M1 Streaming Numeric Options Implementation Plan
 
-Статус: исполнен 2026-08-14. План выполнялся через
-`superpowers:executing-plans`. Архитектура реализации отличается от шага 2:
-`lib/src/format_spec.dart` сохраняет материализованный путь до длины 256 и
-использует потоковый курсор только выше порога; полностью потоковый вариант не
-прошёл performance-check. Паритет двух путей проверяет production debug-seam,
-вопреки первоначальному запрету задачи 2, шага 5. Итоговые замеры и
-обоснование — в
-`2026-08-14[1]-m1-streaming-numeric-options-design.md`.
+> **Состояние на 2026-08-16:** исполнен 2026-08-14. План выполнялся через
+> `superpowers:executing-plans`. Архитектура реализации отличается от шага 2:
+> `lib/src/format_spec.dart` сохраняет материализованный путь до длины 256 и
+> использует потоковый курсор только выше порога; полностью потоковый вариант не
+> прошёл performance-check. Паритет двух путей проверяет production debug-seam,
+> вопреки первоначальному запрету задачи 2, шага 5. Итоговые замеры и
+> обоснование — в `2026-08-14[1]-m1-streaming-numeric-options-design.md`.
+> **Что это:** план реализации потокового разбора числовых частей спецификации.
+> **Связанные записи:** `2026-08-14[1]-m1-streaming-numeric-options-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

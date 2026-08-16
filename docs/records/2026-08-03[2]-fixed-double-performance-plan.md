@@ -1,6 +1,8 @@
 # Fixed Double Performance Implementation Plan
 
-Статус: исполнен, вошло в 3.0.0.
+> **Состояние на 2026-08-16:** исполнен, вошло в 3.0.0.
+> **Что это:** план ускорения фиксированного форматирования `double`.
+> **Связанные записи:** `2026-08-03[1]-fixed-double-performance-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

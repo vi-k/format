@@ -1,8 +1,11 @@
 # JavaScript Character Fast Path Implementation Plan
 
-Статус: исполнен 2026-08-14 коммитом `17c0419`. Tasks 1–3 завершены через
-`superpowers:executing-plans`; A/B и полный обязательный прогон GREEN.
-Чекбоксы в теле отражают состояние плана до итогового коммита.
+> **Состояние на 2026-08-16:** исполнен 2026-08-14 коммитом `17c0419`. Tasks 1–3
+> завершены через `superpowers:executing-plans`; A/B и полный обязательный
+> прогон GREEN. Чекбоксы в теле отражают состояние плана до итогового коммита.
+> **Что это:** план реализации быстрого пути `c` под dart2js.
+> **Связанные записи:**
+> `2026-08-14[5]-javascript-character-fast-path-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or

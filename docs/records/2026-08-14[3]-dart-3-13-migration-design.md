@@ -1,10 +1,14 @@
 # Миграция внутренних инструментов на Dart stable
 
-Статус: исполнен 2026-08-14. Миграционный коммит `9143e74` опубликован,
-push-CI `31804804963` зелёный; AMD-эталон Dart 3.13.0 записан из зелёного
-performance-run `31805224647` той же ревизии и повторно даёт `comparable`.
-Источником истины для wasm-host'ов служат `benchmark/wasm_host.mjs` и
-`benchmark/suite/tool/run.dart`, для версии CI — `.github/workflows/ci.yaml`.
+> **Состояние на 2026-08-16:** исполнен 2026-08-14. Миграционный коммит
+> `9143e74` опубликован, push-CI `31804804963` зелёный; AMD-эталон Dart 3.13.0
+> записан из зелёного performance-run `31805224647` той же ревизии и повторно
+> даёт `comparable`. Источником истины для wasm-host'ов служат
+> `benchmark/wasm_host.mjs` и `benchmark/suite/tool/run.dart`, для версии CI —
+> `.github/workflows/ci.yaml`.
+> **Что это:** дизайн миграции внутренних инструментов и CI на Dart stable 3.13.
+> **Связанные записи:** `2026-08-14[4]-dart-3-13-migration-plan.md`,
+> `2026-08-14[11]-stable-migration-and-3-0-0-report.md`.
 
 ## Контекст
 

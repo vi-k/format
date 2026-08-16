@@ -1,10 +1,14 @@
 # Единый источник справочника форматов
 
-Статус: реализован 2026-08-15. Источник истины —
-`tool/src/format_reference_contract.dart`; генератор, архивная проекция и
-обязательная сверка — `tool/src/format_reference_generator.dart`,
-`tool/generate_format_reference.dart` и
-`tool/verify_generated_artifacts.dart`.
+> **Состояние на 2026-08-16:** реализован 2026-08-15. Источник истины —
+> `tool/src/format_reference_contract.dart`; генератор, архивная проекция и
+> обязательная сверка — `tool/src/format_reference_generator.dart`,
+> `tool/generate_format_reference.dart` и
+> `tool/verify_generated_artifacts.dart`.
+> **Что это:** дизайн единого источника справочника обеих мини-грамматик —
+> const-каталог, из которого генерируются README и conformance-cases.
+> **Связанные записи:** `2026-08-15[1]-format-reference-source-plan.md`,
+> `2026-08-15[4]-format-reference-and-4-0-0-report.md`.
 
 ## Контекст
 

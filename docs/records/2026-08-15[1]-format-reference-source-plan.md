@@ -1,8 +1,12 @@
 # Единый справочник форматов — Implementation Plan
 
-Статус: исполнен и прошёл независимое review 2026-08-15. Реализация — commits
-`1172acb`, `3383adb`, `9cb664c`, `eedbe74`, `6cf6e85`; текущее состояние —
-`docs/handoff.md` и код.
+> **Состояние на 2026-08-16:** исполнен и прошёл независимое review 2026-08-15.
+> Реализация — commits `1172acb`, `3383adb`, `9cb664c`, `eedbe74`, `6cf6e85`;
+> отчёт о работе — `2026-08-15[4]-format-reference-and-4-0-0-report.md`.
+> **Что это:** план четырёх инкрементов справочника форматов: каталог и
+> валидатор, генератор и README, conformance-швы, общий gate.
+> **Связанные записи:** `2026-08-14[9]-format-reference-source-design.md`,
+> `2026-08-15[4]-format-reference-and-4-0-0-report.md`.
 
 > **Для агентных исполнителей:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or

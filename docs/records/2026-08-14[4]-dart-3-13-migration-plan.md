@@ -1,8 +1,12 @@
 # Dart 3.13 Migration Implementation Plan
 
-Статус: исполняется 2026-08-14 через `superpowers:executing-plans`. Tasks 1–5
-завершены: миграционный commit/CI зелёные, проверенный AMD-эталон записан;
-Task 6 — полный прогон, baseline-коммит и его push-CI — ещё открыт.
+> **Состояние на 2026-08-16:** исполнен 2026-08-14, все шесть задач.
+> Миграционный коммит `9143e74` опубликован, push-CI `31804804963` зелёный,
+> AMD-эталон Dart 3.13.0 записан из зелёного performance-run `31805224647` той
+> же ревизии. Чекбоксы в теле отражают состояние плана во время выполнения.
+> **Что это:** план миграции внутренних инструментов и CI на Dart stable 3.13.
+> **Связанные записи:** `2026-08-14[3]-dart-3-13-migration-design.md`,
+> `2026-08-14[11]-stable-migration-and-3-0-0-report.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or

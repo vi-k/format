@@ -1,10 +1,14 @@
 # Дизайн: горячие double-op'ы (вторая итерация IR)
 
-Статус: исполнен, вошло в 3.0.0.
-Расходится с кодом (L17): у `_writeAsciiFloatDirect` нет параметра
-`zeroEffective`. Позиционная часть подписи совпала с описанной, а
-хвост разошёлся: вместо одного флага там два именованных параметра —
-`groupSeparator` и `zeroPaddingGrouped` (`lib/src/template_ir.dart`).
+> **Состояние на 2026-08-16:** исполнен, вошло в 3.0.0. Расходится с кодом
+> (L17): у `_writeAsciiFloatDirect` нет параметра `zeroEffective`. Позиционная
+> часть подписи совпала с описанной, а хвост разошёлся: вместо одного флага там
+> два именованных параметра — `groupSeparator` и `zeroPaddingGrouped`
+> (`lib/src/template_ir.dart`).
+> **Что это:** дизайн горячих double-op'ов, вторая итерация IR.
+> **Связанные записи:** `2026-08-05[2]-double-ops-plan.md`,
+> `2026-08-04[5]-template-ir-design.md`,
+> `2026-08-03[3]-dart-native-double-format-design.md`.
 
 ## Цель
 

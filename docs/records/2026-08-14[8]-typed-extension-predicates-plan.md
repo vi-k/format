@@ -1,8 +1,11 @@
 # Typed Extension Predicates Implementation Plan
 
-Статус: исполнен 2026-08-14 коммитом `4d74070`. Tasks 1–7 завершены через
-`superpowers:executing-plans`; полный обязательный прогон GREEN, scope и index
-проверены. Чекбоксы в теле отражают состояние плана до итогового коммита.
+> **Состояние на 2026-08-16:** исполнен 2026-08-14 коммитом `4d74070`. Tasks 1–7
+> завершены через `superpowers:executing-plans`; полный обязательный прогон
+> GREEN, scope и index проверены. Чекбоксы в теле отражают состояние плана до
+> итогового коммита.
+> **Что это:** план реализации типизированных предикатов расширений.
+> **Связанные записи:** `2026-08-14[7]-typed-extension-predicates-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > `superpowers:executing-plans` for inline execution or

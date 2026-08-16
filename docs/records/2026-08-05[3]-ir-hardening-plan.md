@@ -1,6 +1,10 @@
 # План реализации: IR-hardening + parity-фаззер
 
-Статус: исполнен, вошло в 3.0.0. Чекбоксы в теле не проставлялись — открытым пунктом их читать нельзя.
+> **Состояние на 2026-08-16:** исполнен, вошло в 3.0.0. Чекбоксы в теле не
+> проставлялись — открытым пунктом их читать нельзя.
+> **Что это:** план закалки IR и первой версии parity-фаззера.
+> **Связанные записи:** `2026-08-04[5]-template-ir-design.md`,
+> `2026-08-12[1]-parity-fuzzer-expansion-design.md`.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use
 > superpowers:subagent-driven-development (recommended) or
