@@ -15,6 +15,16 @@ dependencies:
   format_intl: ^1.0.0
 ```
 
+Under Flutter there is one more constraint to satisfy, and it is not this
+package's: `flutter_localizations` pins `intl` to a single exact version, so
+that pin and the constraint here have to overlap. From Flutter 3.32.0 the pin
+is `intl` 0.20.2 and they do. Flutter 3.29.x pins `intl` 0.19.0 and they do
+not, so pub rejects the combination as a version conflict on `intl`; upgrading
+Flutter is the only resolution. An application that does not use
+`flutter_localizations` is unaffected, and so is `format` itself — its SDK
+constraint admits every Flutter from 3.29.2 on, which is the first one to ship
+Dart 3.7.2.
+
 ## Usage
 
 Inject an `IntlNumberLocale` when constructing `Format`. The resulting engine
