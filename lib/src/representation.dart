@@ -11,13 +11,12 @@ Object? applyConversion(
   // statement whose scrutinee is a nullable String and whose cases include
   // `null`: a string equal to a case constant but not identical to it takes
   // `default` instead. Every conversion reaching here is exactly that,
-  // because the parser cuts it out of the template with `substring`, so
-  // `'{!r}'` and `'{!a}'` threw UnsupportedConversionException on values they
-  // represent perfectly well — on every SDK below 3.10.0 that this package
-  // claims to support, and on no runtime a CI job watches. Only that one
-  // shape is affected: the same switch without a null case, the switch
-  // expression form, and the Object? switch in
-  // `_RepresentationWriter._write` all compile correctly.
+  // because the parser cuts it out of the template with `substring` — so
+  // `!s`, `!r` and `!a` alike threw UnsupportedConversionException, on every
+  // SDK below 3.10.0 that this package claims to support, and on no runtime
+  // a CI job watches. Only that one shape is affected: the same switch
+  // without a null case, the switch expression form, and the Object? switch
+  // in `_RepresentationWriter._write` all compile correctly.
   if (conversion == null) return value;
   switch (conversion) {
     case 's':
