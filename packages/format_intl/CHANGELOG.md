@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 - Widened the `intl` constraint from `^0.20.2` to `>=0.19.0 <0.21.0`, so the
   package installs alongside `flutter_localizations` from Flutter 3.27.0

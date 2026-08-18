@@ -1,6 +1,6 @@
 name: format_intl
 description: Intl locale adapter for the format package.
-version: 1.0.1
+version: 1.1.0
 homepage: https://github.com/vi-k/format
 repository: https://github.com/vi-k/format
 issue_tracker: https://github.com/vi-k/format/issues

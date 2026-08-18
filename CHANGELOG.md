@@ -1,6 +1,6 @@
 # CHANGELOG
 
-## Unreleased
+## 4.1.0
 
 * Lowered the SDK floor from `^3.7.2` to `^3.6.0`, which admits Flutter
   3.27.0 and later rather than 3.29.2 and later. Nothing in the package
