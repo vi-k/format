@@ -394,8 +394,14 @@ void main() {
       );
       final before = await generated.readAsString();
 
+      // Same language version the repository is formatted with, which is not
+      // the one the pubspec declares: the floor is 3.6.0 so older SDKs can
+      // install the package, while the sources stay in the 3.7 style. Without
+      // the flag this run reformats the artifact into the pre-3.7 style and
+      // the comparison below fails on a difference the generator did not make.
       final result = await Process.run(Platform.resolvedExecutable, [
         'format',
+        '--language-version=3.7',
         generated.path,
       ]);
 

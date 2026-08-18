@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* Lowered the SDK floor from `^3.7.2` to `^3.6.0`, which admits Flutter
+  3.27.0 and later rather than 3.29.2 and later. Nothing in the package
+  needed a language feature newer than 3.6; the whole test suite, both web
+  backends and the dependency floor were run on 3.6.0 to confirm it. Sources
+  stay in the 3.7 formatting style, so a contributor formats with
+  `dart format --language-version=3.7`.
 * Fixed every brace conversion — `!s`, `!r` and `!a` — throwing
   `UnsupportedConversionException` under dart2wasm on Dart 3.6.0 through
   3.9.0. Anything else was unaffected: a field with no conversion, a format

@@ -10,7 +10,7 @@ topics:
   - sprintf
   - interpolation
 environment:
-  sdk: ^3.7.2
+  sdk: ^3.6.0
 workspace:
   - packages/format_intl
 dependencies:

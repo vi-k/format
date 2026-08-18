@@ -49,15 +49,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 3.7.2 is the minimum the pubspec claims; stable is what the repository
-        # is formatted, analyzed, and fully tested against.
+        # 3.6.0 is the minimum the pubspec claims; stable is what the repository
+        # is analyzed and fully tested against.
         # Written as `include` with an explicit flag rather than as a list of
         # versions: seven steps below run on the primary entry only, and keying
         # them on the version string would silently switch off formatting,
         # `--fatal-infos`, the harness tests, the dependency floor, the archive
         # check and `publish --dry-run` when stable moves.
         include:
-          - sdk: '3.7.2'
+          - sdk: '3.6.0'
             primary: false
           - sdk: stable
             primary: true
@@ -72,7 +72,15 @@ jobs:
         if: matrix.primary
         # The format16 baseline is not materialized in this job, so the
         # whole checkout must be format-clean.
-        run: dart format --output=none --set-exit-if-changed .
+        #
+        # `--language-version` is passed because the two questions are not the
+        # same one. The pubspec says 3.6.0 to admit older SDKs; the formatter
+        # reads that as "format in the pre-3.7 style" and would rewrite 59
+        # files into it. The style a repository is written in is a choice, the
+        # oldest SDK it runs on is a constraint, and this flag is what keeps
+        # the constraint from deciding the choice. The flag is undocumented in
+        # `dart format --help`; it shows under `--help -v`.
+        run: dart format --language-version=3.7 --output=none --set-exit-if-changed .
       - name: Analyze (zero-info baseline)
         if: matrix.primary
         # The full-repository pass lives in the benchmark-suite job:

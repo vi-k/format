@@ -11,7 +11,7 @@ topics:
   - i18n
   - localization
 environment:
-  sdk: ^3.7.2
+  sdk: ^3.6.0
 resolution: workspace
 dependencies:
   # Works with both majors: this package implements NumberLocale, which

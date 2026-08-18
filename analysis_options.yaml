@@ -202,7 +202,14 @@ linter:
     # provide_deprecation_message: true # [core]
     # public_member_api_docs: true # DO document all public members.
     # recursive_getters: true # [recommended]
-    require_trailing_commas: true
+    # require_trailing_commas: false # Deadlocked with the formatter here.
+    # The lint applies below language version 3.7 only, because from 3.7 the
+    # formatter places trailing commas itself. This package declares 3.6 to
+    # support older SDKs while its sources are formatted in the 3.7 style
+    # (`dart format --language-version=3.7`), so the two disagree on four
+    # call sites: `dart fix` adds the commas, the formatter removes them
+    # again, and neither run converges. The formatter owns the file, so the
+    # lint yields. Restore it if the language version ever goes back to 3.7.
     # sized_box_for_whitespace: true # [flutter]
     sized_box_shrink_expand: true
     # slash_for_doc_comments: true # [recommended]

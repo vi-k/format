@@ -22,8 +22,8 @@ is `intl` 0.20.2 and they do. Flutter 3.29.x pins `intl` 0.19.0 and they do
 not, so pub rejects the combination as a version conflict on `intl`; upgrading
 Flutter is the only resolution. An application that does not use
 `flutter_localizations` is unaffected, and so is `format` itself — its SDK
-constraint admits every Flutter from 3.29.2 on, which is the first one to ship
-Dart 3.7.2.
+constraint admits every Flutter from 3.27.0 on, which is the first one to ship
+Dart 3.6.0.
 
 ## Usage
 
