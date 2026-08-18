@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## Unreleased
+
+* Fixed `!r` and `!a` throwing `UnsupportedConversionException` under
+  dart2wasm on Dart 3.6.0 through 3.9.0. The conversion was selected by a
+  switch statement over a nullable `String` with a `case null`, a shape those
+  SDKs miscompile: a string equal to a case constant but not identical to it
+  reached `default`, and every conversion is such a string because the parser
+  cuts it out of the template. Dart 3.10.0 and later compiled the same code
+  correctly, which is why no CI job saw it. Both web suites now run on every
+  SDK in the matrix rather than on stable alone.
+
 ## 4.0.0
 
 * **Breaking for code written against 3.0.0:** `canFormat`, `canLookup`, and

@@ -157,7 +157,7 @@ dart test --coverage=.coverage && dart run coverage:format_coverage --lcov \
   --in=.coverage --out=coverage/lcov.info --report-on=lib \
   --packages=.dart_tool/package_config.json \
   && dart run tool/check_coverage.dart --lcov=coverage/lcov.info
-# покрытие 96.04% (3156/3286), пол 94%
+# покрытие 96.04% (3155/3285), пол 94%
 (cd benchmark/suite && dart pub get && dart test)   # 15 тестов
 (cd benchmark/suite && dart run tool/run.dart --runtime=vm)   # матрица, ~60 с
 (cd benchmark/suite && dart run tool/run.dart --runtime=js)   # ~70 с
@@ -317,6 +317,21 @@ dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
   Четвёртого способа быть не должно: если рантайм не может чего-то, это
   свойство рантайма и его место — рядом с утверждением, а не в списке
   команд.
+- **Рантайм — половина ответа, вторая половина — версия SDK.** dart2wasm
+  с 3.6.0 по 3.9.0 неверно компилирует switch-инструкцию, у которой
+  скрутиниз имеет тип `String?`, а среди веток есть `case null`: строка,
+  равная константе ветки, но не идентичная ей, уходит в `default`.
+  Именно так `!r` и `!a` бросали `UnsupportedConversionException` на всём
+  объявленном диапазоне ниже 3.10.0 — а увидеть это было неоткуда, потому
+  что оба web-прогона стояли под `if: matrix.primary`, то есть гонялись
+  только на stable, где дефект уже исправлен. С 2026-08-18 они идут по
+  всей матрице; разбор — в
+  `docs/records/2026-08-18[1]-wasm-null-switch-and-sdk-floor-report.md`.
+  Отсюда правило: под `if: matrix.primary` ставится шаг про
+  **репозиторий** — формат, линт, архив, dry-run, — а шаг про то, **как
+  код исполняется**, идёт по всей матрице. Дефект компилятора
+  принадлежит SDK, который компилирует, и пол проверяется затем, чтобы
+  такие дефекты ловить.
 - **Покрытие меряется только на VM** и 100 % выразить не может: сбор идёт
   через VM service, которого у вывода dart2js нет, поэтому веб-ветки
   (`_isWeb`) там недостижимы **по построению**. Отсюда `char_sink.dart`

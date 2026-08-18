@@ -52,10 +52,10 @@ jobs:
         # 3.7.2 is the minimum the pubspec claims; stable is what the repository
         # is formatted, analyzed, and fully tested against.
         # Written as `include` with an explicit flag rather than as a list of
-        # versions: nine steps below run on the primary entry only, and keying
+        # versions: seven steps below run on the primary entry only, and keying
         # them on the version string would silently switch off formatting,
-        # `--fatal-infos`, both web runs, the harness tests, the dependency
-        # floor, the archive check and `publish --dry-run` when stable moves.
+        # `--fatal-infos`, the harness tests, the dependency floor, the archive
+        # check and `publish --dry-run` when stable moves.
         include:
           - sdk: '3.7.2'
             primary: false
@@ -91,11 +91,16 @@ jobs:
       # where the fixtures are files, `skip:` where an assertion pins the VM's
       # number model, and the `no-dart2wasm` tag on the one file that crashes
       # inside `package:test` rather than in this package.
+      #
+      # Run on every entry of the matrix, not just the primary one, because a
+      # compiler defect belongs to the SDK that compiles rather than to the
+      # code. dart2wasm from 3.6.0 through 3.9.0 miscompiled a switch on a
+      # nullable String with a `case null`, which made `'{!r}'` and `'{!a}'`
+      # throw on the whole supported range below 3.10.0 — and a web run pinned
+      # to stable, where the defect is fixed, could not see any of it.
       - name: Tests (node platform, dart2js)
-        if: matrix.primary
         run: dart test -p node
       - name: Tests (node platform, dart2wasm)
-        if: matrix.primary
         run: dart test -p node -c dart2wasm -x no-dart2wasm
       - name: Tests (harness, outside the published archive)
         if: matrix.primary
