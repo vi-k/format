@@ -17,13 +17,27 @@ dependencies:
 
 Under Flutter there is one more constraint to satisfy, and it is not this
 package's: `flutter_localizations` pins `intl` to a single exact version, so
-that pin and the constraint here have to overlap. From Flutter 3.32.0 the pin
-is `intl` 0.20.2 and they do. Flutter 3.29.x pins `intl` 0.19.0 and they do
-not, so pub rejects the combination as a version conflict on `intl`; upgrading
-Flutter is the only resolution. An application that does not use
-`flutter_localizations` is unaffected, and so is `format` itself — its SDK
-constraint admits every Flutter from 3.27.0 on, which is the first one to ship
-Dart 3.6.0.
+that pin and the constraint here have to overlap. The `intl` range above spans
+both versions Flutter pins — 0.19.0 up to Flutter 3.31.x and 0.20.2 from
+3.32.0 — so the two overlap on every Flutter from 3.27.0, which is also the
+first one `format` itself installs on.
+
+### Which `intl` your application resolves is visible in the output
+
+This package is an adapter: it reports the symbols the resolved `intl` carries,
+and that data is not identical across the range. Of the 119 locales `intl`
+ships, four differ:
+
+| Locale | `intl` 0.19.0 | 0.20.2 | 0.20.3 |
+| --- | --- | --- | --- |
+| `en_ZA` | decimal `.`, group `,` | decimal `,`, group NBSP | same as 0.20.2 |
+| `de_CH`, `gsw`, `it_CH` | group `’` | group `’` | group `'` |
+
+Only `en_ZA` changes the decimal separator, so it is the one where a number can
+be read wrongly rather than merely look different. Note that three of the four
+already move inside a `^0.20.2` constraint: pinning the range up would not have
+made the output version-independent, only narrower. Every other locale is
+identical across all three versions.
 
 ## Usage
 

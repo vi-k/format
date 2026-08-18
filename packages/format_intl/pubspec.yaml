@@ -17,7 +17,12 @@ dependencies:
   # Works with both majors: this package implements NumberLocale, which
   # 4.0.0 did not change.
   format: '>=3.0.0 <5.0.0'
-  intl: ^0.20.2
+  # Spans both minors Flutter pins, because `flutter_localizations` pins
+  # `intl` to one exact version and a caret here would exclude half of them:
+  # 0.19.0 up to Flutter 3.31.x, 0.20.2 from 3.32.0. What the width costs is
+  # written down in the README — four locales carry different symbols across
+  # this range, and three of those four already differ inside `^0.20.2`.
+  intl: '>=0.19.0 <0.21.0'
 dev_dependencies:
   lints: ^4.0.0
   test: ^1.25.14
