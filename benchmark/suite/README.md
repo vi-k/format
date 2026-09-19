@@ -3,8 +3,8 @@
 This package contains runnable, ANSI-colored examples and performance checks
 for `format`.
 
-One-time setup per clone: materialize the pub `format 1.6.0` competitor
-(its source is not committed; pub is the source of truth):
+One-time setup per clone: materialize the pub `format 1.6.0` competitor (its
+source is not committed; pub is the source of truth):
 
 ```console
 dart run benchmark/baselines/format16/fetch.dart
@@ -36,6 +36,6 @@ and notation changes are visible alongside performance. Timing differences up
 to 5% are reported as equal by default. Library callers may change that limit
 with the `equivalenceThresholdPercent` argument to `runDoubleModesBenchmark`.
 
-VS Code launch configurations are available for every benchmark (the
-archived parser-strategy probe has its own **Benchmark: parser strategy
-JIT** configuration).
+VS Code launch configurations are available for every benchmark (the archived
+parser-strategy probe has its own **Benchmark: parser strategy JIT**
+configuration).

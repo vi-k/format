@@ -7,26 +7,25 @@ expected outcome.
 
 All gateable reports must carry the full, lowercase, 40-character revision of
 the source they measured. Obtain it once from a clean committed checkout, then
-replace `<40hex>` in every compile or run command below with that
-exact value:
+replace `<40hex>` in every compile or run command below with that exact value:
 
 ```sh
 git rev-parse HEAD
 ```
 
-"Clean committed checkout" is checked rather than trusted. Before evaluating
-or recording anything, `gates.dart` compares the revision the reports carry
-with `git rev-parse HEAD` and refuses when they differ or when a tracked file
-is modified — the define is supplied from the shell, because a JavaScript
-runtime cannot ask git, so three reports agreeing with each other proves only
-that one define reached three processes. Untracked files are ignored, since a
+"Clean committed checkout" is checked rather than trusted. Before evaluating or
+recording anything, `gates.dart` compares the revision the reports carry with
+`git rev-parse HEAD` and refuses when they differ or when a tracked file is
+modified — the define is supplied from the shell, because a JavaScript runtime
+cannot ask git, so three reports agreeing with each other proves only that one
+define reached three processes. Untracked files are ignored, since a
 measurement leaves its reports, its AOT executable and its compiled JavaScript
 in the working directory.
 
-Pass `--allow-unverified-revision` to evaluate reports recorded elsewhere —
-on another machine, or before a commit that has since landed. Recording a
-baseline accepts the same flag and is the place to think twice: the file it
-writes becomes the reference every later run is compared against.
+Pass `--allow-unverified-revision` to evaluate reports recorded elsewhere — on
+another machine, or before a commit that has since landed. Recording a baseline
+accepts the same flag and is the place to think twice: the file it writes
+becomes the reference every later run is compared against.
 
 Run a gate-eligible JIT measurement with at least seven recorded rounds:
 
@@ -110,8 +109,8 @@ gh workflow run CI --ref main
 
 Its `performance-gate` artifact contains the eight reports and the gate's
 verdict. A green job with `"comparable": false` is **not** a successful
-comparison: the numbers are diagnostic only and the job exited zero because
-the runner CPU has no exact reference.
+comparison: the numbers are diagnostic only and the job exited zero because the
+runner CPU has no exact reference.
 
 To collect a CPU-specific reference, request an opt-in controlled capture of
 the immutable revision the baseline names. It only uploads eight raw reports;
@@ -143,36 +142,36 @@ way to append a CPU to this committed reference book.
 ## The recorded reference
 
 `benchmark/results/gate-baseline.json` holds the ratios an earlier build
-measured, per runtime, dialect, phase, and scenario. The gate asks whether
-this build drifted away from them, not whether it clears a fixed number.
+measured, per runtime, dialect, phase, and scenario. The gate asks whether this
+build drifted away from them, not whether it clears a fixed number.
 
-The reason is that one set of constants cannot serve four runtimes. Against
-the same frozen comparators, the candidate's ratios differ by an order of
-magnitude between the VM and dart2js, so a limit tight enough to mean
-anything on the VM fires immediately on JavaScript. A ratio, unlike an
-absolute time, is measured candidate-against-comparator inside one process,
-which is what makes a recorded one portable enough to compare against.
+The reason is that one set of constants cannot serve four runtimes. Against the
+same frozen comparators, the candidate's ratios differ by an order of magnitude
+between the VM and dart2js, so a limit tight enough to mean anything on the VM
+fires immediately on JavaScript. A ratio, unlike an absolute time, is measured
+candidate-against-comparator inside one process, which is what makes a recorded
+one portable enough to compare against.
 
 Tolerances live in `gates.dart`, not in the file: 1.25 on a phase geometric
 mean, 1.35 on a key scenario, 1.60 on any other scenario. A limit fails only
 when both runs breach it — which guards against noise inside a job, but not
-against the difference between the job that recorded the reference and the
-job that checks it, since both runs share one machine. One measured pair of
-jobs moved a phase mean by 14.3% with no change in the code, so the
-tolerances have to cover that.
+against the difference between the job that recorded the reference and the job
+that checks it, since both runs share one machine. One measured pair of jobs
+moved a phase mean by 14.3% with no change in the code, so the tolerances have
+to cover that.
 
-**The recorded numbers state what is, not what is acceptable.** Where a
-runtime is slow today the reference says so, and the gate's job is then to
-keep it from getting worse.
+**The recorded numbers state what is, not what is acceptable.** Where a runtime
+is slow today the reference says so, and the gate's job is then to keep it from
+getting worse.
 
 Re-record **immediately** after adding, renaming or removing a scenario: a
 reference missing an entry the reports carry is a hard error, and so is a
 reference carrying an entry the reports no longer have. Both directions are
-errors rather than silently skipped checks, because either one changes how
-much of the matrix is being checked.
+errors rather than silently skipped checks, because either one changes how much
+of the matrix is being checked.
 
-After an intentional speed-up there is no hurry. The reference is one-sided —
-a faster build never fails against it, it just stops being measured against
+After an intentional speed-up there is no hurry. The reference is one-sided — a
+faster build never fails against it, it just stops being measured against
 anything tight — so a stale one is safe and merely less useful. Re-record in
 batches, when a run lands on the same processor model the reference was taken
 on.
@@ -181,40 +180,40 @@ on.
 dart run benchmark/gates.dart --reports=<the same eight paths> --record=$(date +%F) --output=benchmark/results/gate-baseline.json
 ```
 
-Record and evaluate on comparable machines. The committed reference is
-recorded on CI hardware, because that is where the nightly gate runs; the
-same reports evaluated on a laptop drifted by up to 16.2% on a phase mean,
-against a 15% tolerance. Treat a local gate run as indicative and the CI one
-as authoritative, and re-record from a CI run — dispatch the workflow, then
-take the reports from its artifact.
+Record and evaluate on comparable machines. The committed reference is recorded
+on CI hardware, because that is where the nightly gate runs; the same reports
+evaluated on a laptop drifted by up to 16.2% on a phase mean, against a 15%
+tolerance. Treat a local gate run as indicative and the CI one as
+authoritative, and re-record from a CI run — dispatch the workflow, then take
+the reports from its artifact.
 
 "Comparable" is now recorded rather than assumed. A reference carries the
 processor, the operating system, the Dart version and the Node version it was
 measured on, and a run whose processor, Dart or Node differs decides nothing:
-the report says `"comparable": false`, lists what moved, and the command
-still exits zero. The ratios are computed and kept, so they can be read as
+the report says `"comparable": false`, lists what moved, and the command still
+exits zero. The ratios are computed and kept, so they can be read as
 information — they are simply not a verdict about the code or a successful
 comparison.
 
 That is not a hypothetical. Three consecutive nightly runs landed on an Intel
-Xeon 8573C, an EPYC 7763 and an EPYC 9V74, because a hosted pool hands out
-what it has; the two hardware changes were reported as failures. A gate that
-goes red for the pool teaches its reader to ignore it.
+Xeon 8573C, an EPYC 7763 and an EPYC 9V74, because a hosted pool hands out what
+it has; the two hardware changes were reported as failures. A gate that goes
+red for the pool teaches its reader to ignore it.
 
 The operating system string is recorded and deliberately not compared: on a
 hosted runner it carries a kernel build number that changes with every image
 refresh without moving a timing.
 
-A reference with no environment at all is refused outright, with the command
-to re-record it. That is the loud choice of two: a gate that quietly decides
+A reference with no environment at all is refused outright, with the command to
+re-record it. That is the loud choice of two: a gate that quietly decides
 nothing, run after run, reads exactly like a gate that works.
 
 Which machine the pool hands out is worth knowing before dispatching. Measured
 across four dispatches on a fixed revision: two AMD models differ by at most
-1.13 with the tolerance at 1.25, so they are interchangeable in practice,
-while an Intel Xeon reaches 1.36 on `js/braces/cold` alone. The committed
-reference is therefore recorded on the model that comes up most often, and a
-night that lands elsewhere is expected to decide nothing.
+1.13 with the tolerance at 1.25, so they are interchangeable in practice, while
+an Intel Xeon reaches 1.36 on `js/braces/cold` alone. The committed reference
+is therefore recorded on the model that comes up most often, and a night that
+lands elsewhere is expected to decide nothing.
 
 Each round is timed to a duration rather than to a fixed operation count, so
 the two engines run different counts and a ratio is read per operation. The
@@ -225,8 +224,8 @@ minutes where a VM run takes seconds.
 A cold scenario draws a fresh template per operation — the iteration number is
 suffixed to it, which costs both engines the same and so leaves the ratio
 alone — so a cold ratio is a parsing ratio and reads as one. It is also the
-phase most sensitive to the template cache, since a workload that never
-repeats a template is precisely what the cache stops serving.
+phase most sensitive to the template cache, since a workload that never repeats
+a template is precisely what the cache stops serving.
 
 The merge rejects smoke/non-gateable reports, fewer than seven or mismatched
 rounds, missing runtime/dialect/run pairs, missing or mismatched detected
@@ -236,11 +235,11 @@ retains each report's environment, absolute median times and ratios, two-run
 reproduction evidence, geometric means, and AOT executable size. A threshold
 fails only when the same violation reproduces in both runs.
 
-`comparisonKind` distinguishes frozen performance intersections
-(`performance`) from `correctnessOnly` output references and `informational`
-Format 3 features. Only `performance` scenarios have a ratio. `brace.locale.n`
-uses an explicit `CNumberLocale` reference because Format 2 has no `n`
-conversion. `brace.format_intl` checks a separate `IntlNumberLocale` adapter
-instance; it is not a performance competitor. The frozen sprintf7 baseline has
-no `%c`, `%u`, `%a`, or invalid-conversion detection counterpart, so those
-scenarios are informational.
+`comparisonKind` distinguishes frozen performance intersections (`performance`)
+from `correctnessOnly` output references and `informational` Format 3 features.
+Only `performance` scenarios have a ratio. `brace.locale.n` uses an explicit
+`CNumberLocale` reference because Format 2 has no `n` conversion.
+`brace.format_intl` checks a separate `IntlNumberLocale` adapter instance; it
+is not a performance competitor. The frozen sprintf7 baseline has no `%c`,
+`%u`, `%a`, or invalid-conversion detection counterpart, so those scenarios are
+informational.

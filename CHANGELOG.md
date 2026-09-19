@@ -2,42 +2,42 @@
 
 ## 4.1.0
 
-* Lowered the SDK floor from `^3.7.2` to `^3.6.0`, which admits Flutter
-  3.27.0 and later rather than 3.29.2 and later. Nothing in the package
-  needed a language feature newer than 3.6; the whole test suite, both web
-  backends and the dependency floor were run on 3.6.0 to confirm it. Sources
-  stay in the 3.7 formatting style, so a contributor formats with
+* Lowered the SDK floor from `^3.7.2` to `^3.6.0`, which admits Flutter 3.27.0
+  and later rather than 3.29.2 and later. Nothing in the package needed a
+  language feature newer than 3.6; the whole test suite, both web backends and
+  the dependency floor were run on 3.6.0 to confirm it. Sources stay in the 3.7
+  formatting style, so a contributor formats with
   `dart format --language-version=3.7`.
 * Fixed every brace conversion — `!s`, `!r` and `!a` — throwing
-  `UnsupportedConversionException` under dart2wasm on Dart 3.6.0 through
-  3.9.0. Anything else was unaffected: a field with no conversion, a format
-  specification, the whole printf mini-language, dart2js and the VM all
-  behaved correctly, so only `'{!s}'`, `'{!r}'` and `'{!a}'` were lost, and
-  only on a wasm build made by one of those SDKs. The conversion was selected
-  by a switch statement over a nullable `String` with a `case null`, a shape
-  those SDKs miscompile: a string equal to a case constant but not identical
-  to it reached `default`, and every conversion is such a string because the
-  parser cuts it out of the template. Dart 3.10.0 and later compiled the same
-  code correctly, which is why no CI job saw it. Both web suites now run on
-  every SDK in the matrix rather than on stable alone.
+  `UnsupportedConversionException` under dart2wasm on Dart 3.6.0 through 3.9.0.
+  Anything else was unaffected: a field with no conversion, a format
+  specification, the whole printf mini-language, dart2js and the VM all behaved
+  correctly, so only `'{!s}'`, `'{!r}'` and `'{!a}'` were lost, and only on a
+  wasm build made by one of those SDKs. The conversion was selected by a switch
+  statement over a nullable `String` with a `case null`, a shape those SDKs
+  miscompile: a string equal to a case constant but not identical to it reached
+  `default`, and every conversion is such a string because the parser cuts it
+  out of the template. Dart 3.10.0 and later compiled the same code correctly,
+  which is why no CI job saw it. Both web suites now run on every SDK in the
+  matrix rather than on stable alone.
 
 ## 4.0.0
 
 * **Breaking for code written against 3.0.0:** `canFormat`, `canLookup`, and
-  `canRepresent` now receive the extension's `T`; the engine checks the
-  runtime type before invoking user code, and each predicate accepts every
-  `T` by default. Remove overrides that only returned `value is T`; rewrite an
+  `canRepresent` now receive the extension's `T`; the engine checks the runtime
+  type before invoking user code, and each predicate accepts every `T` by
+  default. Remove overrides that only returned `value is T`; rewrite an
   additional filter from `Object?` to `T`.
-* Avoided converting ordinary `int` values to `BigInt` while validating
-  Unicode scalars for `{:c}` and `%c`. In a local dart2js A/B on arm64,
-  cached `{:c}` fell from 133 ns to 56 ns and `%c` from 108 ns to 29 ns;
-  Format 1.6 took 143–144 ns for the brace case. Real `BigInt` values retain
-  the same validation path and showed no reproducible regression.
+* Avoided converting ordinary `int` values to `BigInt` while validating Unicode
+  scalars for `{:c}` and `%c`. In a local dart2js A/B on arm64, cached `{:c}`
+  fell from 133 ns to 56 ns and `%c` from 108 ns to 29 ns; Format 1.6 took
+  143–144 ns for the brace case. Real `BigInt` values retain the same
+  validation path and showed no reproducible regression.
 
 ## 3.0.0
 
-Upgrading from the published 1.6.0 also includes the changes of the
-unpublished 2.0.0 below.
+Upgrading from the published 1.6.0 also includes the changes of the unpublished
+2.0.0 below.
 
 * Added a brace-formatting engine using the Python mini-language, with
   positional, named, item, and attribute lookup; conversions; nested fields;
@@ -248,9 +248,7 @@ unpublished 2.0.0 below.
 
 * Named arguments can now accept Symbol:
 
-  ```dart
-  format('{a} {b}', {#a: 123, #b: 234});
-  ```
+  ```dart format('{a} {b}', {#a: 123, #b: 234}); ```
 
 * Updated.
 * Fixed bug: Formatting fails if 2 justifications used in a single string
@@ -263,7 +261,8 @@ unpublished 2.0.0 below.
 
 ## 1.1.0
 
-* Breaked changes: for named args use format({...}) instead of format([], {...}).
+* Breaked changes: for named args use format({...}) instead of format([],
+  {...}).
 
 ## 1.0.1-nullsafety.0
 

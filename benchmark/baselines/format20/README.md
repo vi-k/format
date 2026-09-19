@@ -29,13 +29,13 @@ formatter registration, and the `n` formatter are omitted because they are not
 reachable through that local API or selected scenarios.
 
 To prevent benchmark code from creating package-level collisions, every copied
-implementation declaration is private and prefixed `_Format2` (or
-`_format2`). Those prefix changes and the conversion from historical source
-files to `part` files are mechanical namespacing edits only; formatting logic
-is otherwise retained from `86febb4` for the retained paths.
+implementation declaration is private and prefixed `_Format2` (or `_format2`).
+Those prefix changes and the conversion from historical source files to `part`
+files are mechanical namespacing edits only; formatting logic is otherwise
+retained from `86febb4` for the retained paths.
 
 ## Benchmark-only policy
 
 This baseline is a reproducible performance comparator. It is not a public
-package API, a production dependency, or a correctness oracle. Do not export
-it from `lib/format.dart`.
+package API, a production dependency, or a correctness oracle. Do not export it
+from `lib/format.dart`.

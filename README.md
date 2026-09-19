@@ -44,22 +44,22 @@ Use doubled braces to emit literal braces:
 format('{{value}} = {0}', 42); // {value} = 42
 ```
 
-The same doubling works inside a format specification, but there the two
-forms must balance: `{{` requires a later `}}`, because the first unescaped
-`}` is what ends the specification. In ordinary text they are independent, so
-a lone `{{` is fine there and a lone `{` is not.
+The same doubling works inside a format specification, but there the two forms
+must balance: `{{` requires a later `}}`, because the first unescaped `}` is
+what ends the specification. In ordinary text they are independent, so a lone
+`{{` is fine there and a lone `{` is not.
 
 ## Key differences from 1.6.0
 
 Version 2.0.0 was never published, so upgrading from 1.6.0 takes the 2.0, 3.0,
-and 4.0 changes together. The CHANGELOG lists them in full, and [Migration from
-1.6.0](#migration-from-160) describes what an upgrade has to change in calling
-code.
+and 4.0 changes together. The CHANGELOG lists them in full, and
+[Migration from 1.6.0](#migration-from-160) describes what an upgrade has to
+change in calling code.
 
 - **Two mini-languages on one engine.** Braces stay in `format` and
-  `formatWith`; the printf dialect arrives as [`sprintf` and
-  `vsprintf`](#sprintf), with C-style conversions for text, integers, and
-  floating point.
+  `formatWith`; the printf dialect arrives as
+  [`sprintf` and `vsprintf`](#sprintf), with C-style conversions for text,
+  integers, and floating point.
 - **Configuration is an object, not a global.** A `Format` instance carries the
   number locale, the text unit, the `double` profile, and the registered
   [custom formatters](#custom-formatters), attribute lookups, and
@@ -68,14 +68,14 @@ code.
 - **The `String` extension is gone.** 1.6.0 formatted through `'{}'.format(x)`
   as well; 3.0 exports top-level functions only.
 - **Failures are typed.** Every one of them is a `FormattingException` subclass
-  that carries the position in the template — see [Error
-  classes](#error-classes). The hierarchy is separate from `dart:core`'s
+  that carries the position in the template — see
+  [Error classes](#error-classes). The hierarchy is separate from `dart:core`'s
   `FormatException` and does not extend it, so `on FormatException` catches
   nothing this package throws.
-- **`double` conversion follows the Dart SDK by default.** [Double formatting
-  profiles](#double-formatting-profiles) switches to the Python/C++ compatible
-  profile where its rounding, exponent layout, extended precision, and
-  `inf`/`nan` spellings are wanted.
+- **`double` conversion follows the Dart SDK by default.**
+  [Double formatting profiles](#double-formatting-profiles) switches to the
+  Python/C++ compatible profile where its rounding, exponent layout, extended
+  precision, and `inf`/`nan` spellings are wanted.
 - **`intl` is no longer a dependency.** [Number locales](#number-locales)
   define the separators, digits, and grouping, the C locale is the default, and
   `package:format_intl` supplies an `intl`-backed locale for applications that
@@ -118,9 +118,9 @@ The cache is most of that difference, and it is the part a workload can lose.
 With it off, the VM keeps 1.7× to 8.9× and dart2wasm 1.5× to 7.6×, but dart2js
 falls behind 1.6.0 on twenty-six of the thirty-one cases, between 0.46× and
 2.1×: 1.6.0's regular expressions run on the JavaScript engine's own regex
-implementation, while the 3.0 scanner is compiled JavaScript. [When to turn it
-off](#when-to-turn-it-off) describes the workloads where the cache does not pay
-for itself.
+implementation, while the 3.0 scanner is compiled JavaScript.
+[When to turn it off](#when-to-turn-it-off) describes the workloads where the
+cache does not pay for itself.
 
 `sprintf` has no counterpart here — 1.6.0 had no printf dialect — so the table
 has no row for it; the benchmark compares it against `package:sprintf` instead.
@@ -299,8 +299,8 @@ format('{:>8s}', 'hi');     //       hi
 format('{:.3s}', 'abcdef'); // abc
 ```
 
-Zero padding is a numeric option, so a text specification rejects it instead
-of quietly padding with zeros:
+Zero padding is a numeric option, so a text specification rejects it instead of
+quietly padding with zeros:
 
 ```dart
 format('{:05s}', 'abc');  // throws InvalidSpecifierException
@@ -397,8 +397,8 @@ type counts as `g` here, so `format('{:.0}', 2.0)` is rejected in this mode and
 gives `2e+00` in the compatible one. As with `toStringAsFixed`, `f` may use
 exponential notation for magnitudes at or above `10^21`.
 
-Select `DoubleFormatMode.compatible` when exact Python brace-formatting and
-C++ printf rounding and spelling are required:
+Select `DoubleFormatMode.compatible` when exact Python brace-formatting and C++
+printf rounding and spelling are required:
 
 ```dart
 final compatible = Format(
@@ -423,10 +423,10 @@ dart run bin/double_modes_benchmark.dart
 For finite `double` values in the benchmark scenarios,
 `DoubleFormatMode.dartSdk` is faster than compatible mode or falls within the
 default 5% equivalence threshold. The report prints both formatted results and
-median times; this performance conclusion does not include `NaN` or
-`Infinity`, and it is measured on the Dart VM — the benchmark runs there, and
-the two modes have not been compared under dart2js. VS Code also provides the
-**Benchmark: double modes** launch configuration.
+median times; this performance conclusion does not include `NaN` or `Infinity`,
+and it is measured on the Dart VM — the benchmark runs there, and the two modes
+have not been compared under dart2js. VS Code also provides the **Benchmark:
+double modes** launch configuration.
 
 In Dart SDK mode, non-finite values are `NaN` and `Infinity` by default. Their
 short spellings can be selected independently; compatible mode always uses
@@ -456,11 +456,11 @@ be literals or `*` arguments. Decimal floating-point conversions use the
 selected double profile: Dart SDK semantics by default, or deterministic
 C++23-compatible nearest-even rounding and `inf`/`nan` spelling in compatible
 mode. In the default profile `sprintf('%e', 12.5)` returns `1.25e+1`, not the C
-`1.250000e+01`: select `DoubleFormatMode.compatible` when C-exact decimal output
-is required. Negative unsigned values are rejected instead of wrapped.
+`1.250000e+01`: select `DoubleFormatMode.compatible` when C-exact decimal
+output is required. Negative unsigned values are rejected instead of wrapped.
 
-This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX
-`$` argument indexing, and C++26 `%b`/`%B`. String width and precision use the
+This Dart dialect intentionally omits `%n`, `%p`, C length modifiers, POSIX `$`
+argument indexing, and C++26 `%b`/`%B`. String width and precision use the
 configured Unicode `TextUnit`; `%c` accepts a Unicode scalar; `%s` calls
 `toString()` for non-string Dart values; and `int`/`BigInt` are not truncated
 to a C machine width. A configured `NumberLocale`, including one supplied by
@@ -542,28 +542,27 @@ final jsonFormat = Format(formatters: [JsonFormatter()]);
 jsonFormat.format('{:json}', <String, Object?>{'answer': 42});
 ```
 
-The engine checks a value against the formatter's `T` before any extension
-code runs. `canFormat(T value)` returns `true` by default, so an ordinary
-formatter only implements `format`. Override the typed predicate only for a
-narrower condition within `T`, for example
+The engine checks a value against the formatter's `T` before any extension code
+runs. `canFormat(T value)` returns `true` by default, so an ordinary formatter
+only implements `format`. Override the typed predicate only for a narrower
+condition within `T`, for example
 `bool canFormat(Money value) => value.currency == 'KZT'`.
 
 Custom specifiers must match `[A-Za-z][A-Za-z0-9_]*`. Built-in names are
 reserved. For a placeholder without an explicit specifier, built-in types take
-priority, followed by a unique matching custom formatter, then `toString()`.
-A formatter is therefore never consulted for a value the engine already
-renders: one that accepts everything still leaves `{}` on a `String` or an
-`int` to the built-in path, and only an explicit `{:name}` reaches such a
-value. When two formatters accept the same value and the placeholder names
-neither, the engine throws `AmbiguousFormatterException` rather than picking
-one.
+priority, followed by a unique matching custom formatter, then `toString()`. A
+formatter is therefore never consulted for a value the engine already renders:
+one that accepts everything still leaves `{}` on a `String` or an `int` to the
+built-in path, and only an explicit `{:name}` reaches such a value. When two
+formatters accept the same value and the placeholder names neither, the engine
+throws `AmbiguousFormatterException` rather than picking one.
 
-Automatic selection needs the specification to be *empty*, not merely
-nameless: `{:>12}` on a custom value carries options and names nothing, so it
-never reaches the registry and is rejected as a specification. Name the
-formatter — `{:>12money}` — or leave the specification empty. Options alone do
-not select one, because then registering an extension would change what an
-unrelated `{:>12}` elsewhere in the program means.
+Automatic selection needs the specification to be *empty*, not merely nameless:
+`{:>12}` on a custom value carries options and names nothing, so it never
+reaches the registry and is rejected as a specification. Name the formatter —
+`{:>12money}` — or leave the specification empty. Options alone do not select
+one, because then registering an extension would change what an unrelated
+`{:>12}` elsewhere in the program means.
 
 Width, fill, and alignment are applied by the engine after a custom formatter
 returns, while `FormatOptions` provides sign, alternate form, zero, grouping,
@@ -588,9 +587,9 @@ jsonFormat.format('{:json:a{{b}', <String, Object?>{'answer': 42});
 
 `FormatOptions` describes the specification, not the engine: a formatter
 receives no `NumberLocale`, `TextUnit` or `DoubleFormatMode`. So `grouping` is
-the flag as written (`,` or `_`), not the separator to write with — a
-formatter that groups digits itself needs the locale, and the application
-hands it over the same way it hands it to the engine:
+the flag as written (`,` or `_`), not the separator to write with — a formatter
+that groups digits itself needs the locale, and the application hands it over
+the same way it hands it to the engine:
 
 ```dart
 const locale = MyLocale();
@@ -619,13 +618,13 @@ final pointFormat = Format(lookups: [PointLookup()]);
 pointFormat.formatWith('{p.x}', named: {'p': const Point(7)});  // 7
 ```
 
-The same typed default applies to `canLookup`: the engine first checks
-`Point`, and the inherited method accepts every `Point`. Override
+The same typed default applies to `canLookup`: the engine first checks `Point`,
+and the inherited method accepts every `Point`. Override
 `bool canLookup(Point value)` only to select a subset of points.
 
-A `Map` is the exception: `{value.name}` on a map is a shorthand for the
-string key `'name'`, resolved before any lookup is consulted, so a lookup that
-accepts maps is never called for one.
+A `Map` is the exception: `{value.name}` on a map is a shorthand for the string
+key `'name'`, resolved before any lookup is consulted, so a lookup that accepts
+maps is never called for one.
 
 ```dart
 formatWith('{value.name}', named: {
@@ -646,8 +645,8 @@ formatWith("{0['key']}", positional: [{"'key'": 1}]);     // throws
 ### Custom representations
 
 Implement `Representation<T>` to give a type its own `!r` and `!a` form.
-Built-in representations take priority the same way built-in formatters do,
-and `!a` escapes non-ASCII characters in whatever the representation returned:
+Built-in representations take priority the same way built-in formatters do, and
+`!a` escapes non-ASCII characters in whatever the representation returned:
 
 ```dart
 final class MoneyRepresentation extends Representation<Money> {
@@ -666,8 +665,8 @@ only when a representation accepts a subset of `Money` values.
 ### Failures inside an extension
 
 Anything an extension throws is caught and rethrown as
-`FormatExtensionException`, which carries the original `error` and
-`stackTrace` along with the template location. The exception to that is a
+`FormatExtensionException`, which carries the original `error` and `stackTrace`
+along with the template location. The exception to that is a
 `FormattingException`: an extension reporting a failure in the engine's own
 vocabulary has it passed through unchanged.
 
@@ -692,8 +691,8 @@ case: `format('{:.3}', 2)` also produces `2.00` on the web, where the VM and
 CPython reject it. dart2js cannot tell the two values apart, so one of the two
 answers has to give; this way the divergence hands back a string rather than an
 exception. On the Dart VM, `42` and `42.0` remain distinct and empty formatting
-produces `42` and `42.0` respectively. `BigInt` remains a separate value kind on
-every platform.
+produces `42` and `42.0` respectively. `BigInt` remains a separate value kind
+on every platform.
 
 ## Representations
 
@@ -723,11 +722,11 @@ entries.
 
 ## Template cache
 
-Parsed templates are cached, which is what makes repeated formatting cheap.
-How much cheaper depends on the template, and the spread is wide: parsing is
-paid per template, while formatting is paid per field, so the denser the
-template the smaller the share parsing takes. Measured on the package's own
-benchmark, a first call costs this much more than a cached one:
+Parsed templates are cached, which is what makes repeated formatting cheap. How
+much cheaper depends on the template, and the spread is wide: parsing is paid
+per template, while formatting is paid per field, so the denser the template
+the smaller the share parsing takes. Measured on the package's own benchmark, a
+first call costs this much more than a cached one:
 
 | template | Dart VM | dart2js |
 |---|---|---|
@@ -815,16 +814,15 @@ uncached time, so below 1 means the cache is winning:
 | past the bounds | one literal, no fields | 8.17 | 4.52 | 5.10 | 4.04 | 3.95 |
 
 So a template with fields repays its own caching on the second use, and a
-template that is nothing but literal text takes until about the seventh —
-there is nothing to parse there, while the cache still charges two table
-operations. The rows past the bounds are flat, which is the point: repetition
-buys nothing once the set no longer fits.
+template that is nothing but literal text takes until about the seventh — there
+is nothing to parse there, while the cache still charges two table operations.
+The rows past the bounds are flat, which is the point: repetition buys nothing
+once the set no longer fits.
 
-Those three flat rows are what the cache now steps out of on its own — they
-are measured with it consulted throughout, which is what it used to do and
-what it still does until the misses add up. Turning it off outright is the
-difference between paying that for the first few hundred calls and not paying
-it at all.
+Those three flat rows are what the cache now steps out of on its own — they are
+measured with it consulted throughout, which is what it used to do and what it
+still does until the misses add up. Turning it off outright is the difference
+between paying that for the first few hundred calls and not paying it at all.
 
 Before turning the cache off, weigh raising both bounds so that the set does
 fit — and size that with `templateCacheMemory` rather than by eye, because
@@ -838,23 +836,23 @@ more than on its length:
 | ten `{i:>8,d}` fields | about 5 KiB | about 1 640 |
 
 A template with no fields is its own output and holds only the key, which is
-why it is nearly free to cache and also the one shape least worth caching.
-A field-dense template holds a parse node per field, so raising the capacity
-to 8192 without raising the memory limit leaves it evicting exactly as before.
+why it is nearly free to cache and also the one shape least worth caching. A
+field-dense template holds a parse node per field, so raising the capacity to
+8192 without raising the memory limit leaves it evicting exactly as before.
 
 Lowering either bound discards entries immediately, rather than at the next
 insertion.
 
-`templateCacheSize` tells "the cache is too small for this workload" apart
-from "this workload never repeats a template", which otherwise look alike from
-the outside. Both it and `templateCacheMemory` are sums across the two
+`templateCacheSize` tells "the cache is too small for this workload" apart from
+"this workload never repeats a template", which otherwise look alike from the
+outside. Both it and `templateCacheMemory` are sums across the two
 mini-languages, while the two bounds apply to each separately: a program using
 braces and printf alike can read 1024 resident templates with the capacity at
 512 and nothing be wrong. Read with `templateCacheMemory`, it also tells a
 cache full of small templates from one held by a handful of large or
-field-dense ones — the two need opposite adjustments. To see the difference
-the cache makes on the current machine, the benchmark measures every case with
-it on and off — again from a clone of the repository, not from the published
+field-dense ones — the two need opposite adjustments. To see the difference the
+cache makes on the current machine, the benchmark measures every case with it
+on and off — again from a clone of the repository, not from the published
 package:
 
 ```console
@@ -865,10 +863,10 @@ dart run tool/run.dart --runtime=wasm   # dart2wasm, under node
 ```
 
 `tool/run.dart` also takes `--bin=`, one of `comparison`, `template_ir`,
-`double_modes`, `list_snapshot`, and compiles into a temporary directory.
-The operations per round are calibrated to whichever clock the runtime has:
-under dart2js it advances in whole milliseconds, so a count tuned on the VM
-would print multiples of 50 ns and nothing between them.
+`double_modes`, `list_snapshot`, and compiles into a temporary directory. The
+operations per round are calibrated to whichever clock the runtime has: under
+dart2js it advances in whole milliseconds, so a count tuned on the VM would
+print multiples of 50 ns and nothing between them.
 
 ## Migration from 1.6.0
 
@@ -896,13 +894,13 @@ separate from `dart:core`'s `FormatException` and does not extend it, so
 locales, and text units by constructing a `Format` instance instead of mutating
 global registries.
 
-Dart SDK decimal `double` conversion is the default. Applications
-that depend on Python/C++ rounding, exponent layout, precision beyond the Dart
-SDK limits, or `inf`/`nan` spellings should construct a `Format` with
+Dart SDK decimal `double` conversion is the default. Applications that depend
+on Python/C++ rounding, exponent layout, precision beyond the Dart SDK limits,
+or `inf`/`nan` spellings should construct a `Format` with
 `DoubleFormatMode.compatible`. This setting applies consistently to brace
 formatting, `sprintf`, and nested `!r`/`!a` representations.
 
 Code written against 3.0.0 rather than 1.6.0 has one thing to change: 4.0.0
 gives `canFormat`, `canLookup`, and `canRepresent` the extension's `T` and
-filters the runtime type before calling them, so an override that only
-repeated `value is T` can go, and any remaining filter takes a `T`.
+filters the runtime type before calling them, so an override that only repeated
+`value is T` can go, and any remaining filter takes a `T`.

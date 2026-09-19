@@ -77,13 +77,12 @@ That exponent separator is worth knowing about before it surprises you: `intl`
 spells it `E` for 108 of its 119 locales, so `%e` and `%E` produce the same
 text under most of them and stop being distinguishable. Seven locales spell it
 as something that is not a letter at all — `×10^` in `sv`, `أس` in `ar_EG` —
-and there `%E` has nothing to uppercase either. Brace formatting is
-unaffected, because `{:e}` does not read the locale at all; only `{:n}`
-does. `IntlNumberLocale` supplies
-symbols and grouping only: it does not round values. Precision and rounding
-remain the responsibility of `format`. `IntlNumberLocale` does not select or
-apply number notation, including compact or scientific notation; notation
-remains the responsibility of `format`.
+and there `%E` has nothing to uppercase either. Brace formatting is unaffected,
+because `{:e}` does not read the locale at all; only `{:n}` does.
+`IntlNumberLocale` supplies symbols and grouping only: it does not round
+values. Precision and rounding remain the responsibility of `format`.
+`IntlNumberLocale` does not select or apply number notation, including compact
+or scientific notation; notation remains the responsibility of `format`.
 
 Decimal `double` values use Dart SDK conversion by default. Locale symbols are
 applied after that conversion. Select the compatible profile when Python brace
