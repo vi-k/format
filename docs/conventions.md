@@ -351,7 +351,7 @@ dart run benchmark/gates.dart --reports=/tmp/gate/jit-1.json,... \
   ставился на старые SDK, — и форматтер тут же прочёл это как «писать в до-3.7
   стиле» и переписал бы 59 файлов из 127. Поэтому везде, где зовётся форматтер,
   стоит `--language-version=3.7`: шаг Formatting в CI, `Process.run`
-  в `tool/test/format_reference_generator_test.dart`, список проверок ниже
+  в `tool/test/format_reference_generator_test.dart`, список проверок выше
   и локальный pre-commit хук. Флага нет в `dart format --help` — он
   показывается только под `--help -v`. Значение именно `3.7`, а не `latest`:
   на 3.13 `latest` меняет 51 файл, у форматтера с тех пор свои подвижки.
