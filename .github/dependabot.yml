@@ -8,7 +8,7 @@ updates:
   # and the version comment, so the pair cannot drift apart.
   #
   # Only the actions are watched. Dart dependencies are resolved from `pubspec`
-  # ranges on every run and are already exercised by the `3.7.2`/`stable`
+  # ranges on every run and are already exercised by the `3.6.0`/`stable`
   # matrix, so a bot proposing the same resolution would add noise, not signal.
   - package-ecosystem: github-actions
     directory: /
