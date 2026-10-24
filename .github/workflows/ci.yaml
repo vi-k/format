@@ -39,11 +39,105 @@ permissions:
 # because `@v5` kept working while v7 existed.
 
 jobs:
+  # Whether tonight has anything to check. In October 2026 the schedule ran 24
+  # nights over three commits, fourteen of them in a row on one, and every job
+  # below repeated a run that had already answered — about 28 runner minutes a
+  # night.
+  #
+  # The commit alone is not the key, though. Nothing here pins Dart: every job
+  # but `checks (3.6.0)` follows stable, and stable moving between two runs is
+  # exactly how this workflow once went red with no commit at all, on
+  # 2026-08-12. That is what a night on an unchanged commit is still there to
+  # find, so a night is skipped only when both the commit and today's stable
+  # match the last run that reached the checks. Dependencies float as well —
+  # there is no committed lock — and are not part of the key: a new release of
+  # one is seen at the next commit or the next stable, not the next night.
+  #
+  # Pushes, pull requests and dispatches always run.
+  changed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      run: ${{ steps.decide.outputs.run }}
+    steps:
+      # The address setup-dart itself asks when it is given `stable`.
+      - name: Resolve today's Dart stable
+        id: stable
+        run: |
+          version=$(curl -fsSL \
+            https://storage.googleapis.com/dart-archive/channels/stable/release/latest/VERSION \
+            | jq -r .version)
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+      # The version is in the step's name because that is where a later night
+      # reads it back: the jobs API returns step names and nothing a step
+      # wrote. The pattern below depends on this wording.
+      - name: Decide for Dart ${{ steps.stable.outputs.version }}
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          CURRENT: ${{ github.sha }}
+          STABLE: ${{ steps.stable.outputs.version }}
+          EVENT: ${{ github.event_name }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          if [ "${EVENT}" != "schedule" ]; then
+            echo "${EVENT}: running"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # The last run that actually reached `checks (stable)`. A job with
+          # no steps never ran — skipped by this job, or refused before it
+          # started — and a cancelled one did not finish; neither is an answer
+          # about any commit. Runs from before this job have no version to
+          # read and count as unknown.
+          previous=""
+          previous_stable=""
+          runs=$(gh api \
+            "repos/${REPO}/actions/workflows/ci.yaml/runs?status=completed&per_page=20" \
+            --jq '.workflow_runs[] | "\(.id) \(.head_sha)"')
+          while read -r id sha; do
+            if [ -z "${id}" ] || [ "${id}" = "${RUN_ID}" ]; then
+              continue
+            fi
+            checked=$(gh api "repos/${REPO}/actions/runs/${id}/jobs" --jq '
+              if any(.jobs[]; .name == "checks (stable)"
+                  and (.steps | length) > 0 and .conclusion != "cancelled")
+              then [.jobs[] | select(.name == "changed") | .steps[].name
+                  | capture("^Decide for Dart (?<v>\\S+)$").v] | first // "unknown"
+              else empty end')
+            if [ -n "${checked}" ]; then
+              previous="${sha}"
+              previous_stable="${checked}"
+              break
+            fi
+          done <<< "${runs}"
+
+          if [ -z "${previous}" ]; then
+            echo "no earlier check to compare against: running"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${previous}" != "${CURRENT}" ]; then
+            echo "new commits since ${previous}: running"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${previous_stable}" != "${STABLE}" ]; then
+            echo "${CURRENT} was checked on Dart ${previous_stable}, stable is ${STABLE}: running"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "${CURRENT} has already been checked on Dart ${STABLE}: nothing to do"
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   checks:
     # Named explicitly because the matrix carries a flag as well as a version:
     # left to GitHub the job would be "checks (stable, true)", and the name is
     # what other places refer to this check by.
     name: checks (${{ matrix.sdk }})
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -164,6 +258,8 @@ jobs:
     # nothing about them announces that they are stale. This job regenerates
     # each one and compares; it needs an interpreter and a compiler the other
     # jobs do not, which is why it is separate rather than a step in `checks`.
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -191,6 +287,8 @@ jobs:
     # measures, prints the per-file table worst first, and holds the total to a
     # floor. Separate from `checks` because it reruns the suite under the VM
     # service, which is slower and would double the matrix.
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -226,6 +324,8 @@ jobs:
           if-no-files-found: error
 
   benchmark-suite:
+    needs: changed
+    if: needs.changed.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -266,13 +366,18 @@ jobs:
         working-directory: benchmark/suite
 
   performance-gate:
-    # On demand, and nightly once the schedule above is enabled: six full
-    # measurement runs take minutes, and shared runners are noisy enough that
-    # gating every pull request on them would cost more trust than it buys.
+    # On demand, and nightly when the gate finds a new commit or a new stable:
+    # six full measurement runs take minutes, and shared runners are noisy
+    # enough that gating every pull request on them would cost more trust than
+    # it buys. A night on the same commit and SDK would add only another draw
+    # of the CPU model and another sample of the noise.
     #
     # Run this manually to produce the reports a first reference is recorded
     # from; see benchmark/results/README.md.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: changed
+    if: >-
+      needs.changed.outputs.run == 'true' && (github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
